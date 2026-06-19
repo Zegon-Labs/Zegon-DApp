@@ -1,16 +1,7 @@
 import Phaser from "phaser";
-import { coverImage } from "../config/assets.js";
 import { t } from "../i18n/index.js";
-
-const UI = {
-  color: {
-    bone: "#E6E1D3",
-    dust: "#9A93A8",
-    cyan: "#2EE6D6",
-    ember: "#FF4D2E",
-  },
-  font: "VT323, monospace",
-};
+import { C, COLORS, FONT } from "../ui/theme.js";
+import { createMenuButton, drawScanlines } from "../ui/components.js";
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -21,78 +12,57 @@ export class TitleScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const strings = t();
 
-    coverImage(this, "menu_inicio");
+    this.cameras.main.setBackgroundColor(C.void);
+    drawScanlines(this);
+
+    this.add.circle(width / 2, height * 0.28, 110, C.blood, 0.12);
+    this.drawSilhouette(width / 2, height * 0.3);
 
     this.add
-      .image(width / 2, height * 0.22, "logo")
-      .setScale(Math.min(0.42, (width * 0.55) / 800))
-      .setDepth(1);
-
-    this.add
-      .text(width / 2, height * 0.38, strings.tagline, {
-        fontFamily: UI.font,
-        fontSize: "22px",
-        color: UI.color.ember,
+      .text(width / 2, height * 0.14, "ZEGON", {
+        fontFamily: FONT,
+        fontSize: "72px",
+        color: COLORS.bone,
       })
-      .setOrigin(0.5)
-      .setDepth(2);
+      .setOrigin(0.5);
 
-    this.createMenuButton(width / 2, height * 0.52, strings.duel, () => {
+    this.add
+      .text(width / 2, height * 0.22, strings.tagline, {
+        fontFamily: FONT,
+        fontSize: "20px",
+        color: COLORS.ember,
+      })
+      .setOrigin(0.5);
+
+    createMenuButton(this, width / 2, height * 0.48, strings.duel, () => {
       this.scene.start("DuelScene", { mode: "standard" });
     });
 
-    this.createMenuButton(width / 2, height * 0.62, strings.daily, () => {
+    createMenuButton(this, width / 2, height * 0.58, strings.daily, () => {
       this.scene.start("DuelScene", { mode: "daily" });
     });
 
-    this.createMenuButton(width / 2, height * 0.72, strings.settings, () => {
+    createMenuButton(this, width / 2, height * 0.68, strings.settings, () => {
       this.scene.start("SettingsScene");
     });
 
     this.add
-      .text(width / 2, height - 28, strings.pressStart, {
-        fontFamily: UI.font,
+      .text(width / 2, height - 24, strings.pressStart, {
+        fontFamily: FONT,
         fontSize: "18px",
-        color: UI.color.cyan,
+        color: COLORS.cyan,
       })
       .setOrigin(0.5)
-      .setAlpha(0.75)
-      .setDepth(2);
+      .setAlpha(0.7);
   }
 
-  private createMenuButton(
-    x: number,
-    y: number,
-    label: string,
-    onClick: () => void,
-  ): Phaser.GameObjects.Container {
-    const w = 280;
-    const h = 44;
-    const bg = this.add
-      .rectangle(x, y, w, h, 0x8b0000, 0.85)
-      .setStrokeStyle(2, 0xff4d2e)
-      .setDepth(2);
-
-    const text = this.add
-      .text(x, y, label, {
-        fontFamily: UI.font,
-        fontSize: "28px",
-        color: UI.color.bone,
-      })
-      .setOrigin(0.5)
-      .setDepth(3);
-
-    bg.setInteractive({ useHandCursor: true });
-    bg.on("pointerover", () => {
-      bg.setFillStyle(0xb3122b, 0.95);
-      text.setColor(UI.color.cyan);
-    });
-    bg.on("pointerout", () => {
-      bg.setFillStyle(0x8b0000, 0.85);
-      text.setColor(UI.color.bone);
-    });
-    bg.on("pointerdown", onClick);
-
-    return this.add.container(0, 0, [bg, text]);
+  private drawSilhouette(x: number, y: number): void {
+    const g = this.add.graphics().setDepth(1);
+    g.fillStyle(0x0a0911, 1);
+    g.fillEllipse(x, y - 40, 80, 20);
+    g.fillRect(x - 22, y - 58, 44, 24);
+    g.fillRect(x - 18, y - 20, 36, 70);
+    g.fillStyle(C.blood, 0.8);
+    g.fillRect(x - 2, y - 28, 4, 30);
   }
 }

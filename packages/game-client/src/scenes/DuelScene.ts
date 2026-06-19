@@ -4,31 +4,29 @@ import {
   DuelPhase,
   PlayerAction,
 } from "../adapters/GameCoreAdapter.js";
-import { coverImage } from "../config/assets.js";
 import { t } from "../i18n/index.js";
 import type { RoundOutcome } from "@zegon/game-core";
-
-const UI = {
-  font: "VT323, monospace",
-  color: {
-    bone: "#E6E1D3",
-    dust: "#9A93A8",
-    cyan: "#2EE6D6",
-    ember: "#FF4D2E",
-    blood: "#B3122B",
-  },
-};
+import {
+  createActionButton,
+  createLabeledPanel,
+  drawBlindsightMeter,
+  drawDesertBackdrop,
+  drawDivider,
+  drawHpBar,
+  drawScanlines,
+  drawZegonFigure,
+} from "../ui/components.js";
+import { C, COLORS, FONT } from "../ui/theme.js";
 
 function actionLabel(action: PlayerAction): string {
   const strings = t();
-  const map: Record<PlayerAction, string> = {
+  return {
     [PlayerAction.FIRE_HIGH]: strings.actionFireHigh,
     [PlayerAction.FIRE_LOW]: strings.actionFireLow,
     [PlayerAction.DODGE]: strings.actionDodge,
     [PlayerAction.FEINT]: strings.actionFeint,
     [PlayerAction.RELOAD]: strings.actionReload,
-  };
-  return map[action];
+  }[action];
 }
 
 function isFireAction(action: PlayerAction): boolean {
@@ -37,18 +35,21 @@ function isFireAction(action: PlayerAction): boolean {
 
 export class DuelScene extends Phaser.Scene {
   private adapter!: GameCoreAdapter;
-  private bgNormal!: Phaser.GameObjects.Image;
-  private bgDamaged!: Phaser.GameObjects.Image;
-  private fireOverlay!: Phaser.GameObjects.Image;
+  private backdrop!: Phaser.GameObjects.Container;
+  private zegonFigure!: Phaser.GameObjects.Container;
   private roundText!: Phaser.GameObjects.Text;
-  private historyText!: Phaser.GameObjects.Text;
+  private historyBody!: Phaser.GameObjects.Text;
   private blindsightLabel!: Phaser.GameObjects.Text;
-  private blindsightBar!: Phaser.GameObjects.Graphics;
+  private blindsightGfx!: Phaser.GameObjects.Graphics;
+  private hpGfx!: Phaser.GameObjects.Graphics;
   private playerStats!: Phaser.GameObjects.Text;
   private zegonStats!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
   private tauntText!: Phaser.GameObjects.Text;
-  private actionButtons: Phaser.GameObjects.Container[] = [];
+  private actionButtons: {
+    bg: Phaser.GameObjects.Rectangle;
+    text: Phaser.GameObjects.Text;
+  }[] = [];
   private mode: "standard" | "daily" = "standard";
 
   constructor() {
@@ -61,63 +62,59 @@ export class DuelScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
+    const strings = t();
 
-    this.bgNormal = coverImage(this, "duel_normal", 0);
-    this.bgDamaged = coverImage(this, "duel_damaged", 1).setAlpha(0);
-    this.fireOverlay = coverImage(this, "duel_fire", 5).setAlpha(0);
+    this.cameras.main.setBackgroundColor(C.void);
+    this.backdrop = drawDesertBackdrop(this, 0);
+    drawScanlines(this);
+    drawDivider(this, height - 100);
 
-    this.add
-      .rectangle(0, 0, width, height, 0x0a0911, 0.35)
-      .setOrigin(0)
-      .setDepth(2);
+    this.zegonFigure = drawZegonFigure(this, width / 2, height * 0.42, 0);
 
-    this.roundText = this.add.text(24, 16, "", {
-      fontFamily: UI.font,
-      fontSize: "20px",
-      color: UI.color.ember,
+    this.roundText = this.add.text(20, 14, "", {
+      fontFamily: FONT,
+      fontSize: "18px",
+      color: COLORS.ember,
     }).setDepth(10);
 
-    this.historyText = this.add.text(24, 52, "", {
-      fontFamily: UI.font,
+    const historyPanel = createLabeledPanel(this, 20, 52, 160, 110, strings.history, 10);
+    this.historyBody = historyPanel.body;
+
+    this.blindsightLabel = this.add.text(width - 20, 14, "", {
+      fontFamily: FONT,
       fontSize: "16px",
-      color: UI.color.dust,
-      lineSpacing: 4,
-    }).setDepth(10);
-
-    this.blindsightLabel = this.add.text(width - 24, 16, "", {
-      fontFamily: UI.font,
-      fontSize: "18px",
-      color: UI.color.ember,
+      color: COLORS.ember,
     }).setOrigin(1, 0).setDepth(10);
 
-    this.blindsightBar = this.add.graphics().setDepth(10);
+    this.blindsightGfx = this.add.graphics().setDepth(10);
+    this.hpGfx = this.add.graphics().setDepth(10);
 
-    this.playerStats = this.add.text(24, height - 130, "", {
-      fontFamily: UI.font,
-      fontSize: "18px",
-      color: UI.color.bone,
+    this.playerStats = this.add.text(20, height - 88, "", {
+      fontFamily: FONT,
+      fontSize: "16px",
+      color: COLORS.bone,
     }).setDepth(10);
 
-    this.zegonStats = this.add.text(width - 24, height - 130, "", {
-      fontFamily: UI.font,
-      fontSize: "18px",
-      color: UI.color.ember,
+    this.zegonStats = this.add.text(width - 20, height - 88, "", {
+      fontFamily: FONT,
+      fontSize: "16px",
+      color: COLORS.ember,
     }).setOrigin(1, 0).setDepth(10);
 
-    this.statusText = this.add.text(width / 2, height * 0.38, "", {
-      fontFamily: UI.font,
-      fontSize: "24px",
-      color: UI.color.cyan,
+    this.statusText = this.add.text(width / 2, height * 0.18, strings.duelTitle, {
+      fontFamily: FONT,
+      fontSize: "22px",
+      color: COLORS.cyan,
       align: "center",
-      wordWrap: { width: width * 0.7 },
+      wordWrap: { width: width * 0.8 },
     }).setOrigin(0.5).setDepth(10);
 
-    this.tauntText = this.add.text(width / 2, height * 0.48, "", {
-      fontFamily: UI.font,
-      fontSize: "18px",
-      color: UI.color.ember,
+    this.tauntText = this.add.text(width / 2, height * 0.58, "", {
+      fontFamily: FONT,
+      fontSize: "17px",
+      color: COLORS.ember,
       align: "center",
-      wordWrap: { width: width * 0.55 },
+      wordWrap: { width: width * 0.6 },
     }).setOrigin(0.5).setDepth(10);
 
     this.adapter = new GameCoreAdapter({
@@ -134,179 +131,140 @@ export class DuelScene extends Phaser.Scene {
   private createActionButtons(): void {
     const actions = Object.values(PlayerAction);
     const { width, height } = this.scale;
-    const totalW = width - 48;
-    const btnW = Math.min(140, totalW / actions.length - 8);
-    const y = height - 56;
-    const startX = 24 + btnW / 2;
+    const gap = 6;
+    const btnW = Math.min(150, (width - 40 - gap * (actions.length - 1)) / actions.length);
+    const btnH = 34;
+    const y = height - 52;
+    const total = actions.length * btnW + (actions.length - 1) * gap;
+    let x = (width - total) / 2 + btnW / 2;
 
-    actions.forEach((action, i) => {
-      const x = startX + i * (btnW + 8);
-      const bg = this.add
-        .rectangle(x, y, btnW, 36, 0x14121c, 0.9)
-        .setStrokeStyle(1, 0xff4d2e)
-        .setDepth(10);
-
-      const label = this.add.text(x, y, actionLabel(action), {
-        fontFamily: UI.font,
-        fontSize: "14px",
-        color: UI.color.dust,
-        align: "center",
-      }).setOrigin(0.5).setDepth(11);
-
-      bg.setInteractive({ useHandCursor: true });
-      bg.on("pointerdown", () => {
-        if (this.adapter.isAwaitingPlayer()) {
+    actions.forEach((action) => {
+      const btn = createActionButton(
+        this, x, y, btnW, btnH, actionLabel(action),
+        () => {
+          if (!this.adapter.isAwaitingPlayer()) return;
           const outcome = this.adapter.submitAction(action);
-          if (isFireAction(action)) {
-            this.playFireFlash();
-          }
+          if (isFireAction(action)) this.playFireFlash();
           this.onRoundResolved(outcome);
-        }
-      });
-
-      this.actionButtons.push(this.add.container(0, 0, [bg, label]));
+        },
+        10,
+      );
+      this.actionButtons.push(btn);
+      x += btnW + gap;
     });
   }
 
   private playFireFlash(): void {
-    this.fireOverlay.setAlpha(1);
+    const { width, height } = this.scale;
+    const flash = this.add.circle(width / 2, height * 0.55, 40, C.ember, 0.7).setDepth(20);
     this.tweens.add({
-      targets: this.fireOverlay,
+      targets: flash,
       alpha: 0,
-      duration: 350,
-      ease: "Power2",
+      scale: 2.5,
+      duration: 280,
+      onComplete: () => flash.destroy(),
     });
-    this.cameras.main.shake(120, 0.004);
+    this.cameras.main.shake(100, 0.003);
   }
 
   private onRoundResolved(outcome: RoundOutcome): void {
     if (outcome.playerDamage > 0) {
-      this.cameras.main.flash(200, 179, 18, 43);
-    }
-    if (outcome.zegonDamage > 0) {
-      this.tweens.add({
-        targets: this.bgNormal,
-        alpha: 0.85,
-        yoyo: true,
-        duration: 80,
-        repeat: 1,
-      });
+      this.cameras.main.flash(180, 179, 18, 43);
     }
   }
 
-  private handleEvent(event: {
-    type: string;
-    outcome?: RoundOutcome;
-  }): void {
+  private handleEvent(event: { type: string }): void {
     const strings = t();
 
     if (event.type === "phaseChange") {
       const phase = this.adapter.getPhase();
       if (phase === DuelPhase.ZEGON_THINKING) {
-        this.statusText.setText(strings.zegonReading);
-        this.statusText.setColor(UI.color.ember);
+        this.statusText.setText(strings.zegonReading).setColor(COLORS.ember);
       } else if (phase === DuelPhase.AWAITING_PLAYER) {
-        this.statusText.setText(strings.yourTurnPrompt);
-        this.statusText.setColor(UI.color.cyan);
+        this.statusText.setText(strings.yourTurnPrompt).setColor(COLORS.cyan);
         this.tauntText.setText(this.adapter.getPendingTaunt() ?? "");
       } else if (phase === DuelPhase.DEADEYE) {
-        this.statusText.setText(strings.deadeye);
-        this.statusText.setColor(UI.color.ember);
-        this.cameras.main.flash(300, 255, 77, 46);
+        this.statusText.setText(strings.deadeye).setColor(COLORS.ember);
+        this.cameras.main.flash(280, 255, 77, 46);
       }
     }
 
     if (event.type === "duelEnd") {
-      this.time.delayedCall(900, () => {
+      this.time.delayedCall(800, () => {
         this.scene.start("ResultScene", { result: this.adapter.getResult() });
       });
     }
 
     this.updateHud();
     this.updateActionButtons();
-    this.updateBackgroundState();
+    this.updateArena();
   }
 
-  private updateBackgroundState(): void {
+  private updateArena(): void {
     const blindsight = this.adapter.getBlindsight();
-    const zegonHp = this.adapter.getZegonHp();
-    const playerHp = this.adapter.getPlayerHp();
-    const damaged =
-      blindsight >= 70 || zegonHp <= 25 || playerHp <= 30;
+    const isDeadeye = blindsight >= 80;
 
-    this.tweens.add({
-      targets: this.bgDamaged,
-      alpha: damaged ? 1 : 0,
-      duration: 400,
-    });
+    this.zegonFigure.destroy();
+    this.zegonFigure = drawZegonFigure(
+      this,
+      this.scale.width / 2,
+      this.scale.height * 0.42,
+      blindsight,
+      isDeadeye,
+    );
+
+    this.backdrop.destroy();
+    this.backdrop = drawDesertBackdrop(this, blindsight / 100);
+    this.backdrop.setDepth(0);
   }
 
   private updateHud(): void {
     const strings = t();
+    const { width, height } = this.scale;
     const state = this.adapter.getState();
-    const round = state.roundIndex;
     const history = state.playerHistory;
+    const blindsight = this.adapter.getBlindsight();
+    const playerHp = this.adapter.getPlayerHp();
+    const zegonHp = this.adapter.getZegonHp();
 
-    this.roundText.setText(`${strings.round} ${String(round + 1).padStart(2, "0")}`);
+    this.roundText.setText(`${strings.round} ${String(state.roundIndex + 1).padStart(2, "0")}`);
 
-    const historyLines = history.slice(-4).map((action, i) => {
-      const r = history.length - history.slice(-4).length + i + 1;
+    const lines = history.slice(-5).map((action, i) => {
+      const r = history.length - history.slice(-5).length + i + 1;
       return `R${r} ${actionLabel(action as PlayerAction)}`;
     });
-    this.historyText.setText(
-      history.length > 0
-        ? `${strings.history}\n${historyLines.join("\n")}`
-        : `${strings.history}\n—`,
-    );
+    this.historyBody.setText(lines.length > 0 ? lines.join("\n") : "—");
 
-    const blindsight = this.adapter.getBlindsight();
-    this.blindsightLabel.setText(
-      `${strings.hudBlindsight}\n${blindsight}%`,
-    );
-    this.drawBlindsightBar(blindsight);
+    this.blindsightLabel.setText(`${strings.hudBlindsight}  ${blindsight}%`);
+    drawBlindsightMeter(this.blindsightGfx, width - 216, 38, 196, 8, blindsight);
+
+    drawHpBar(this.hpGfx, 20, height - 108, 120, 6, playerHp, 100, C.cyan);
+    drawHpBar(this.hpGfx, width - 140, height - 108, 120, 6, zegonHp, 100, C.ember);
 
     this.playerStats.setText(
-      `${strings.hudYou}\n${this.adapter.getPlayerHp()} ${strings.hudHp}  ·  ${strings.hudAmmo} x${this.adapter.getAmmo()}`,
+      `${strings.hudYou}  ${playerHp}${strings.hudHp}  ·  ${strings.hudAmmo} ×${this.adapter.getAmmo()}`,
     );
 
     const deadeyeNear = blindsight >= 80;
     this.zegonStats.setText(
-      `${strings.hudZegon}\n${this.adapter.getZegonHp()} ${strings.hudHp}` +
+      `${strings.hudZegon}  ${zegonHp}${strings.hudHp}` +
       (deadeyeNear ? `\n${strings.deadeyeNear}` : ""),
     );
-  }
-
-  private drawBlindsightBar(value: number): void {
-    const { width } = this.scale;
-    const x = width - 220;
-    const y = 52;
-    const w = 196;
-    const h = 10;
-    const fill = (value / 100) * w;
-
-    this.blindsightBar.clear();
-    this.blindsightBar.fillStyle(0x211e2e, 0.9);
-    this.blindsightBar.fillRect(x, y, w, h);
-    this.blindsightBar.fillStyle(0xff4d2e, 1);
-    this.blindsightBar.fillRect(x, y, fill, h);
   }
 
   private updateActionButtons(): void {
     const available = new Set(this.adapter.getAvailableActions());
     const enabled = this.adapter.isAwaitingPlayer();
 
-    this.actionButtons.forEach((container, i) => {
+    this.actionButtons.forEach((btn, i) => {
       const action = Object.values(PlayerAction)[i]!;
       const active = enabled && available.has(action);
-      const bg = container.list[0] as Phaser.GameObjects.Rectangle;
-      const label = container.list[1] as Phaser.GameObjects.Text;
-
-      label.setText(actionLabel(action));
-      bg.setStrokeStyle(active ? 2 : 1, active ? 0x2ee6d6 : 0x3a3550);
-      bg.setFillStyle(active ? 0x211e2e : 0x14121c, active ? 0.95 : 0.7);
-      label.setColor(active ? UI.color.bone : UI.color.dust);
-      bg.setAlpha(active ? 1 : 0.45);
-      label.setAlpha(active ? 1 : 0.45);
+      btn.text.setText(actionLabel(action));
+      btn.bg.setStrokeStyle(active ? 2 : 1, active ? C.cyan : C.fog);
+      btn.bg.setFillStyle(active ? C.smoke : C.ash, active ? 1 : 0.55);
+      btn.text.setColor(active ? COLORS.bone : COLORS.dust);
+      btn.bg.setAlpha(active ? 1 : 0.5);
+      btn.text.setAlpha(active ? 1 : 0.5);
     });
   }
 
