@@ -1,5 +1,16 @@
 import Phaser from "phaser";
+import { coverImage } from "../config/assets.js";
 import { t } from "../i18n/index.js";
+
+const UI = {
+  color: {
+    bone: "#E6E1D3",
+    dust: "#9A93A8",
+    cyan: "#2EE6D6",
+    ember: "#FF4D2E",
+  },
+  font: "VT323, monospace",
+};
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -10,62 +21,78 @@ export class TitleScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const strings = t();
 
-    this.add
-      .text(width / 2, height / 3, "ZEGON", {
-        fontFamily: "VT323, monospace",
-        fontSize: "96px",
-        color: "#E6E1D3",
-      })
-      .setOrigin(0.5);
+    coverImage(this, "menu_inicio");
 
     this.add
-      .text(width / 2, height / 3 + 60, strings.tagline, {
-        fontFamily: "VT323, monospace",
-        fontSize: "24px",
-        color: "#9A93A8",
-      })
-      .setOrigin(0.5);
+      .image(width / 2, height * 0.22, "logo")
+      .setScale(Math.min(0.42, (width * 0.55) / 800))
+      .setDepth(1);
 
-    this.createButton(width / 2, height / 2 + 20, strings.duel, () => {
+    this.add
+      .text(width / 2, height * 0.38, strings.tagline, {
+        fontFamily: UI.font,
+        fontSize: "22px",
+        color: UI.color.ember,
+      })
+      .setOrigin(0.5)
+      .setDepth(2);
+
+    this.createMenuButton(width / 2, height * 0.52, strings.duel, () => {
       this.scene.start("DuelScene", { mode: "standard" });
     });
 
-    this.createButton(width / 2, height / 2 + 80, strings.daily, () => {
+    this.createMenuButton(width / 2, height * 0.62, strings.daily, () => {
       this.scene.start("DuelScene", { mode: "daily" });
     });
 
-    this.createButton(width / 2, height / 2 + 140, strings.settings, () => {
+    this.createMenuButton(width / 2, height * 0.72, strings.settings, () => {
       this.scene.start("SettingsScene");
     });
 
     this.add
-      .text(width / 2, height - 40, strings.pressStart, {
-        fontFamily: "VT323, monospace",
-        fontSize: "20px",
-        color: "#2EE6D6",
+      .text(width / 2, height - 28, strings.pressStart, {
+        fontFamily: UI.font,
+        fontSize: "18px",
+        color: UI.color.cyan,
       })
       .setOrigin(0.5)
-      .setAlpha(0.7);
+      .setAlpha(0.75)
+      .setDepth(2);
   }
 
-  private createButton(
+  private createMenuButton(
     x: number,
     y: number,
     label: string,
     onClick: () => void,
-  ): Phaser.GameObjects.Text {
-    const btn = this.add
-      .text(x, y, `[ ${label} ]`, {
-        fontFamily: "VT323, monospace",
-        fontSize: "32px",
-        color: "#E6E1D3",
+  ): Phaser.GameObjects.Container {
+    const w = 280;
+    const h = 44;
+    const bg = this.add
+      .rectangle(x, y, w, h, 0x8b0000, 0.85)
+      .setStrokeStyle(2, 0xff4d2e)
+      .setDepth(2);
+
+    const text = this.add
+      .text(x, y, label, {
+        fontFamily: UI.font,
+        fontSize: "28px",
+        color: UI.color.bone,
       })
       .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
+      .setDepth(3);
 
-    btn.on("pointerover", () => btn.setColor("#2EE6D6"));
-    btn.on("pointerout", () => btn.setColor("#E6E1D3"));
-    btn.on("pointerdown", onClick);
-    return btn;
+    bg.setInteractive({ useHandCursor: true });
+    bg.on("pointerover", () => {
+      bg.setFillStyle(0xb3122b, 0.95);
+      text.setColor(UI.color.cyan);
+    });
+    bg.on("pointerout", () => {
+      bg.setFillStyle(0x8b0000, 0.85);
+      text.setColor(UI.color.bone);
+    });
+    bg.on("pointerdown", onClick);
+
+    return this.add.container(0, 0, [bg, text]);
   }
 }

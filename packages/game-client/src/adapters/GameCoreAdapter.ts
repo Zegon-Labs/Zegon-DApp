@@ -90,6 +90,10 @@ export class GameCoreAdapter {
     await this.controller.startDuel();
   }
 
+  getState() {
+    return this.controller.getState();
+  }
+
   getPhase(): DuelPhase {
     return this.controller.getState().phase;
   }

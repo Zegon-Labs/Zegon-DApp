@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { coverImage } from "../config/assets.js";
 import { getLanguage, setLanguage, t, type Language } from "../i18n/index.js";
 
 export class SettingsScene extends Phaser.Scene {
@@ -16,6 +17,9 @@ export class SettingsScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
     const strings = t();
+
+    coverImage(this, "menu_inicio");
+    this.add.rectangle(0, 0, width, height, 0x0a0911, 0.75).setOrigin(0);
 
     this.add
       .text(width / 2, 60, strings.settingsTitle, {

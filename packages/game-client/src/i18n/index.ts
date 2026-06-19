@@ -39,6 +39,10 @@ export interface LocaleStrings {
   copied: string;
   menu: string;
   shareText: string;
+  round: string;
+  history: string;
+  yourTurnPrompt: string;
+  deadeyeNear: string;
 }
 
 const LOCALES: Record<Language, LocaleStrings> = {
@@ -82,6 +86,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     menu: "MENU",
     shareText:
       "I scored {score} against ZEGON. Times read: {timesRead}. Outdraw the blind.",
+    round: "ROUND",
+    history: "HISTORY",
+    yourTurnPrompt: "ZEGON HAS LOCKED IN. CHOOSE YOUR ACTION.",
+    deadeyeNear: "DEADEYE NEAR",
   },
   es: {
     pageTitle: "ZEGON — Supera al ciego",
@@ -123,6 +131,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     menu: "MENÚ",
     shareText:
       "Saqué {score} contra ZEGON. Me leyó {timesRead} veces. Supera al ciego.",
+    round: "RONDA",
+    history: "HISTORIAL",
+    yourTurnPrompt: "ZEGON YA BLOQUEÓ. ELEGÍ TU JUGADA.",
+    deadeyeNear: "OJO DE MUERTE CERCA",
   },
 };
 

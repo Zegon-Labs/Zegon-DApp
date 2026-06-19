@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { BootScene } from "./scenes/BootScene.js";
 import { TitleScene } from "./scenes/TitleScene.js";
 import { DuelScene } from "./scenes/DuelScene.js";
 import { ResultScene } from "./scenes/ResultScene.js";
@@ -10,12 +11,12 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 480,
   parent: "game-container",
   backgroundColor: "#0A0911",
-  pixelArt: true,
+  pixelArt: false,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [TitleScene, SettingsScene, DuelScene, ResultScene],
+  scene: [BootScene, TitleScene, SettingsScene, DuelScene, ResultScene],
 };
 
 new Phaser.Game(config);
