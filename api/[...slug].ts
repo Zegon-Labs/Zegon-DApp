@@ -1,13 +1,15 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import {
-  handleDailyLeaderboard,
-  handleRecordDuel,
-  handleRoundCommit,
-  handleRoundReveal,
-  handleStartDuel,
-  handleSubmitScore,
-  handleVerify,
-} from "../packages/game-server/src/handlers/duelHandlers.js";
+
+type Handlers = typeof import("../packages/game-server/dist/handlers/duelHandlers.js");
+
+let handlersPromise: Promise<Handlers> | null = null;
+
+function loadHandlers(): Promise<Handlers> {
+  if (!handlersPromise) {
+    handlersPromise = import("../packages/game-server/dist/handlers/duelHandlers.js");
+  }
+  return handlersPromise;
+}
 
 function slugParts(req: VercelRequest): string[] {
   const raw = req.query.slug;
@@ -25,48 +27,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const slug = slugParts(req);
 
   try {
-    // /api/duel/start
+    const h = await loadHandlers();
+
     if (slug[0] === "duel" && slug[1] === "start" && req.method === "POST") {
-      return res.status(200).json(await handleStartDuel(req.body));
+      return res.status(200).json(await h.handleStartDuel(req.body));
     }
-    // /api/duel/round/commit
     if (
       slug[0] === "duel" &&
       slug[1] === "round" &&
       slug[2] === "commit" &&
       req.method === "POST"
     ) {
-      return res.status(200).json(await handleRoundCommit(req.body));
+      return res.status(200).json(await h.handleRoundCommit(req.body));
     }
-    // /api/duel/round/reveal
     if (
       slug[0] === "duel" &&
       slug[1] === "round" &&
       slug[2] === "reveal" &&
       req.method === "POST"
     ) {
-      return res.status(200).json(await handleRoundReveal(req.body));
+      return res.status(200).json(await h.handleRoundReveal(req.body));
     }
-    // /api/duel/record
     if (slug[0] === "duel" && slug[1] === "record" && req.method === "POST") {
-      return res.status(200).json(await handleRecordDuel(req.body));
+      return res.status(200).json(await h.handleRecordDuel(req.body));
     }
-    // /api/duel/verify/:id
     if (slug[0] === "duel" && slug[1] === "verify" && req.method === "GET") {
       const duelId = slug[2] ?? "demo";
-      return res.status(200).json(await handleVerify(duelId));
+      return res.status(200).json(await h.handleVerify(duelId));
     }
-    // /api/daily/leaderboard
     if (slug[0] === "daily" && slug[1] === "leaderboard") {
-      return res.status(200).json(await handleDailyLeaderboard());
+      return res.status(200).json(await h.handleDailyLeaderboard());
     }
-    // /api/daily/submit
     if (slug[0] === "daily" && slug[1] === "submit" && req.method === "POST") {
-      return res.status(200).json(await handleSubmitScore(req.body));
+      return res.status(200).json(await h.handleSubmitScore(req.body));
     }
 
     return res.status(404).json({ error: "Not found", slug });
   } catch (err) {
+    console.error(err);
     return res.status(500).json({ error: String(err) });
   }
 }

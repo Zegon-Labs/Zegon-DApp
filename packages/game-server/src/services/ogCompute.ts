@@ -127,7 +127,7 @@ export class OGComputeService {
       );
       const signer = new ethers.Wallet(pk, provider);
       const broker = await createZGComputeNetworkBroker(
-        signer as Parameters<typeof createZGComputeNetworkBroker>[0],
+        signer as unknown as Parameters<typeof createZGComputeNetworkBroker>[0],
       );
 
       await ensureLedgerFunded(broker);

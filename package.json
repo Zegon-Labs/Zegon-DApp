@@ -7,7 +7,7 @@
     "dev:server": "pnpm --filter @zegon/game-server dev",
     "dev:full": "pnpm --filter @zegon/game-server dev & pnpm --filter @zegon/game-client dev",
     "build": "pnpm -r build",
-    "vercel-build": "pnpm --filter @zegon/game-core build && pnpm --filter @zegon/game-client build",
+    "vercel-build": "pnpm --filter @zegon/game-core build && pnpm --filter @zegon/game-server build && pnpm --filter @zegon/game-client build",
     "test": "pnpm --filter @zegon/game-core test && pnpm --filter @zegon/game-server test",
     "test:contracts": "pnpm --filter @zegon/contracts test",
     "compile": "pnpm --filter @zegon/contracts compile",
