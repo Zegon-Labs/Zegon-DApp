@@ -86,6 +86,8 @@
           loading: "Cargando prueba…",
           error: "No se pudo cargar la prueba.",
           noDuel: "Falta el ID del duelo.",
+          noDuelHelp: "Esta página muestra la prueba de un duelo concreto. Si querés entender cómo funciona VERIFY, leé la guía.",
+          openGuide: "Cómo funciona VERIFY",
           verified: "✓ PRUEBA VERIFICADA — commit antes de cada jugada",
           pending: "Prueba incompleta",
           openContract: "Abrir contrato en Chainscan",
@@ -113,6 +115,8 @@
           loading: "Loading proof…",
           error: "Could not load proof.",
           noDuel: "Missing duel ID.",
+          noDuelHelp: "This page shows proof for a specific duel. To learn how VERIFY works, read the guide.",
+          openGuide: "How VERIFY works",
           verified: "✓ PROOF VERIFIED — commit before every input",
           pending: "Proof incomplete",
           openContract: "Open contract on Chainscan",
@@ -154,7 +158,11 @@
         const content = document.getElementById("content");
 
         if (!duelId) {
-          content.innerHTML = `<p class="error">${T.noDuel}</p>`;
+          content.innerHTML = `
+            <p class="error">${T.noDuel}</p>
+            <p class="meta" style="margin-top: 16px;">${T.noDuelHelp}</p>
+            <a class="btn primary" href="/verify-guide.html">${T.openGuide}</a>
+            <a class="btn" href="/" style="margin-left: 8px;">←</a>`;
           return;
         }
 

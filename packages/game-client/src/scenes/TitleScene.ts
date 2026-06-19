@@ -88,7 +88,7 @@ export class TitleScene extends Phaser.Scene {
 
     verifyLink.on("pointerover", () => verifyLink.setColor(COLORS.linkHover));
     verifyLink.on("pointerout", () => verifyLink.setColor(COLORS.link));
-    verifyLink.on("pointerdown", () => window.open("/verify.html", "_blank"));
+    verifyLink.on("pointerdown", () => window.open("/verify-guide.html", "_blank"));
 
     this.walletUnsub = onWalletChange(() => this.renderWalletUi());
   }

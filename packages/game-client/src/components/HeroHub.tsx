@@ -10,7 +10,12 @@ import {
   onWalletChange,
   truncateAddress,
 } from "../services/wallet.js";
+import { fetchProfile, hasNickname } from "../services/profile.js";
 import { isTutorialDone } from "../tutorial/steps.js";
+
+interface HeroHubProps {
+  onNeedsProfile?: (address: string) => void;
+}
 
 function WalletIcon() {
   return (
@@ -31,7 +36,7 @@ function LockIcon() {
   );
 }
 
-export function HeroHub() {
+export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   const { strings } = useLocale();
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
 
@@ -54,6 +59,10 @@ export function HeroHub() {
     try {
       const address = await connectWallet();
       notify.success(strings.walletConnected, truncateAddress(address));
+      if (!hasNickname(address)) {
+        const remote = await fetchProfile(address);
+        if (!remote?.nickname) onNeedsProfile?.(address);
+      }
     } catch {
       notify.error(strings.walletNoProvider);
     }
@@ -145,7 +154,7 @@ export function HeroHub() {
         <button
           type="button"
           className="hero__verify-link"
-          onClick={() => window.open("/verify.html", "_blank")}
+          onClick={() => window.open("/verify-guide.html", "_blank")}
         >
           {strings.hubVerifyLink}
         </button>

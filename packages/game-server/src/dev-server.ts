@@ -11,6 +11,8 @@ import {
   handleStartDuel,
   handleSubmitScore,
   handleVerify,
+  handleGetPlayerProfile,
+  handleSetPlayerProfile,
 } from "./handlers/duelHandlers.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -93,6 +95,23 @@ const server = createServer(async (req, res) => {
     if (url === "/api/daily/submit" && req.method === "POST") {
       const body = (await parseBody(req)) as Parameters<typeof handleSubmitScore>[0];
       const result = await handleSubmitScore(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.startsWith("/api/player/profile") && req.method === "GET") {
+      const parsed = new URL(url, "http://localhost");
+      const address = parsed.searchParams.get("address") ?? "";
+      const result = await handleGetPlayerProfile(address);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/profile" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleSetPlayerProfile>[0];
+      const result = await handleSetPlayerProfile(body);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;

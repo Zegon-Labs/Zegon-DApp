@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZEGON — Cómo funciona VERIFY</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Oswald:wght@500;600&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --void: #0a0911;
+        --ash: #14121c;
+        --bone: #e6e1d3;
+        --dust: #9a93a8;
+        --ember: #ff4d2e;
+        --blood: #b3122b;
+        --verified: #4df07a;
+        --fog: #3a3550;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: var(--void);
+        color: var(--bone);
+        font-family: "VT323", monospace;
+        font-size: 19px;
+        line-height: 1.55;
+        min-height: 100vh;
+        padding: 32px 16px 56px;
+      }
+      .wrap { max-width: 680px; margin: 0 auto; }
+      h1 {
+        font-family: "Oswald", sans-serif;
+        font-size: 38px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--ember);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+      }
+      .tagline {
+        color: var(--dust);
+        font-size: 20px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 28px;
+      }
+      .lead {
+        font-size: 22px;
+        color: var(--bone);
+        margin-bottom: 28px;
+        padding: 16px 18px;
+        border-left: 3px solid var(--blood);
+        background: rgba(20, 18, 28, 0.8);
+      }
+      section {
+        margin-bottom: 28px;
+        padding: 20px 18px;
+        border: 1px solid var(--fog);
+        background: var(--ash);
+      }
+      section h2 {
+        font-family: "Oswald", sans-serif;
+        font-size: 22px;
+        color: var(--ember);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      section p { margin-bottom: 10px; color: var(--bone); }
+      section p:last-child { margin-bottom: 0; }
+      .steps {
+        list-style: none;
+        counter-reset: step;
+        margin-top: 8px;
+      }
+      .steps li {
+        counter-increment: step;
+        position: relative;
+        padding-left: 36px;
+        margin-bottom: 14px;
+      }
+      .steps li::before {
+        content: counter(step);
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 26px;
+        height: 26px;
+        line-height: 26px;
+        text-align: center;
+        font-size: 16px;
+        color: var(--bone);
+        border: 1px solid var(--blood);
+        background: rgba(179, 18, 43, 0.2);
+      }
+      .highlight {
+        color: var(--verified);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .warn {
+        color: var(--ember);
+      }
+      .box-id {
+        margin-top: 14px;
+        padding: 14px;
+        background: rgba(3, 2, 5, 0.6);
+        border: 1px dashed var(--fog);
+      }
+      code, .mono {
+        font-family: "VT323", monospace;
+        color: var(--dust);
+        word-break: break-all;
+      }
+      .flow {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 14px 0;
+        font-size: 17px;
+      }
+      .flow span {
+        padding: 8px 12px;
+        background: rgba(10, 9, 17, 0.9);
+        border: 1px solid var(--fog);
+      }
+      .flow .arrow {
+        text-align: center;
+        color: var(--blood);
+        padding: 0;
+        border: none;
+        background: none;
+        font-size: 20px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 32px;
+      }
+      .btn {
+        display: inline-block;
+        padding: 12px 20px;
+        border: 2px solid var(--blood);
+        color: var(--blood);
+        text-decoration: none;
+        font-size: 20px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: transparent;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .btn:hover {
+        background: rgba(179, 18, 43, 0.12);
+        color: var(--ember);
+        border-color: var(--ember);
+      }
+      .btn--fill { background: rgba(179, 18, 43, 0.15); }
+      .lookup {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid var(--fog);
+      }
+      .lookup input {
+        width: 100%;
+        margin-top: 10px;
+        padding: 12px 14px;
+        font-family: inherit;
+        font-size: 18px;
+        color: var(--bone);
+        background: var(--void);
+        border: 1px solid var(--fog);
+      }
+      .lookup input:focus {
+        outline: 2px solid var(--blood);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1 id="title">ZEGON — VERIFY</h1>
+      <p class="tagline" id="subtitle">Guía para jugadores · 0G Galileo</p>
+
+      <p class="lead" id="lead"></p>
+
+      <section>
+        <h2 id="s1-title"></h2>
+        <p id="s1-body"></p>
+      </section>
+
+      <section>
+        <h2 id="s2-title"></h2>
+        <ol class="steps" id="s2-steps"></ol>
+      </section>
+
+      <section>
+        <h2 id="s3-title"></h2>
+        <p id="s3-body"></p>
+        <div class="flow" id="s3-flow"></div>
+      </section>
+
+      <section>
+        <h2 id="s4-title"></h2>
+        <p id="s4-body"></p>
+        <div class="box-id">
+          <p><strong id="s4-id-label"></strong></p>
+          <p class="mono" id="s4-id-example"></p>
+          <p id="s4-id-note" style="margin-top: 10px; color: var(--dust); font-size: 17px;"></p>
+        </div>
+      </section>
+
+      <section>
+        <h2 id="s5-title"></h2>
+        <p id="s5-body"></p>
+        <p class="warn" id="s5-offline"></p>
+      </section>
+
+      <div class="lookup">
+        <p id="lookup-label"></p>
+        <input type="text" id="duel-input" placeholder="" autocomplete="off" spellcheck="false" />
+        <div class="actions" style="margin-top: 14px;">
+          <button type="button" class="btn btn--fill" id="lookup-btn"></button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href="/" class="btn" id="back-btn"></a>
+      </div>
+    </div>
+
+    <script>
+      const LOCALE = localStorage.getItem("zegon-language") === "en" ? "en" : "es";
+
+      const T = {
+        es: {
+          pageTitle: "ZEGON — Cómo funciona VERIFY",
+          title: "ZEGON — VERIFY",
+          subtitle: "Guía para jugadores · 0G Galileo",
+          lead: "VERIFY demuestra que ZEGON no hizo trampa: la IA eligió su jugada antes de que vos actuaras, y solo usó tu historial — nunca vio tu disparo actual.",
+          s1Title: "¿Qué es VERIFY?",
+          s1Body: "Es la prueba on-chain de que cada duelo online fue provably fair. ZEGON está \"a ciegas\": no puede ver tu acción del turno. Antes de que elijas, su movimiento queda sellado en la blockchain (commit). Después se revela (reveal) y cualquiera puede comprobar el orden y las transacciones.",
+          s2Title: "Cómo verificar tu duelo (paso a paso)",
+          s2Steps: [
+            "Jugá un duelo online (DUEL o DAILY) con el servidor conectado — no el tutorial offline.",
+            "Al terminar, en la pantalla de resultados tocá «VERIFICAR EN CADENA».",
+            "Se abre la página de prueba con tu duel ID ya cargado.",
+            "Revisá cada ronda: debe decir que el commit on-chain ocurrió antes de tu input.",
+            "Opcional: abrí los enlaces a Chainscan para ver las transacciones reales.",
+          ],
+          s3Title: "Qué pasa en cada ronda",
+          s3Body: "En orden cronológico:",
+          s3Flow: [
+            "ZEGON recibe solo tu historial (no tu jugada actual)",
+            "↓",
+            "ZEGON sella su jugada on-chain (commit)",
+            "↓",
+            "Vos elegís FIRE / DODGE / FEINT / RELOAD",
+            "↓",
+            "Se revela la jugada de ZEGON y se resuelve el daño",
+          ],
+          s4Title: "¿Qué es el duel ID?",
+          s4Body: "Es un identificador único de tu partida en el servidor. Lo necesitás para cargar la prueba en esta web.",
+          s4IdLabel: "Ejemplo de URL:",
+          s4IdExample: "/verify.html?duel=abc123-def456-…",
+          s4IdNote: "Solo lo tenés después de un duelo online. Si entraste acá desde el menú sin jugar, es normal que no haya ID — leé esta guía y verificá al terminar tu próximo duelo.",
+          s5Title: "Cuándo NO hay prueba",
+          s5Body: "El tutorial y el modo sin conexión al API no generan duel ID ni transacciones on-chain. Ahí VERIFY muestra «sin prueba» — no es un error.",
+          s5Offline: "Tip: conectá wallet solo si querés ranking diario; VERIFY funciona igual sin wallet.",
+          lookupLabel: "¿Ya tenés un duel ID? Pegalo acá:",
+          lookupPlaceholder: "p.ej. a1b2c3d4-e5f6-…",
+          lookupBtn: "Abrir mi prueba",
+          backBtn: "← Volver al juego",
+        },
+        en: {
+          pageTitle: "ZEGON — How VERIFY works",
+          title: "ZEGON — VERIFY",
+          subtitle: "Player guide · 0G Galileo",
+          lead: "VERIFY proves ZEGON didn't cheat: the AI locked in its move before you acted, using only your history — never your current shot.",
+          s1Title: "What is VERIFY?",
+          s1Body: "It's the on-chain proof that each online duel was provably fair. ZEGON is \"blind\": it cannot see your current-turn action. Before you choose, its move is sealed on-chain (commit). Then it's revealed, and anyone can check the order and transactions.",
+          s2Title: "How to verify your duel (step by step)",
+          s2Steps: [
+            "Play an online duel (DUEL or DAILY) with the server connected — not offline tutorial.",
+            "When you finish, on the results screen tap «VERIFY ON-CHAIN».",
+            "The proof page opens with your duel ID already filled in.",
+            "Check each round: it should show on-chain commit before your input.",
+            "Optional: open Chainscan links to see the real transactions.",
+          ],
+          s3Title: "What happens each round",
+          s3Body: "In chronological order:",
+          s3Flow: [
+            "ZEGON receives only your history (not your current move)",
+            "↓",
+            "ZEGON seals its move on-chain (commit)",
+            "↓",
+            "You pick FIRE / DODGE / FEINT / RELOAD",
+            "↓",
+            "ZEGON's move is revealed and damage is resolved",
+          ],
+          s4Title: "What is the duel ID?",
+          s4Body: "A unique match identifier from the server. You need it to load the proof on this site.",
+          s4IdLabel: "Example URL:",
+          s4IdExample: "/verify.html?duel=abc123-def456-…",
+          s4IdNote: "You only get this after an online duel. If you opened this from the menu without playing, no ID is expected — read this guide and verify after your next duel.",
+          s5Title: "When there is NO proof",
+          s5Body: "Tutorial and offline/API-less modes don't create a duel ID or on-chain txs. VERIFY will say «no proof» — that's not a bug.",
+          s5Offline: "Tip: connect wallet only for daily ranking; VERIFY works without a wallet.",
+          lookupLabel: "Already have a duel ID? Paste it here:",
+          lookupPlaceholder: "e.g. a1b2c3d4-e5f6-…",
+          lookupBtn: "Open my proof",
+          backBtn: "← Back to game",
+        },
+      }[LOCALE];
+
+      document.title = T.pageTitle;
+      document.documentElement.lang = LOCALE;
+      document.getElementById("title").textContent = T.title;
+      document.getElementById("subtitle").textContent = T.subtitle;
+      document.getElementById("lead").textContent = T.lead;
+      document.getElementById("s1-title").textContent = T.s1Title;
+      document.getElementById("s1-body").textContent = T.s1Body;
+      document.getElementById("s2-title").textContent = T.s2Title;
+      document.getElementById("s3-title").textContent = T.s3Title;
+      document.getElementById("s3-body").textContent = T.s3Body;
+      document.getElementById("s4-title").textContent = T.s4Title;
+      document.getElementById("s4-body").textContent = T.s4Body;
+      document.getElementById("s4-id-label").textContent = T.s4IdLabel;
+      document.getElementById("s4-id-example").textContent = T.s4IdExample;
+      document.getElementById("s4-id-note").textContent = T.s4IdNote;
+      document.getElementById("s5-title").textContent = T.s5Title;
+      document.getElementById("s5-body").textContent = T.s5Body;
+      document.getElementById("s5-offline").textContent = T.s5Offline;
+      document.getElementById("lookup-label").textContent = T.lookupLabel;
+      document.getElementById("duel-input").placeholder = T.lookupPlaceholder;
+      document.getElementById("lookup-btn").textContent = T.lookupBtn;
+      document.getElementById("back-btn").textContent = T.backBtn;
+
+      const stepsEl = document.getElementById("s2-steps");
+      T.s2Steps.forEach((text) => {
+        const li = document.createElement("li");
+        li.textContent = text;
+        stepsEl.appendChild(li);
+      });
+
+      const flowEl = document.getElementById("s3-flow");
+      T.s3Flow.forEach((line) => {
+        const span = document.createElement("span");
+        if (line === "↓") span.className = "arrow";
+        span.textContent = line;
+        flowEl.appendChild(span);
+      });
+
+      document.getElementById("lookup-btn").addEventListener("click", () => {
+        const id = document.getElementById("duel-input").value.trim();
+        if (!id) return;
+        window.location.href = `/verify.html?duel=${encodeURIComponent(id)}`;
+      });
+
+      document.getElementById("duel-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") document.getElementById("lookup-btn").click();
+      });
+    </script>
+  </body>
+</html>

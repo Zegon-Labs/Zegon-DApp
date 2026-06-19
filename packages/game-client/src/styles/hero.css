@@ -699,3 +699,184 @@ html, body {
   overflow-y: auto;
 }
 
+.hero__panel--wide {
+  max-width: 520px;
+}
+
+.hero__panel--scroll {
+  max-height: min(88vh, 720px);
+  overflow-y: auto;
+}
+
+.settings-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(58,53,80,0.5);
+}
+
+.settings-section:last-of-type {
+  border-bottom: none;
+}
+
+.settings-section__title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dust);
+}
+
+.settings-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+
+.settings-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 18px;
+  color: var(--bone);
+  background: var(--void);
+  border: 1px solid var(--fog);
+}
+
+.settings-input:focus {
+  outline: 2px solid var(--blood);
+  outline-offset: 1px;
+}
+
+.settings-hint {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--dust);
+}
+
+.settings-error {
+  margin-top: 8px;
+  color: var(--ember);
+  font-size: 15px;
+}
+
+.settings-meta {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: var(--dust);
+}
+
+.settings-meta code {
+  color: var(--bone);
+}
+
+.settings-inline-btn {
+  margin-top: 10px;
+  margin-right: 8px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 16px;
+  color: var(--bone);
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--blood);
+}
+
+.settings-slider {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.settings-slider__label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 15px;
+  color: var(--bone);
+}
+
+.settings-slider__value {
+  color: var(--dust);
+}
+
+.settings-slider input[type="range"] {
+  width: 100%;
+  accent-color: var(--blood);
+}
+
+.leaderboard-table {
+  border: 1px solid var(--fog);
+  background: rgba(10,9,17,0.6);
+  margin-bottom: 8px;
+}
+
+.leaderboard-table__head,
+.leaderboard-table__row {
+  display: grid;
+  grid-template-columns: 36px 1fr 56px;
+  gap: 8px;
+  padding: 10px 12px;
+  align-items: center;
+}
+
+.leaderboard-table__head {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dust);
+  border-bottom: 1px solid var(--fog);
+}
+
+.leaderboard-table__row {
+  font-size: 17px;
+  border-bottom: 1px solid rgba(58,53,80,0.35);
+}
+
+.leaderboard-table__row:last-child {
+  border-bottom: none;
+}
+
+.leaderboard-table__row--you {
+  background: rgba(179,18,43,0.12);
+}
+
+.leaderboard-table__you {
+  color: var(--ember);
+  font-size: 14px;
+}
+
+.leaderboard-table__time {
+  display: block;
+  font-size: 13px;
+  color: var(--dust);
+  margin-top: 2px;
+}
+
+html.zegon-reduced-motion .hero__bg-img,
+html.zegon-reduced-motion .hero__character-img,
+html.zegon-reduced-motion .hero__logo-img,
+html.zegon-reduced-motion .smoke-layer {
+  animation: none !important;
+}
+

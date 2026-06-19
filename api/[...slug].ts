@@ -61,6 +61,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (slug[0] === "daily" && slug[1] === "submit" && req.method === "POST") {
       return res.status(200).json(await h.handleSubmitScore(req.body));
     }
+    if (slug[0] === "player" && slug[1] === "profile" && req.method === "GET") {
+      const address = String(req.query.address ?? slug[2] ?? "");
+      return res.status(200).json(await h.handleGetPlayerProfile(address));
+    }
+    if (slug[0] === "player" && slug[1] === "profile" && req.method === "POST") {
+      return res.status(200).json(await h.handleSetPlayerProfile(req.body));
+    }
 
     return res.status(404).json({ error: "Not found", slug });
   } catch (err) {

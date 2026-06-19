@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { createDailyDuel, type DuelResult } from "@zegon/game-core";
 import { format, t } from "../i18n/index.js";
 import { gameBridge } from "../game/bridge.js";
+import { getCachedProfile } from "../services/profile.js";
 import { getWalletAddress } from "../services/wallet.js";
 import { createMenuButton, drawScanlines } from "../ui/components.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
@@ -134,6 +135,11 @@ export class ResultScene extends Phaser.Scene {
       return;
     }
 
+    if (!getCachedProfile(address)?.nickname) {
+      label.setText(strings.scoreSubmitNoProfile);
+      return;
+    }
+
     const daily = createDailyDuel();
     try {
       const res = await fetch("/api/daily/submit", {
@@ -145,8 +151,11 @@ export class ResultScene extends Phaser.Scene {
           seed: daily.seed,
         }),
       });
-      if (res.ok) {
+      const data = (await res.json()) as { accepted?: boolean; reason?: string };
+      if (res.ok && data.accepted !== false) {
         label.setText(strings.scoreSubmitted).setColor(COLORS.cyan);
+      } else if (data.reason === "PROFILE_REQUIRED") {
+        label.setText(strings.scoreSubmitNoProfile);
       }
     } catch {
       label.setText(strings.leaderboardEmpty);

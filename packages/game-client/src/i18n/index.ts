@@ -129,6 +129,43 @@ export interface LocaleStrings {
   footerChainDesc: string;
   footerStorageTitle: string;
   footerStorageDesc: string;
+  settingsSectionProfile: string;
+  settingsSectionLanguage: string;
+  settingsSectionAudio: string;
+  settingsSectionVideo: string;
+  settingsSectionGameplay: string;
+  settingsMasterVolume: string;
+  settingsMusicVolume: string;
+  settingsSfxVolume: string;
+  settingsUiSounds: string;
+  settingsScanlines: string;
+  settingsScreenShake: string;
+  settingsGlitchEffects: string;
+  settingsReducedMotion: string;
+  settingsShowActionHints: string;
+  settingsAudioNote: string;
+  nicknameLabel: string;
+  nicknamePlaceholder: string;
+  nicknameHint: string;
+  nicknameLength: string;
+  nicknameChars: string;
+  profileSetupTitle: string;
+  profileSetupBody: string;
+  profileSave: string;
+  profileSkip: string;
+  profileSaved: string;
+  profileSaveFailed: string;
+  settingsProfileWallet: string;
+  settingsProfileNoWallet: string;
+  settingsEditNickname: string;
+  leaderboardWalletOnly: string;
+  leaderboardSubtitle: string;
+  leaderboardColRank: string;
+  leaderboardColPlayer: string;
+  leaderboardColScore: string;
+  leaderboardYou: string;
+  scoreSubmitNoProfile: string;
+  settingsSoon: string;
 }
 
 const LOCALES: Record<Language, LocaleStrings> = {
@@ -276,6 +313,43 @@ const LOCALES: Record<Language, LocaleStrings> = {
     leaderboardRank: "#{rank}  {id}  —  {score}",
     scoreSubmitted: "Score submitted to daily board",
     scoreSubmitNoWallet: "Connect wallet to save your daily score",
+    scoreSubmitNoProfile: "Create a nickname in Settings to appear on the ranking",
+    settingsSectionProfile: "Profile",
+    settingsSectionLanguage: "Language",
+    settingsSectionAudio: "Audio",
+    settingsSectionVideo: "Visual effects",
+    settingsSectionGameplay: "Gameplay",
+    settingsMasterVolume: "Master volume",
+    settingsMusicVolume: "Music",
+    settingsSfxVolume: "Sound effects",
+    settingsUiSounds: "UI sounds",
+    settingsScanlines: "Scanlines overlay",
+    settingsScreenShake: "Screen shake",
+    settingsGlitchEffects: "Blindsight glitch",
+    settingsReducedMotion: "Reduce motion",
+    settingsShowActionHints: "Action tooltips",
+    settingsAudioNote: "Audio controls are saved — in-game mix coming soon.",
+    nicknameLabel: "Nickname",
+    nicknamePlaceholder: "Outlaw_42",
+    nicknameHint: "3–16 chars · letters, numbers, underscore · shown on daily ranking",
+    nicknameLength: "Nickname must be 3–16 characters.",
+    nicknameChars: "Use only letters, numbers, and underscore.",
+    profileSetupTitle: "Choose your name",
+    profileSetupBody: "Your wallet is connected. Pick a nickname to appear on the daily ranking and future leaderboards.",
+    profileSave: "Save profile",
+    profileSkip: "Later",
+    profileSaved: "Profile saved",
+    profileSaveFailed: "Could not save profile. Try again.",
+    settingsProfileWallet: "Wallet",
+    settingsProfileNoWallet: "Connect a wallet to create your player profile and join rankings.",
+    settingsEditNickname: "Save nickname",
+    leaderboardWalletOnly: "Daily ranking · wallet players with a nickname only",
+    leaderboardSubtitle: "Best score today · top 10",
+    leaderboardColRank: "#",
+    leaderboardColPlayer: "Player",
+    leaderboardColScore: "Score",
+    leaderboardYou: "you",
+    settingsSoon: "Saved for later",
   },
   es: {
     pageTitle: "ZEGON — Supera al ciego",
@@ -421,6 +495,43 @@ const LOCALES: Record<Language, LocaleStrings> = {
     leaderboardRank: "#{rank}  {id}  —  {score}",
     scoreSubmitted: "Puntaje enviado al ranking diario",
     scoreSubmitNoWallet: "Conectá wallet para guardar tu puntaje diario",
+    scoreSubmitNoProfile: "Creá un nickname en Ajustes para aparecer en el ranking",
+    settingsSectionProfile: "Perfil",
+    settingsSectionLanguage: "Idioma",
+    settingsSectionAudio: "Audio",
+    settingsSectionVideo: "Efectos visuales",
+    settingsSectionGameplay: "Jugabilidad",
+    settingsMasterVolume: "Volumen general",
+    settingsMusicVolume: "Música",
+    settingsSfxVolume: "Efectos de sonido",
+    settingsUiSounds: "Sonidos de interfaz",
+    settingsScanlines: "Scanlines",
+    settingsScreenShake: "Sacudida de pantalla",
+    settingsGlitchEffects: "Glitch ciego-vista",
+    settingsReducedMotion: "Reducir movimiento",
+    settingsShowActionHints: "Tips de acciones",
+    settingsAudioNote: "Los ajustes de audio se guardan — mezcla en juego próximamente.",
+    nicknameLabel: "Nickname",
+    nicknamePlaceholder: "Forajido_42",
+    nicknameHint: "3–16 caracteres · letras, números, guion bajo · visible en el ranking diario",
+    nicknameLength: "El nickname debe tener 3–16 caracteres.",
+    nicknameChars: "Solo letras, números y guion bajo.",
+    profileSetupTitle: "Elegí tu nombre",
+    profileSetupBody: "Tu wallet está conectada. Elegí un nickname para aparecer en el ranking diario y futuros leaderboards.",
+    profileSave: "Guardar perfil",
+    profileSkip: "Después",
+    profileSaved: "Perfil guardado",
+    profileSaveFailed: "No se pudo guardar. Intentá de nuevo.",
+    settingsProfileWallet: "Wallet",
+    settingsProfileNoWallet: "Conectá una wallet para crear tu perfil y entrar al ranking.",
+    settingsEditNickname: "Guardar nickname",
+    leaderboardWalletOnly: "Ranking diario · solo jugadores con wallet y nickname",
+    leaderboardSubtitle: "Mejor puntaje de hoy · top 10",
+    leaderboardColRank: "#",
+    leaderboardColPlayer: "Jugador",
+    leaderboardColScore: "Pts",
+    leaderboardYou: "vos",
+    settingsSoon: "Guardado para más adelante",
   },
 };
 

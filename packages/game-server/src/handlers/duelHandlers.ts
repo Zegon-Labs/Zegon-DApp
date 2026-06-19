@@ -9,7 +9,13 @@ import {
 } from "@zegon/game-core";
 import { computeCommitHash, computeInputHash } from "../services/commit.js";
 import { EXPLORER_BASE, getContractService } from "../services/contract.js";
-import { getLeaderboard, submitScore } from "../services/leaderboard.js";
+import { getLeaderboard, submitScore, type LeaderboardEntry } from "../services/leaderboard.js";
+import {
+  getProfile,
+  getNicknamesForAddresses,
+  setProfile,
+  isWalletAddress,
+} from "../services/playerProfiles.js";
 import { getOGComputeService } from "../services/ogCompute.js";
 import { loadSession, saveSession } from "../services/sessionStore.js";
 import { storeDuelLog, loadDuelLogPayload } from "../services/storage.js";
@@ -351,18 +357,53 @@ export async function handleVerify(duelId: string): Promise<{
 
 export async function handleDailyLeaderboard(): Promise<{
   date: string;
-  entries: Awaited<ReturnType<typeof getLeaderboard>>;
+  entries: Array<LeaderboardEntry & { nickname?: string; displayName?: string }>;
 }> {
   const daily = createDailyDuel();
   const entries = await getLeaderboard(daily.seed!);
-  return { date: daily.seed!, entries };
+  const walletEntries = entries.filter((e) => isWalletAddress(e.playerId));
+  const nicknames = await getNicknamesForAddresses(walletEntries.map((e) => e.playerId));
+
+  const enriched = walletEntries.slice(0, 10).map((e) => {
+    const key = e.playerId.toLowerCase();
+    const nickname = nicknames[key];
+    return {
+      ...e,
+      nickname,
+      displayName: nickname ?? `${e.playerId.slice(0, 6)}…${e.playerId.slice(-4)}`,
+    };
+  });
+
+  return { date: daily.seed!, entries: enriched };
+}
+
+export async function handleGetPlayerProfile(address: string): Promise<{
+  profile: Awaited<ReturnType<typeof getProfile>>;
+}> {
+  const profile = await getProfile(address);
+  return { profile };
+}
+
+export async function handleSetPlayerProfile(body: {
+  address: string;
+  nickname: string;
+}): Promise<{ profile: Awaited<ReturnType<typeof setProfile>> }> {
+  const profile = await setProfile(body.address, body.nickname);
+  return { profile };
 }
 
 export async function handleSubmitScore(body: {
   playerId: string;
   score: number;
   seed: string;
-}): Promise<{ accepted: boolean }> {
+}): Promise<{ accepted: boolean; reason?: string }> {
+  if (!isWalletAddress(body.playerId)) {
+    return { accepted: false, reason: "WALLET_REQUIRED" };
+  }
+  const profile = await getProfile(body.playerId);
+  if (!profile) {
+    return { accepted: false, reason: "PROFILE_REQUIRED" };
+  }
   await submitScore(body.playerId, body.score, body.seed);
   return { accepted: true };
 }
