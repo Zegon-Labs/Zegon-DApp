@@ -1,3 +1,4 @@
+import { getLanguage } from "../i18n/index.js";
 import {
   DuelConfig,
   DuelController,
@@ -62,7 +63,7 @@ export class GameCoreAdapter {
     }
 
     const seed = config.seed ?? "standard";
-    const brain = new DummyZegonBrain(seed);
+    const brain = new DummyZegonBrain(seed, getLanguage());
     this.controller = new DuelController(brain, config);
 
     if (options.onEvent) {

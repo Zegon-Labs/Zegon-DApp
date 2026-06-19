@@ -134,7 +134,7 @@ export class DuelScene extends Phaser.Scene {
   private updateHud(): void {
     const strings = t();
     this.hudText.setText(
-      `${strings.hudYou}: ${this.adapter.getPlayerHp()} HP  |  ${strings.hudZegon}: ${this.adapter.getZegonHp()} HP\n` +
+      `${strings.hudYou}: ${this.adapter.getPlayerHp()} ${strings.hudHp}  |  ${strings.hudZegon}: ${this.adapter.getZegonHp()} ${strings.hudHp}\n` +
       `${strings.hudAmmo}: ${this.adapter.getAmmo()}  |  ${strings.hudBlindsight}: ${this.adapter.getBlindsight()}%`,
     );
     this.drawBlindsightBar();

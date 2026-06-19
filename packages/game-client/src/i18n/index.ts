@@ -1,6 +1,7 @@
 export type Language = "en" | "es";
 
 export interface LocaleStrings {
+  pageTitle: string;
   tagline: string;
   pressStart: string;
   duel: string;
@@ -18,6 +19,7 @@ export interface LocaleStrings {
   deadeye: string;
   hudYou: string;
   hudZegon: string;
+  hudHp: string;
   hudAmmo: string;
   hudBlindsight: string;
   actionFireHigh: string;
@@ -41,6 +43,7 @@ export interface LocaleStrings {
 
 const LOCALES: Record<Language, LocaleStrings> = {
   en: {
+    pageTitle: "ZEGON — Outdraw the Blind",
     tagline: "Outdraw the Blind",
     pressStart: "PRESS START",
     duel: "DUEL",
@@ -58,6 +61,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     deadeye: "DEADEYE!",
     hudYou: "YOU",
     hudZegon: "ZEGON",
+    hudHp: "HP",
     hudAmmo: "AMMO",
     hudBlindsight: "BLINDSIGHT",
     actionFireHigh: "FIRE HIGH",
@@ -80,8 +84,9 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "I scored {score} against ZEGON. Times read: {timesRead}. Outdraw the blind.",
   },
   es: {
+    pageTitle: "ZEGON — Supera al ciego",
     tagline: "Supera al ciego",
-    pressStart: "PULSA START",
+    pressStart: "PULSA INICIO",
     duel: "DUELO",
     daily: "DIARIO",
     settings: "AJUSTES",
@@ -94,9 +99,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     duelTitle: "DUELO",
     zegonReading: "ZEGON te está leyendo...",
     yourMove: "TU JUGADA",
-    deadeye: "¡DEADEYE!",
+    deadeye: "¡OJO DE MUERTE!",
     hudYou: "TÚ",
     hudZegon: "ZEGON",
+    hudHp: "PS",
     hudAmmo: "MUNICIÓN",
     hudBlindsight: "CIEGO-VISTA",
     actionFireHigh: "DISPARO ALTO",
@@ -111,7 +117,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     timesRead: "Veces leído",
     finalBlindsight: "Ciego-vista final",
     score: "Puntuación",
-    verifyOnChain: "VERIFICAR ON-CHAIN",
+    verifyOnChain: "VERIFICAR EN CADENA",
     share: "COMPARTIR",
     copied: "¡COPIADO!",
     menu: "MENÚ",
@@ -153,6 +159,7 @@ export function setLanguage(lang: Language): void {
   }
   if (typeof document !== "undefined") {
     document.documentElement.lang = lang;
+    document.title = LOCALES[lang].pageTitle;
   }
 }
 
