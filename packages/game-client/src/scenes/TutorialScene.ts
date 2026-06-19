@@ -24,6 +24,7 @@ import {
 } from "../ui/components.js";
 import { actionButtonWidth, DUEL_LAYOUT as L, TUTORIAL_BUBBLE } from "../ui/layout.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
+import { gameBridge } from "../game/bridge.js";
 import {
   getPracticeForRound,
   LESSON_COUNT,
@@ -146,7 +147,7 @@ export class TutorialScene extends Phaser.Scene {
 
     createSmallButton(this, width - 12, 10, strings.tutorialSkip, () => {
       markTutorialDone();
-      this.scene.start("TitleScene");
+      gameBridge.navigate({ type: "hub" });
     }).setDepth(60);
   }
 
@@ -316,7 +317,7 @@ export class TutorialScene extends Phaser.Scene {
       body,
       badge: `▸ ${strings.tutorialTip}`,
       buttonLabel: strings.tutorialBackToMenu,
-      onDismiss: () => this.scene.start("TitleScene"),
+      onDismiss: () => gameBridge.navigate({ type: "hub" }),
       x: width / 2,
       y: height / 2 - 8,
       entrance: "fade",

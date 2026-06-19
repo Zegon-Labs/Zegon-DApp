@@ -115,6 +115,20 @@ export interface LocaleStrings {
   scoreSubmitted: string;
   scoreSubmitNoWallet: string;
   connectWallet: string;
+  heroTagline: string;
+  heroPlaySubtitle: string;
+  heroVerifyLine1: string;
+  heroVerifyLine2a: string;
+  heroVerifyLine2b: string;
+  heroOr: string;
+  heroBuiltOn: string;
+  heroGuestNote: string;
+  footerComputeTitle: string;
+  footerComputeDesc: string;
+  footerChainTitle: string;
+  footerChainDesc: string;
+  footerStorageTitle: string;
+  footerStorageDesc: string;
 }
 
 const LOCALES: Record<Language, LocaleStrings> = {
@@ -235,6 +249,20 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialStepProgress: "Practice {current}/{total}",
     tutorialHudHint: "Bars: HP bottom · Blindsight top-right · Ammo under you",
     connectWallet: "CONNECT WALLET",
+    heroTagline: "It can't see you. It reads you.",
+    heroPlaySubtitle: "Enter the duel",
+    heroVerifyLine1: "Zegon's inference is sealed.",
+    heroVerifyLine2a: "Every duel is ",
+    heroVerifyLine2b: "verified on-chain",
+    heroOr: "or",
+    heroBuiltOn: "Built on",
+    heroGuestNote: "Wallet optional — play as guest. Connect later for rewards and rankings.",
+    footerComputeTitle: "0G Compute",
+    footerComputeDesc: "Sealed inference",
+    footerChainTitle: "0G Chain",
+    footerChainDesc: "Provably fair",
+    footerStorageTitle: "0G Storage",
+    footerStorageDesc: "Verifiable data",
     disconnectWallet: "DISCONNECT",
     walletOptional: "Optional — daily ranking & future multiplayer",
     walletConnected: "Connected",
@@ -366,6 +394,20 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialStepProgress: "Práctica {current}/{total}",
     tutorialHudHint: "Barras: PS abajo · Ciego-vista arriba-derecha · Munición bajo vos",
     connectWallet: "CONECTAR WALLET",
+    heroTagline: "No te ve. Te lee.",
+    heroPlaySubtitle: "Entrá al duelo",
+    heroVerifyLine1: "La inferencia de Zegon está sellada.",
+    heroVerifyLine2a: "Cada duelo se ",
+    heroVerifyLine2b: "verifica on-chain",
+    heroOr: "o",
+    heroBuiltOn: "Construido en",
+    heroGuestNote: "Wallet opcional — jugá como invitado. Conectá después para recompensas y ranking.",
+    footerComputeTitle: "0G Compute",
+    footerComputeDesc: "Inferencia sellada",
+    footerChainTitle: "0G Chain",
+    footerChainDesc: "Provably fair",
+    footerStorageTitle: "0G Storage",
+    footerStorageDesc: "Datos verificables",
     disconnectWallet: "DESCONECTAR",
     walletOptional: "Opcional — ranking diario y multijugador futuro",
     walletConnected: "Conectado",

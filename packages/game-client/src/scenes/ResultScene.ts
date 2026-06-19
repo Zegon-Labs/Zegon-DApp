@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { createDailyDuel, type DuelResult } from "@zegon/game-core";
 import { format, t } from "../i18n/index.js";
+import { gameBridge } from "../game/bridge.js";
 import { getWalletAddress } from "../services/wallet.js";
 import { createMenuButton, drawScanlines } from "../ui/components.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
@@ -118,7 +119,7 @@ export class ResultScene extends Phaser.Scene {
     });
 
     createMenuButton(this, width / 2, height / 2 + 190, strings.menu, () => {
-      this.scene.start("TitleScene");
+      gameBridge.navigate({ type: "hub" });
     });
   }
 
