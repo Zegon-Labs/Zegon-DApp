@@ -6,6 +6,7 @@ import { TutorialScene } from "../scenes/TutorialScene.js";
 import { C } from "../ui/theme.js";
 
 let gameInstance: Phaser.Game | null = null;
+let pendingScene: { scene: string; data?: Record<string, unknown> } | null = null;
 
 export function createPhaserGame(parent: HTMLElement): Phaser.Game {
   if (gameInstance) {
@@ -26,6 +27,11 @@ export function createPhaserGame(parent: HTMLElement): Phaser.Game {
     scene: [BlankScene, TutorialScene, DuelScene, ResultScene],
   });
 
+  if (pendingScene) {
+    gameInstance.scene.start(pendingScene.scene, pendingScene.data);
+    pendingScene = null;
+  }
+
   return gameInstance;
 }
 
@@ -35,7 +41,10 @@ export function destroyPhaserGame(): void {
 }
 
 export function startPhaserScene(scene: string, data?: Record<string, unknown>): void {
-  if (!gameInstance) return;
+  if (!gameInstance) {
+    pendingScene = { scene, data };
+    return;
+  }
   gameInstance.scene.start(scene, data);
 }
 

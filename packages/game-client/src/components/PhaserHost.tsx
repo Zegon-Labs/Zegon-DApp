@@ -14,6 +14,7 @@ interface PhaserHostProps {
 export function PhaserHost({ visible }: PhaserHostProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Phaser must stay mounted (hidden) so the canvas exists before startScene fires.
   useEffect(() => {
     if (!containerRef.current) return;
     createPhaserGame(containerRef.current);
@@ -30,10 +31,12 @@ export function PhaserHost({ visible }: PhaserHostProps) {
     if (!visible) stopToBlank();
   }, [visible]);
 
-  if (!visible) return null;
-
   return (
-    <div className="game-stage">
+    <div
+      className="game-stage"
+      style={visible ? undefined : { visibility: "hidden", pointerEvents: "none", position: "fixed", inset: 0, zIndex: -1 }}
+      aria-hidden={!visible}
+    >
       <div className="game-stage__frame">
         <div ref={containerRef} className="aspect-[854/480] w-full" />
       </div>
