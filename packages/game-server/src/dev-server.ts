@@ -105,3 +105,13 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`ZEGON API dev server on http://localhost:${PORT}`);
 });
+
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(
+      `Port ${PORT} is already in use. Stop the other process or run with PORT=3001 pnpm dev`,
+    );
+    process.exit(1);
+  }
+  throw err;
+});
