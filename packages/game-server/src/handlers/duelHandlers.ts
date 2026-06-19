@@ -7,11 +7,11 @@ import {
   buildChallengeUrl,
   createDailyDuel,
 } from "@zegon/game-core";
-import { computeCommitHash, computeInputHash } from "./services/commit.js";
-import { getContractService } from "./services/contract.js";
-import { getLeaderboard, submitScore } from "./services/leaderboard.js";
-import { getOGComputeService } from "./services/ogCompute.js";
-import { storeDuelLog } from "./services/storage.js";
+import { computeCommitHash, computeInputHash } from "../services/commit.js";
+import { getContractService } from "../services/contract.js";
+import { getLeaderboard, submitScore } from "../services/leaderboard.js";
+import { getOGComputeService } from "../services/ogCompute.js";
+import { storeDuelLog } from "../services/storage.js";
 
 export interface DuelSession {
   id: string;
