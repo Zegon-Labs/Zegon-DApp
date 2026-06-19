@@ -5,7 +5,6 @@ import {
   PlayerAction,
 } from "../adapters/GameCoreAdapter.js";
 import { shouldUseServerApi, apiBaseUrl } from "../services/apiMode.js";
-import { gameBridge } from "../game/bridge.js";
 import { t } from "../i18n/index.js";
 import type { DuelEvent, RoundOutcome } from "@zegon/game-core";
 import { ActionValidationError } from "@zegon/game-core";
@@ -324,8 +323,7 @@ export class DuelScene extends Phaser.Scene {
 
     if (event.type === "duelEnd") {
       this.time.delayedCall(800, () => {
-        gameBridge.navigate({
-          type: "result",
+        this.scene.start("ResultScene", {
           result: this.adapter.getResult(),
           duelId: this.adapter.getDuelId(),
           apiBaseUrl: this.adapter.getApiBaseUrl(),

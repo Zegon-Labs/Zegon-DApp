@@ -6,13 +6,35 @@
     <title>ZEGON</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=VT323&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --void: #0a0911;
+        --ash: #14121c;
+        --bone: #e6e1d3;
+        --dust: #9a93a8;
+        --cyan: #2ee6d6;
+        --ember: #ff4d2e;
+        --blood: #b3122b;
+        --verified: #4df07a;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        background: var(--void);
+        color: var(--bone);
+        font-family: "VT323", monospace;
+        overflow: hidden;
+      }
+      #game-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="game-container"></div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

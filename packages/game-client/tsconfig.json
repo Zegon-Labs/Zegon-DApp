@@ -3,13 +3,8 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": ".",
-    "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"],
-    "noEmit": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "noEmit": true
   },
   "include": ["src/**/*"]
 }

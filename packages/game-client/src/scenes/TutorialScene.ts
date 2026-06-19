@@ -11,6 +11,7 @@ import {
   createActionButton,
   createPromptPanel,
   createSmallButton,
+  createTutorialBubble,
   type ActionButtonHandle,
   drawBlindsightMeter,
   drawDesertBackdrop,
@@ -21,9 +22,8 @@ import {
   scanlineAlphaForBlindsight,
   drawZegonFigure,
 } from "../ui/components.js";
-import { actionButtonWidth, DUEL_LAYOUT as L } from "../ui/layout.js";
+import { actionButtonWidth, DUEL_LAYOUT as L, TUTORIAL_BUBBLE } from "../ui/layout.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
-import { gameBridge } from "../game/bridge.js";
 import {
   getPracticeForRound,
   LESSON_COUNT,
@@ -146,7 +146,7 @@ export class TutorialScene extends Phaser.Scene {
 
     createSmallButton(this, width - 12, 10, strings.tutorialSkip, () => {
       markTutorialDone();
-      gameBridge.navigate({ type: "hub" });
+      this.scene.start("TitleScene");
     }).setDepth(60);
   }
 
@@ -237,24 +237,37 @@ export class TutorialScene extends Phaser.Scene {
     onContinue: () => void,
   ): void {
     const strings = t();
+    const { width, height } = this.scale;
     this.modalLayer.removeAll(true);
     this.resetPresentationEffects();
+
+    const dim = this.add
+      .rectangle(width / 2, height / 2, width, height, C.void, 0.88)
+      .setDepth(109);
+    this.modalLayer.add(dim);
 
     const subtitle = lesson
       ? format(strings.tutorialLessonProgress, { current: lesson, total: LESSON_COUNT })
       : undefined;
 
     const badge = subtitle
-      ? `${strings.tutorialTip} · ${subtitle}`
-      : strings.tutorialTip;
+      ? `▸ ${strings.tutorialTip} · ${subtitle}`
+      : `▸ ${strings.tutorialTip}`;
 
-    gameBridge.openDialog({
+    const centered = lesson === undefined;
+
+    const bubble = createTutorialBubble(this, {
       title,
       body,
       badge,
       buttonLabel: strings.tutorialOk,
       onDismiss: onContinue,
+      x: centered ? width / 2 : TUTORIAL_BUBBLE.lesson.x,
+      y: centered ? height / 2 - 8 : TUTORIAL_BUBBLE.lesson.y,
+      entrance: centered ? "fade" : "slide",
+      depth: 110,
     });
+    this.modalLayer.add(bubble);
   }
 
   private showPracticeInstructionPopup(instruction: string, roundIndex: number): void {
@@ -268,15 +281,19 @@ export class TutorialScene extends Phaser.Scene {
       total: PRACTICE_SEGMENTS.length,
     });
 
-    gameBridge.openDialog({
+    const bubble = createTutorialBubble(this, {
       body: instruction,
-      badge: `${strings.tutorialTip} · ${stepLabel}`,
+      badge: `▸ ${strings.tutorialTip} · ${stepLabel}`,
       buttonLabel: strings.tutorialOk,
       onDismiss: () => {
         this.waitingInstruction = false;
         this.updateActionButtons(true);
       },
+      x: TUTORIAL_BUBBLE.practice.x,
+      y: TUTORIAL_BUBBLE.practice.y,
+      depth: 50,
     });
+    this.modalLayer.add(bubble);
   }
 
   private setPracticeFeedback(text: string, color: string = COLORS.bone): void {
@@ -285,21 +302,31 @@ export class TutorialScene extends Phaser.Scene {
 
   private showFinishModal(title: string, body: string): void {
     const strings = t();
+    const { width, height } = this.scale;
     this.modalLayer.removeAll(true);
     this.resetPresentationEffects();
 
-    gameBridge.openDialog({
+    const dim = this.add
+      .rectangle(width / 2, height / 2, width, height, C.void, 0.88)
+      .setDepth(109);
+    this.modalLayer.add(dim);
+
+    const bubble = createTutorialBubble(this, {
       title,
       body,
-      badge: strings.tutorialTip,
+      badge: `▸ ${strings.tutorialTip}`,
       buttonLabel: strings.tutorialBackToMenu,
-      onDismiss: () => gameBridge.navigate({ type: "hub" }),
+      onDismiss: () => this.scene.start("TitleScene"),
+      x: width / 2,
+      y: height / 2 - 8,
+      entrance: "fade",
+      depth: 110,
     });
+    this.modalLayer.add(bubble);
   }
 
   private async beginDuel(): Promise<void> {
     this.modalLayer.removeAll(true);
-    gameBridge.closeDialog();
     this.setGameVisible(true);
     this.hudHintText.setVisible(false);
     this.duelStarted = true;
