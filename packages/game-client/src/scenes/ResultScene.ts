@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { DuelResult } from "@zegon/game-core";
+import { format, t } from "../i18n/index.js";
 
 export class ResultScene extends Phaser.Scene {
   constructor() {
@@ -9,13 +10,14 @@ export class ResultScene extends Phaser.Scene {
   create(data: { result: DuelResult }): void {
     const { width, height } = this.scale;
     const result = data.result;
+    const strings = t();
 
     const winnerLabel =
       result.winner === "PLAYER"
-        ? "YOU WIN"
+        ? strings.youWin
         : result.winner === "ZEGON"
-          ? "ZEGON WINS"
-          : "DRAW";
+          ? strings.zegonWins
+          : strings.draw;
 
     this.add
       .text(width / 2, 60, winnerLabel, {
@@ -26,10 +28,10 @@ export class ResultScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add.text(width / 2, 140, [
-      `Rounds: ${result.roundsPlayed}`,
-      `Times read: ${result.timesRead}`,
-      `Final Blindsight: ${result.finalBlindsight}%`,
-      `Score: ${result.score}`,
+      `${strings.rounds}: ${result.roundsPlayed}`,
+      `${strings.timesRead}: ${result.timesRead}`,
+      `${strings.finalBlindsight}: ${result.finalBlindsight}%`,
+      `${strings.score}: ${result.score}`,
     ].join("\n"), {
       fontFamily: "VT323, monospace",
       fontSize: "24px",
@@ -38,7 +40,7 @@ export class ResultScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     const verifyBtn = this.add
-      .text(width / 2, height / 2 + 40, "[ VERIFY ON-CHAIN ]", {
+      .text(width / 2, height / 2 + 40, `[ ${strings.verifyOnChain} ]`, {
         fontFamily: "VT323, monospace",
         fontSize: "28px",
         color: "#2EE6D6",
@@ -53,7 +55,7 @@ export class ResultScene extends Phaser.Scene {
     });
 
     const shareBtn = this.add
-      .text(width / 2, height / 2 + 100, "[ SHARE ]", {
+      .text(width / 2, height / 2 + 100, `[ ${strings.share} ]`, {
         fontFamily: "VT323, monospace",
         fontSize: "28px",
         color: "#E6E1D3",
@@ -62,13 +64,16 @@ export class ResultScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     shareBtn.on("pointerdown", () => {
-      const text = `I scored ${result.score} against ZEGON. Times read: ${result.timesRead}. Outdraw the blind.`;
+      const text = format(strings.shareText, {
+        score: result.score,
+        timesRead: result.timesRead,
+      });
       void navigator.clipboard?.writeText(text);
-      shareBtn.setText("[ COPIED! ]");
+      shareBtn.setText(`[ ${strings.copied} ]`);
     });
 
     const menuBtn = this.add
-      .text(width / 2, height - 60, "[ MENU ]", {
+      .text(width / 2, height - 60, `[ ${strings.menu} ]`, {
         fontFamily: "VT323, monospace",
         fontSize: "24px",
         color: "#9A93A8",

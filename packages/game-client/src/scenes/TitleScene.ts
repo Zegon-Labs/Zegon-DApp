@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { t } from "../i18n/index.js";
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -7,6 +8,7 @@ export class TitleScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
+    const strings = t();
 
     this.add
       .text(width / 2, height / 3, "ZEGON", {
@@ -17,23 +19,27 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height / 3 + 60, "Outdraw the Blind", {
+      .text(width / 2, height / 3 + 60, strings.tagline, {
         fontFamily: "VT323, monospace",
         fontSize: "24px",
         color: "#9A93A8",
       })
       .setOrigin(0.5);
 
-    this.createButton(width / 2, height / 2 + 40, "DUEL", () => {
+    this.createButton(width / 2, height / 2 + 20, strings.duel, () => {
       this.scene.start("DuelScene", { mode: "standard" });
     });
 
-    this.createButton(width / 2, height / 2 + 100, "DAILY", () => {
+    this.createButton(width / 2, height / 2 + 80, strings.daily, () => {
       this.scene.start("DuelScene", { mode: "daily" });
     });
 
+    this.createButton(width / 2, height / 2 + 140, strings.settings, () => {
+      this.scene.start("SettingsScene");
+    });
+
     this.add
-      .text(width / 2, height - 40, "PRESS START", {
+      .text(width / 2, height - 40, strings.pressStart, {
         fontFamily: "VT323, monospace",
         fontSize: "20px",
         color: "#2EE6D6",

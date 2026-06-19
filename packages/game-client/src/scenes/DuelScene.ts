@@ -4,14 +4,19 @@ import {
   DuelPhase,
   PlayerAction,
 } from "../adapters/GameCoreAdapter.js";
+import { t } from "../i18n/index.js";
 
-const ACTION_LABELS: Record<PlayerAction, string> = {
-  [PlayerAction.FIRE_HIGH]: "FIRE HIGH",
-  [PlayerAction.FIRE_LOW]: "FIRE LOW",
-  [PlayerAction.DODGE]: "DODGE",
-  [PlayerAction.FEINT]: "FEINT",
-  [PlayerAction.RELOAD]: "RELOAD",
-};
+function actionLabel(action: PlayerAction): string {
+  const strings = t();
+  const map: Record<PlayerAction, string> = {
+    [PlayerAction.FIRE_HIGH]: strings.actionFireHigh,
+    [PlayerAction.FIRE_LOW]: strings.actionFireLow,
+    [PlayerAction.DODGE]: strings.actionDodge,
+    [PlayerAction.FEINT]: strings.actionFeint,
+    [PlayerAction.RELOAD]: strings.actionReload,
+  };
+  return map[action];
+}
 
 export class DuelScene extends Phaser.Scene {
   private adapter!: GameCoreAdapter;
@@ -32,9 +37,10 @@ export class DuelScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
+    const strings = t();
 
     this.add
-      .text(width / 2, 30, "DUEL", {
+      .text(width / 2, 30, strings.duelTitle, {
         fontFamily: "VT323, monospace",
         fontSize: "32px",
         color: "#E6E1D3",
@@ -79,7 +85,7 @@ export class DuelScene extends Phaser.Scene {
 
     actions.forEach((action, i) => {
       const btn = this.add
-        .text(startX + i * 150, y, ACTION_LABELS[action], {
+        .text(startX + i * 150, y, actionLabel(action), {
           fontFamily: "VT323, monospace",
           fontSize: "20px",
           color: "#9A93A8",
@@ -97,17 +103,19 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private handleEvent(event: { type: string; outcome?: { zegonDecision: { taunt: string } } }): void {
+    const strings = t();
+
     if (event.type === "phaseChange") {
       const phase = this.adapter.getPhase();
       if (phase === DuelPhase.ZEGON_THINKING) {
-        this.statusText.setText("ZEGON is reading you...");
+        this.statusText.setText(strings.zegonReading);
         this.statusText.setColor("#FF4D2E");
       } else if (phase === DuelPhase.AWAITING_PLAYER) {
-        this.statusText.setText("YOUR MOVE");
+        this.statusText.setText(strings.yourMove);
         this.statusText.setColor("#2EE6D6");
         this.tauntText.setText(this.adapter.getPendingTaunt() ?? "");
       } else if (phase === DuelPhase.DEADEYE) {
-        this.statusText.setText("DEADEYE!");
+        this.statusText.setText(strings.deadeye);
         this.statusText.setColor("#FF4D2E");
         this.cameras.main.flash(300, 255, 77, 46);
       }
@@ -124,9 +132,10 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private updateHud(): void {
+    const strings = t();
     this.hudText.setText(
-      `YOU: ${this.adapter.getPlayerHp()} HP  |  ZEGON: ${this.adapter.getZegonHp()} HP\n` +
-      `AMMO: ${this.adapter.getAmmo()}  |  BLINDSIGHT: ${this.adapter.getBlindsight()}%`,
+      `${strings.hudYou}: ${this.adapter.getPlayerHp()} HP  |  ${strings.hudZegon}: ${this.adapter.getZegonHp()} HP\n` +
+      `${strings.hudAmmo}: ${this.adapter.getAmmo()}  |  ${strings.hudBlindsight}: ${this.adapter.getBlindsight()}%`,
     );
     this.drawBlindsightBar();
   }
@@ -152,6 +161,7 @@ export class DuelScene extends Phaser.Scene {
     this.actionButtons.forEach((btn, i) => {
       const action = Object.values(PlayerAction)[i]!;
       const active = enabled && available.has(action);
+      btn.setText(actionLabel(action));
       btn.setColor(active ? "#E6E1D3" : "#3A3550");
       btn.setAlpha(active ? 1 : 0.4);
     });
