@@ -83,11 +83,11 @@ export class TitleScene extends Phaser.Scene {
     const verifyLink = this.add.text(width / 2, TITLE_LAYOUT.linkY, strings.hubVerifyLink, {
       fontFamily: FONT,
       fontSize: "11px",
-      color: COLORS.cyan,
+      color: COLORS.link,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    verifyLink.on("pointerover", () => verifyLink.setColor(COLORS.bone));
-    verifyLink.on("pointerout", () => verifyLink.setColor(COLORS.cyan));
+    verifyLink.on("pointerover", () => verifyLink.setColor(COLORS.linkHover));
+    verifyLink.on("pointerout", () => verifyLink.setColor(COLORS.link));
     verifyLink.on("pointerdown", () => window.open("/verify.html", "_blank"));
 
     this.walletUnsub = onWalletChange(() => this.renderWalletUi());

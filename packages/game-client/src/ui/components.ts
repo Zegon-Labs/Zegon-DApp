@@ -711,13 +711,13 @@ export function createSmallButton(
   const text = scene.add.text(x, y, label, {
     fontFamily: FONT,
     fontSize: "13px",
-    color: COLORS.cyan,
+    color: COLORS.link,
     backgroundColor: "#1a1520",
     padding: { x: 8, y: 4 },
   }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
 
-  text.on("pointerover", () => text.setColor(COLORS.bone));
-  text.on("pointerout", () => text.setColor(COLORS.cyan));
+  text.on("pointerover", () => text.setColor(COLORS.linkHover));
+  text.on("pointerout", () => text.setColor(COLORS.link));
   text.on("pointerdown", onClick);
   return text;
 }

@@ -22,6 +22,9 @@ export const COLORS = {
   magenta: "#FF2E88",
   ember: "#FF4D2E",
   blood: "#B3122B",
+  /** Color for clickable links (blood red — project identity). */
+  link: "#B3122B",
+  linkHover: "#FF4D2E",
   verified: "#4DF07A",
   gold: "#E8B23A",
   bone: "#E6E1D3",
