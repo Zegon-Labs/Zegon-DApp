@@ -128,18 +128,15 @@ export class DuelController {
       throw new Error("No pending ZEGON decision");
     }
 
+    const decision = this.state.pendingZegonDecision;
+
     this.state = transitionPhase(this.state, DuelPhase.RESOLVING);
     this.emit({ type: "phaseChange" });
 
     const ctx = buildRoundContext(this.state);
-    const outcome = resolveRound(
-      ctx,
-      action,
-      this.state.pendingZegonDecision,
-      {
-        playerActionTimestamp: Date.now(),
-      },
-    );
+    const outcome = resolveRound(ctx, action, decision, {
+      playerActionTimestamp: Date.now(),
+    });
 
     const hp = applyRoundOutcomeToHp(
       this.state.playerHp,

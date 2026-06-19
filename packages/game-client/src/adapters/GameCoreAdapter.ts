@@ -47,7 +47,7 @@ export class GameCoreAdapter {
   readonly controller: DuelController;
   private readonly brainMode: BrainMode;
   private readonly apiBaseUrl: string;
-  private duelId: string | null = null;
+  private _duelId: string | null = null;
   private unsubscribe: (() => void) | null = null;
 
   constructor(options: GameCoreAdapterOptions = {}) {
@@ -83,7 +83,7 @@ export class GameCoreAdapter {
         body: JSON.stringify({ config: this.controller.getState().config }),
       });
       const data = (await res.json()) as { duelId: string };
-      this.duelId = data.duelId;
+      this._duelId = data.duelId;
     }
 
     await this.controller.startDuel();
@@ -131,6 +131,10 @@ export class GameCoreAdapter {
 
   getResult(): DuelResult {
     return this.controller.getResult();
+  }
+
+  getDuelId(): string | null {
+    return this._duelId;
   }
 
   destroy(): void {
