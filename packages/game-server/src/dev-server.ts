@@ -1,0 +1,107 @@
+import { createServer } from "node:http";
+import {
+  handleDailyLeaderboard,
+  handleRecordDuel,
+  handleRoundCommit,
+  handleRoundReveal,
+  handleStartDuel,
+  handleSubmitScore,
+  handleVerify,
+} from "./handlers/duelHandlers.js";
+
+const PORT = Number(process.env.PORT ?? 3000);
+
+async function parseBody(req: import("node:http").IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", (chunk) => { data += chunk; });
+    req.on("end", () => {
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+}
+
+const server = createServer(async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  const url = req.url ?? "/";
+
+  try {
+    if (url === "/api/duel/start" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleStartDuel>[0];
+      const result = await handleStartDuel(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/duel/round/commit" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleRoundCommit>[0];
+      const result = await handleRoundCommit(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/duel/round/reveal" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleRoundReveal>[0];
+      const result = await handleRoundReveal(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/duel/record" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleRecordDuel>[0];
+      const result = await handleRecordDuel(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.startsWith("/api/duel/verify/") && req.method === "GET") {
+      const duelId = url.split("/").pop() ?? "demo";
+      const result = await handleVerify(duelId);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/daily/leaderboard" && req.method === "GET") {
+      const result = await handleDailyLeaderboard();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/daily/submit" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleSubmitScore>[0];
+      const result = await handleSubmitScore(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Not found" }));
+  } catch (err) {
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: String(err) }));
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`ZEGON API dev server on http://localhost:${PORT}`);
+});

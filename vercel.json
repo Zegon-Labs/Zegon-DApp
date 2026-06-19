@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "packages/game-client/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
+    { "src": "packages/game-server/api/**/*.ts", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/packages/game-server/api/duel/[...slug].ts" },
+    { "src": "/(.*)", "dest": "/packages/game-client/$1" }
+  ]
+}
