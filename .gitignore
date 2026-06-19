@@ -7,3 +7,11 @@ cache/
 artifacts/
 typechain-types/
 .vercel
+*.rar
+packages/game-server/.duel-sessions/
+packages/game-server/.duel-logs/
+packages/game-server/.leaderboard/
+packages/game-server/api/**/*.js
+packages/game-server/api/**/*.js.map
+packages/game-server/api/**/*.d.ts
+packages/game-server/api/**/*.d.ts.map

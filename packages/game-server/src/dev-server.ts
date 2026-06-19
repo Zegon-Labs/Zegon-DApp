@@ -1,4 +1,8 @@
+import { config as loadEnv } from "dotenv";
+import { resolve } from "node:path";
 import { createServer } from "node:http";
+
+loadEnv({ path: resolve(import.meta.dirname, "../../../.env") });
 import {
   handleDailyLeaderboard,
   handleRecordDuel,

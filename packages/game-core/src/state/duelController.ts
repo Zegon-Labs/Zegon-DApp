@@ -98,10 +98,7 @@ export class DuelController {
     this.submitZegonDecision(decision);
   }
 
-  submitZegonDecision(
-    decision: ZegonDecision,
-    commitHash?: string,
-  ): void {
+  submitZegonDecision(decision: ZegonDecision): void {
     if (this.state.phase !== DuelPhase.ZEGON_THINKING) {
       throw new Error("ZEGON decision only accepted during ZEGON_THINKING");
     }
@@ -111,14 +108,18 @@ export class DuelController {
       pendingZegonDecision: decision,
     };
 
-    if (commitHash) {
-      this.state.pendingZegonDecision = {
-        ...decision,
-      };
-    }
-
     this.state = transitionPhase(this.state, DuelPhase.AWAITING_PLAYER);
     this.emit({ type: "phaseChange" });
+  }
+
+  setPendingDecision(decision: ZegonDecision): void {
+    if (this.state.phase !== DuelPhase.AWAITING_PLAYER) {
+      throw new Error("Pending decision only updatable during AWAITING_PLAYER");
+    }
+    this.state = {
+      ...this.state,
+      pendingZegonDecision: decision,
+    };
   }
 
   submitPlayerAction(action: PlayerAction): RoundOutcome {
@@ -210,6 +211,12 @@ export class DuelController {
     this.emit({ type: "phaseChange" });
 
     void this.beginRound();
+  }
+
+  patchState(
+    partial: Partial<Pick<DuelState, "ammo" | "blindsight" | "playerHp" | "zegonHp">>,
+  ): void {
+    this.state = { ...this.state, ...partial };
   }
 
   getResult(): DuelResult {

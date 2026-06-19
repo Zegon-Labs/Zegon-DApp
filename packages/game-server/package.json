@@ -5,19 +5,22 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/dev-server.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run",
+    "smoke:compute": "tsx scripts/smoke-compute.ts"
   },
   "dependencies": {
+    "@0glabs/0g-serving-broker": "^0.5.0",
+    "@0glabs/0g-ts-sdk": "^0.3.0",
     "@zegon/game-core": "workspace:*",
+    "dotenv": "^17.4.2",
     "ethers": "^6.13.5"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",
+    "@vercel/node": "^5.1.8",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
-  },
-  "optionalDependencies": {
-    "@0glabs/0g-serving-broker": "^0.5.0",
-    "@0glabs/0g-ts-sdk": "^0.3.0"
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
   }
 }

@@ -7,7 +7,7 @@ import {
   handleStartDuel,
   handleSubmitScore,
   handleVerify,
-} from "../src/handlers/duelHandlers.js";
+} from "../../src/handlers/duelHandlers.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");

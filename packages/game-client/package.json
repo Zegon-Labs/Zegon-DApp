@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@zegon/game-core": "workspace:*",
-    "phaser": "^3.87.0"
+    "phaser": "^3.87.0",
+    "viem": "^2.52.2"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

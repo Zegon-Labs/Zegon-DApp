@@ -1,0 +1,7 @@
+{
+  "address": "DEPLOY_WITH_pnpm_deploy",
+  "operator": "YOUR_WALLET_ADDRESS",
+  "network": "galileo",
+  "chainId": 16602,
+  "note": "Replaced by galileo.json after deploy"
+}

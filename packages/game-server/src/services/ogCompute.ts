@@ -2,7 +2,6 @@ import {
   DummyZegonBrain,
   PlayerAction,
   RoundContext,
-  ZegonAction,
   ZegonDecision,
   ALL_PLAYER_ACTIONS,
   ALL_ZEGON_ACTIONS,
@@ -29,9 +28,10 @@ function buildUserPrompt(ctx: RoundContext): string {
 
 function parseDecision(raw: string): ZegonDecision | null {
   try {
-    const json = JSON.parse(raw) as Record<string, unknown>;
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    const json = JSON.parse(jsonMatch?.[0] ?? raw) as Record<string, unknown>;
     const predicted = json.predicted_player_move as PlayerAction;
-    const move = json.zegon_move as ZegonAction;
+    const move = json.zegon_move as ZegonDecision["zegonMove"];
     if (!ALL_PLAYER_ACTIONS.includes(predicted)) return null;
     if (!ALL_ZEGON_ACTIONS.includes(move)) return null;
     return {
@@ -45,12 +45,73 @@ function parseDecision(raw: string): ZegonDecision | null {
   }
 }
 
+function extractAssistantContent(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = parsed.choices?.[0]?.message?.content;
+    if (content) return content;
+  } catch {
+    // raw text fallback
+  }
+  return body;
+}
+
+let ledgerInitialized = false;
+
+async function ensureLedgerFunded(broker: {
+  ledger: {
+    depositFund?: (amount: number) => Promise<unknown>;
+    addLedger?: (amount: number) => Promise<unknown>;
+  };
+}): Promise<void> {
+  if (ledgerInitialized) return;
+  const depositOg = Number(process.env.OG_LEDGER_DEPOSIT_OG ?? "3");
+  try {
+    if (typeof broker.ledger.depositFund === "function") {
+      await broker.ledger.depositFund(depositOg);
+    } else if (typeof broker.ledger.addLedger === "function") {
+      await broker.ledger.addLedger(depositOg);
+    }
+  } catch {
+    // Ledger may already exist with balance
+  }
+  ledgerInitialized = true;
+}
+
+async function resolveProviderAddress(
+  broker: {
+    inference: {
+      listService: () => Promise<Array<{ provider: string; model?: string; url?: string }>>;
+    };
+  },
+  modelFilter: string,
+): Promise<string> {
+  const services = await broker.inference.listService();
+  if (services.length === 0) {
+    throw new Error("No 0G Compute services available");
+  }
+
+  const match = services.find(
+    (s) =>
+      s.model?.includes(modelFilter) ||
+      s.url?.includes(modelFilter) ||
+      JSON.stringify(s).includes(modelFilter),
+  );
+
+  return (match ?? services[0]).provider;
+}
+
 export class OGComputeService {
   async infer(ctx: RoundContext): Promise<{
     decision: ZegonDecision;
     attestationHash: string;
+    attestation?: unknown;
   }> {
     const userPrompt = buildUserPrompt(ctx);
+    const useOG = process.env.USE_OG_COMPUTE === "true";
+    const strict = useOG;
 
     try {
       const { createZGComputeNetworkBroker } = await import(
@@ -59,7 +120,7 @@ export class OGComputeService {
       const { ethers } = await import("ethers");
 
       const pk = process.env.SERVER_WALLET_PRIVATE_KEY;
-      if (!pk) throw new Error("No wallet configured");
+      if (!pk) throw new Error("SERVER_WALLET_PRIVATE_KEY not configured");
 
       const provider = new ethers.JsonRpcProvider(
         process.env.OG_RPC_URL ?? "https://evmrpc-testnet.0g.ai",
@@ -67,42 +128,61 @@ export class OGComputeService {
       const signer = new ethers.Wallet(pk, provider);
       const broker = await createZGComputeNetworkBroker(signer);
 
-      const model = process.env.OG_MODEL ?? "glm-5-fp8";
-      const headers = await broker.inference.getRequestHeaders(model);
-      const metadata = await broker.inference.getServiceMetadata(model);
+      await ensureLedgerFunded(broker);
+
+      const modelFilter = process.env.OG_MODEL ?? "glm-5-fp8";
+      const providerAddress = await resolveProviderAddress(broker, modelFilter);
+      const metadata = await broker.inference.getServiceMetadata(providerAddress);
+      const requestBody = JSON.stringify({
+        model: metadata.model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0,
+      });
+
+      const headers = await broker.inference.getRequestHeaders(
+        providerAddress,
+        requestBody,
+      );
 
       const response = await fetch(metadata.endpoint, {
         method: "POST",
         headers: {
-          ...headers,
           "Content-Type": "application/json",
+          Address: headers.Address,
+          "VLLM-Proxy": headers["VLLM-Proxy"],
         },
-        body: JSON.stringify({
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0,
-        }),
+        body: requestBody,
       });
 
       const body = await response.text();
-      const verified = await broker.inference.processResponse(
-        model,
-        response.headers as Record<string, string>,
+      if (!response.ok) {
+        throw new Error(`Compute HTTP ${response.status}: ${body.slice(0, 200)}`);
+      }
+
+      const attestationValid = await broker.inference.processResponse(
+        providerAddress,
         body,
       );
 
-      const decision =
-        parseDecision(body) ??
-        (await new DummyZegonBrain().decide(ctx));
+      const assistantText = extractAssistantContent(body);
+      const decision = parseDecision(assistantText);
+      if (!decision) {
+        throw new Error("Invalid TEE response JSON");
+      }
 
+      const attestation = { valid: attestationValid, body: assistantText };
       const attestationHash = createHash("sha256")
-        .update(JSON.stringify(verified))
+        .update(JSON.stringify(attestation))
         .digest("hex");
 
-      return { decision, attestationHash };
-    } catch {
+      return { decision, attestationHash, attestation };
+    } catch (err) {
+      if (strict) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
       const decision = await new DummyZegonBrain().decide(ctx);
       const attestationHash = createHash("sha256")
         .update(userPrompt)

@@ -1,11 +1,20 @@
 {
   "version": 2,
+  "installCommand": "pnpm install",
   "builds": [
-    { "src": "packages/game-client/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
-    { "src": "packages/game-server/api/**/*.ts", "use": "@vercel/node" }
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "packages/game-client/dist" }
+    },
+    {
+      "src": "packages/game-server/api/duel/[...slug].ts",
+      "use": "@vercel/node"
+    }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/packages/game-server/api/duel/[...slug].ts" },
-    { "src": "/(.*)", "dest": "/packages/game-client/$1" }
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/packages/game-client/dist/index.html" }
   ]
 }

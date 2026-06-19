@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZEGON — Verificar en cadena</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --void: #0a0911;
+        --ash: #14121c;
+        --bone: #e6e1d3;
+        --dust: #9a93a8;
+        --cyan: #2ee6d6;
+        --ember: #ff4d2e;
+        --verified: #4df07a;
+        --fog: #2a2638;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: var(--void);
+        color: var(--bone);
+        font-family: "VT323", monospace;
+        font-size: 20px;
+        min-height: 100vh;
+        padding: 24px 16px 48px;
+      }
+      .wrap { max-width: 720px; margin: 0 auto; }
+      h1 { font-size: 42px; color: var(--cyan); margin-bottom: 4px; }
+      .tagline { color: var(--dust); margin-bottom: 24px; font-size: 22px; }
+      .status {
+        padding: 12px 16px;
+        border: 1px solid var(--fog);
+        background: var(--ash);
+        margin-bottom: 20px;
+        font-size: 24px;
+      }
+      .status.ok { color: var(--verified); border-color: var(--verified); }
+      .status.pending { color: var(--ember); }
+      .btn {
+        display: inline-block;
+        padding: 10px 20px;
+        border: 2px solid var(--cyan);
+        color: var(--cyan);
+        text-decoration: none;
+        font-size: 24px;
+        margin: 8px 8px 8px 0;
+        background: transparent;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .btn:hover { background: rgba(46, 230, 214, 0.12); }
+      .btn.primary { background: rgba(46, 230, 214, 0.15); }
+      .meta { color: var(--dust); font-size: 18px; word-break: break-all; margin: 12px 0; }
+      .round {
+        border: 1px solid var(--fog);
+        background: var(--ash);
+        padding: 14px 16px;
+        margin-bottom: 12px;
+      }
+      .round h3 { color: var(--ember); font-size: 26px; margin-bottom: 8px; }
+      .round .proof { color: var(--verified); font-size: 18px; }
+      .round a { color: var(--cyan); word-break: break-all; }
+      .round .links { margin-top: 8px; line-height: 1.6; }
+      .loading { color: var(--dust); font-size: 24px; }
+      .error { color: var(--ember); }
+      code { color: var(--dust); font-size: 16px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1 id="title">ZEGON — VERIFY</h1>
+      <p class="tagline" id="subtitle">Prueba on-chain · Galileo testnet</p>
+      <div id="content"><p class="loading" id="loading">Cargando prueba…</p></div>
+    </div>
+    <script>
+      const EXPLORER = "https://chainscan-galileo.0g.ai";
+      const LOCALE = localStorage.getItem("zegon-language") === "en" ? "en" : "es";
+
+      const T = {
+        es: {
+          title: "ZEGON — VERIFICAR",
+          subtitle: "Prueba on-chain · Galileo testnet",
+          loading: "Cargando prueba…",
+          error: "No se pudo cargar la prueba.",
+          noDuel: "Falta el ID del duelo.",
+          verified: "✓ PRUEBA VERIFICADA — commit antes de cada jugada",
+          pending: "Prueba incompleta",
+          openContract: "Abrir contrato en Chainscan",
+          openRecord: "Ver registro final del duelo",
+          duelId: "ID del duelo",
+          contract: "Contrato",
+          round: "Ronda",
+          zegonMove: "Movimiento de ZEGON",
+          commitBefore: "Commit on-chain antes de tu input",
+          yes: "Sí",
+          no: "No",
+          commitTx: "Tx commit (sellado)",
+          revealTx: "Tx reveal (revelado)",
+          actions: {
+            FIRE_HIGH: "Disparo alto",
+            FIRE_LOW: "Disparo bajo",
+            DODGE: "Esquivar",
+            FEINT: "Finta",
+            RELOAD: "Recargar",
+          },
+        },
+        en: {
+          title: "ZEGON — VERIFY",
+          subtitle: "On-chain proof · Galileo testnet",
+          loading: "Loading proof…",
+          error: "Could not load proof.",
+          noDuel: "Missing duel ID.",
+          verified: "✓ PROOF VERIFIED — commit before every input",
+          pending: "Proof incomplete",
+          openContract: "Open contract on Chainscan",
+          openRecord: "View final duel record tx",
+          duelId: "Duel ID",
+          contract: "Contract",
+          round: "Round",
+          zegonMove: "ZEGON move",
+          commitBefore: "On-chain commit before your input",
+          yes: "Yes",
+          no: "No",
+          commitTx: "Commit tx (sealed)",
+          revealTx: "Reveal tx (opened)",
+          actions: {
+            FIRE_HIGH: "Fire high",
+            FIRE_LOW: "Fire low",
+            DODGE: "Dodge",
+            FEINT: "Feint",
+            RELOAD: "Reload",
+          },
+        },
+      }[LOCALE];
+
+      document.getElementById("title").textContent = T.title;
+      document.getElementById("subtitle").textContent = T.subtitle;
+      document.documentElement.lang = LOCALE;
+
+      function txUrl(hash) {
+        return hash ? `${EXPLORER}/tx/${hash}` : null;
+      }
+
+      function moveLabel(key) {
+        return T.actions[key] || key || "—";
+      }
+
+      async function main() {
+        const params = new URLSearchParams(location.search);
+        const duelId = params.get("duel");
+        const content = document.getElementById("content");
+
+        if (!duelId) {
+          content.innerHTML = `<p class="error">${T.noDuel}</p>`;
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/duel/verify/${duelId}`);
+          if (!res.ok) throw new Error(String(res.status));
+          const data = await res.json();
+
+          const proofCount = data.rounds.filter((r) => r.commitBeforePlayer).length;
+          const allOk = data.verified && proofCount === data.rounds.length;
+
+          let html = `
+            <div class="status ${allOk ? "ok" : "pending"}">
+              ${allOk ? T.verified : T.pending}
+              (${proofCount}/${data.rounds.length})
+            </div>
+            <a class="btn primary" href="${EXPLORER}/address/${data.contractAddress}" target="_blank" rel="noopener">
+              ${T.openContract}
+            </a>`;
+
+          if (data.recordTxHash) {
+            html += `
+            <a class="btn" href="${txUrl(data.recordTxHash)}" target="_blank" rel="noopener">
+              ${T.openRecord}
+            </a>`;
+          }
+
+          html += `
+            <p class="meta"><strong>${T.duelId}:</strong> <code>${data.duelId}</code></p>
+            <p class="meta"><strong>${T.contract}:</strong> <code>${data.contractAddress}</code></p>`;
+
+          for (const r of data.rounds) {
+            html += `
+              <div class="round">
+                <h3>${T.round} ${r.roundIndex + 1}</h3>
+                <p>${T.zegonMove}: <strong>${moveLabel(r.zegonMove)}</strong></p>
+                <p class="proof">${T.commitBefore}: <strong>${r.commitBeforePlayer ? T.yes : T.no}</strong></p>
+                <div class="links">
+                  ${r.commitTxHash ? `<div><a href="${txUrl(r.commitTxHash)}" target="_blank" rel="noopener">${T.commitTx} →</a></div>` : ""}
+                  ${r.revealTxHash ? `<div><a href="${txUrl(r.revealTxHash)}" target="_blank" rel="noopener">${T.revealTx} →</a></div>` : ""}
+                </div>
+              </div>`;
+          }
+
+          content.innerHTML = html;
+        } catch {
+          content.innerHTML = `<p class="error">${T.error}</p>`;
+        }
+      }
+
+      main();
+    </script>
+  </body>
+</html>

@@ -5,13 +5,15 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy": "hardhat run scripts/deploy.ts --network galileo"
+    "deploy": "hardhat run scripts/deploy.ts --network galileo",
+    "smoke:galileo": "hardhat run scripts/smoke-galileo.ts --network galileo"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "chai": "^4.5.0",
+    "dotenv": "^17.4.2",
     "hardhat": "^2.22.18",
-    "typescript": "^5.7.3",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   }
 }

@@ -1,68 +1,152 @@
 import Phaser from "phaser";
 import { t } from "../i18n/index.js";
+import {
+  connectWallet,
+  disconnectWallet,
+  getWalletAddress,
+  hasEthereumProvider,
+  onWalletChange,
+  truncateAddress,
+} from "../services/wallet.js";
+import { isTutorialDone } from "../tutorial/steps.js";
+import {
+  createAccentMenuButton,
+  createMenuButton,
+  createSmallButton,
+  drawScanlines,
+} from "../ui/components.js";
+import { titleButtonY, TITLE_LAYOUT } from "../ui/layout.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
-import { createMenuButton, drawScanlines } from "../ui/components.js";
 
 export class TitleScene extends Phaser.Scene {
+  private walletText!: Phaser.GameObjects.Text;
+  private walletHint!: Phaser.GameObjects.Text;
+  private walletUnsub: (() => void) | null = null;
+
   constructor() {
     super("TitleScene");
   }
 
   create(): void {
-    const { width, height } = this.scale;
+    const { width } = this.scale;
     const strings = t();
 
     this.cameras.main.setBackgroundColor(C.void);
     drawScanlines(this);
 
-    this.add.circle(width / 2, height * 0.28, 110, C.blood, 0.12);
-    this.drawSilhouette(width / 2, height * 0.3);
+    this.add.text(width / 2, TITLE_LAYOUT.logoY, "ZEGON", {
+      fontFamily: FONT,
+      fontSize: "60px",
+      color: COLORS.bone,
+    }).setOrigin(0.5);
 
-    this.add
-      .text(width / 2, height * 0.14, "ZEGON", {
-        fontFamily: FONT,
-        fontSize: "72px",
-        color: COLORS.bone,
-      })
-      .setOrigin(0.5);
+    this.add.text(width / 2, TITLE_LAYOUT.taglineY, strings.tagline, {
+      fontFamily: FONT,
+      fontSize: "17px",
+      color: COLORS.ember,
+    }).setOrigin(0.5);
 
-    this.add
-      .text(width / 2, height * 0.22, strings.tagline, {
-        fontFamily: FONT,
-        fontSize: "20px",
-        color: COLORS.ember,
-      })
-      .setOrigin(0.5);
+    this.renderWalletUi();
 
-    createMenuButton(this, width / 2, height * 0.48, strings.duel, () => {
+    const tutorialLabel = isTutorialDone()
+      ? `${strings.tutorial}  ${strings.tutorialDoneBadge}`
+      : strings.tutorial;
+
+    createAccentMenuButton(this, width / 2, titleButtonY(0), tutorialLabel, () => {
+      this.scene.start("TutorialScene");
+    });
+
+    createMenuButton(this, width / 2, titleButtonY(1), strings.duel, () => {
       this.scene.start("DuelScene", { mode: "standard" });
     });
 
-    createMenuButton(this, width / 2, height * 0.58, strings.daily, () => {
+    createMenuButton(this, width / 2, titleButtonY(2), strings.daily, () => {
       this.scene.start("DuelScene", { mode: "daily" });
     });
 
-    createMenuButton(this, width / 2, height * 0.68, strings.settings, () => {
+    createMenuButton(this, width / 2, titleButtonY(3), strings.leaderboard, () => {
+      this.scene.start("LeaderboardScene");
+    });
+
+    createMenuButton(this, width / 2, titleButtonY(4), strings.settings, () => {
       this.scene.start("SettingsScene");
     });
 
-    this.add
-      .text(width / 2, height - 24, strings.pressStart, {
-        fontFamily: FONT,
-        fontSize: "18px",
-        color: COLORS.cyan,
-      })
-      .setOrigin(0.5)
-      .setAlpha(0.7);
+    this.add.text(width / 2, TITLE_LAYOUT.footerY, strings.hubFooter, {
+      fontFamily: FONT,
+      fontSize: "11px",
+      color: COLORS.dust,
+      align: "center",
+      wordWrap: { width: width - 48 },
+    }).setOrigin(0.5);
+
+    const verifyLink = this.add.text(width / 2, TITLE_LAYOUT.linkY, strings.hubVerifyLink, {
+      fontFamily: FONT,
+      fontSize: "11px",
+      color: COLORS.cyan,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    verifyLink.on("pointerover", () => verifyLink.setColor(COLORS.bone));
+    verifyLink.on("pointerout", () => verifyLink.setColor(COLORS.cyan));
+    verifyLink.on("pointerdown", () => window.open("/verify.html", "_blank"));
+
+    this.walletUnsub = onWalletChange(() => this.renderWalletUi());
   }
 
-  private drawSilhouette(x: number, y: number): void {
-    const g = this.add.graphics().setDepth(1);
-    g.fillStyle(0x0a0911, 1);
-    g.fillEllipse(x, y - 40, 80, 20);
-    g.fillRect(x - 22, y - 58, 44, 24);
-    g.fillRect(x - 18, y - 20, 36, 70);
-    g.fillStyle(C.blood, 0.8);
-    g.fillRect(x - 2, y - 28, 4, 30);
+  private renderWalletUi(): void {
+    this.walletText?.destroy();
+    this.walletHint?.destroy();
+
+    const strings = t();
+    const { width } = this.scale;
+    const address = getWalletAddress();
+
+    if (address) {
+      this.walletText = createSmallButton(
+        this,
+        width - 12,
+        10,
+        `${truncateAddress(address)}`,
+        () => disconnectWallet(),
+      );
+      this.walletHint = this.add.text(width - 12, 32, strings.disconnectWallet, {
+        fontFamily: FONT,
+        fontSize: "10px",
+        color: COLORS.dust,
+      }).setOrigin(1, 0);
+    } else {
+      this.walletText = createSmallButton(
+        this,
+        width - 12,
+        10,
+        strings.connectWallet,
+        () => void this.handleConnect(),
+      );
+      this.walletHint = this.add.text(width - 12, 32, strings.walletOptional, {
+        fontFamily: FONT,
+        fontSize: "10px",
+        color: COLORS.dust,
+        align: "right",
+        wordWrap: { width: 180 },
+      }).setOrigin(1, 0);
+    }
+  }
+
+  private async handleConnect(): Promise<void> {
+    const strings = t();
+    if (!hasEthereumProvider()) {
+      this.walletHint?.setText(strings.walletNoProvider);
+      return;
+    }
+    try {
+      await connectWallet();
+    } catch {
+      this.walletHint?.setText(strings.walletNoProvider);
+    }
+  }
+
+  shutdown(): void {
+    this.walletUnsub?.();
+    this.walletUnsub = null;
   }
 }

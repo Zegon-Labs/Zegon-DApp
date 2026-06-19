@@ -1,23 +1,52 @@
 import Phaser from "phaser";
-import type { DuelResult } from "@zegon/game-core";
+import { createDailyDuel, type DuelResult } from "@zegon/game-core";
 import { format, t } from "../i18n/index.js";
+import { getWalletAddress } from "../services/wallet.js";
 import { createMenuButton, drawScanlines } from "../ui/components.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
+
+interface VerifyRound {
+  roundIndex: number;
+  commitHash: string;
+  commitTxHash?: string;
+  revealTxHash?: string;
+  commitBeforePlayer: boolean;
+  zegonMove?: string;
+}
+
+interface VerifyResponse {
+  duelId: string;
+  verified: boolean;
+  contractAddress?: string;
+  rounds: VerifyRound[];
+  storageRoot?: string;
+  recordTxHash?: string;
+  explorerUrl?: string;
+  recordTxExplorerUrl?: string;
+}
 
 export class ResultScene extends Phaser.Scene {
   constructor() {
     super("ResultScene");
   }
 
-  create(data: { result: DuelResult }): void {
+  create(data: {
+    result: DuelResult;
+    duelId?: string | null;
+    apiBaseUrl?: string;
+    mode?: "standard" | "daily";
+  }): void {
     const { width, height } = this.scale;
     const result = data.result;
     const strings = t();
+    const duelId = data.duelId;
+    const apiBase = data.apiBaseUrl ?? "";
+    const mode = data.mode ?? "standard";
 
     this.cameras.main.setBackgroundColor(C.void);
     drawScanlines(this);
 
-    const panel = this.add.rectangle(width / 2, height / 2, 420, 340, C.ash, 0.95);
+    const panel = this.add.rectangle(width / 2, height / 2, 460, 380, C.ash, 0.95);
     panel.setStrokeStyle(1, C.fog);
 
     const winnerLabel =
@@ -28,31 +57,59 @@ export class ResultScene extends Phaser.Scene {
           : strings.draw;
 
     this.add
-      .text(width / 2, height / 2 - 130, winnerLabel, {
+      .text(width / 2, height / 2 - 120, winnerLabel, {
         fontFamily: FONT,
-        fontSize: "44px",
+        fontSize: "40px",
         color: result.winner === "PLAYER" ? COLORS.verified : COLORS.ember,
       })
       .setOrigin(0.5);
 
-    this.add.text(width / 2, height / 2 - 60, [
+    this.add.text(width / 2, height / 2 - 50, [
       `${strings.rounds}: ${result.roundsPlayed}`,
       `${strings.timesRead}: ${result.timesRead}`,
       `${strings.finalBlindsight}: ${result.finalBlindsight}%`,
       `${strings.score}: ${result.score}`,
     ].join("\n"), {
       fontFamily: FONT,
-      fontSize: "22px",
+      fontSize: "20px",
       color: COLORS.bone,
       align: "center",
       lineSpacing: 6,
     }).setOrigin(0.5);
 
-    createMenuButton(this, width / 2, height / 2 + 30, strings.verifyOnChain, () => {
-      window.open("/api/duel/verify/demo", "_blank");
+    const verifyLabel = this.add.text(width / 2, height / 2 + 20, "", {
+      fontFamily: FONT,
+      fontSize: "14px",
+      color: COLORS.cyan,
+      align: "center",
+      wordWrap: { width: 400 },
+    }).setOrigin(0.5);
+
+    const dailyLabel = this.add.text(width / 2, height / 2 + 48, "", {
+      fontFamily: FONT,
+      fontSize: "13px",
+      color: COLORS.dust,
+      align: "center",
+      wordWrap: { width: 400 },
+    }).setOrigin(0.5);
+
+    if (mode === "daily") {
+      void this.submitDailyScore(result.score, dailyLabel);
+    }
+
+    createMenuButton(this, width / 2, height / 2 + 90, strings.verifyOnChain, () => {
+      if (duelId) {
+        window.open(`/verify.html?duel=${encodeURIComponent(duelId)}`, "_blank");
+      } else {
+        verifyLabel.setText(strings.verifyOffline);
+      }
     });
 
-    createMenuButton(this, width / 2, height / 2 + 80, strings.share, () => {
+    if (duelId) {
+      void this.loadVerifySummary(`${apiBase}/api/duel/verify/${duelId}`, verifyLabel);
+    }
+
+    createMenuButton(this, width / 2, height / 2 + 140, strings.share, () => {
       const text = format(strings.shareText, {
         score: result.score,
         timesRead: result.timesRead,
@@ -60,8 +117,58 @@ export class ResultScene extends Phaser.Scene {
       void navigator.clipboard?.writeText(text);
     });
 
-    createMenuButton(this, width / 2, height / 2 + 130, strings.menu, () => {
+    createMenuButton(this, width / 2, height / 2 + 190, strings.menu, () => {
       this.scene.start("TitleScene");
     });
+  }
+
+  private async submitDailyScore(
+    score: number,
+    label: Phaser.GameObjects.Text,
+  ): Promise<void> {
+    const strings = t();
+    const address = getWalletAddress();
+    if (!address) {
+      label.setText(strings.scoreSubmitNoWallet);
+      return;
+    }
+
+    const daily = createDailyDuel();
+    try {
+      const res = await fetch("/api/daily/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: address,
+          score,
+          seed: daily.seed,
+        }),
+      });
+      if (res.ok) {
+        label.setText(strings.scoreSubmitted).setColor(COLORS.cyan);
+      }
+    } catch {
+      label.setText(strings.leaderboardEmpty);
+    }
+  }
+
+  private async loadVerifySummary(
+    url: string,
+    label: Phaser.GameObjects.Text,
+  ): Promise<void> {
+    const strings = t();
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = (await res.json()) as VerifyResponse;
+      const proofCount = data.rounds.filter((r) => r.commitBeforePlayer).length;
+      const status = data.verified ? strings.verifyOk : strings.verifyPending;
+      label.setText(
+        `${status}\n${strings.verifyRounds}: ${proofCount}/${data.rounds.length}` +
+        (data.contractAddress ? `\n${data.contractAddress.slice(0, 10)}…` : ""),
+      );
+    } catch {
+      label.setText(strings.verifyPending);
+    }
   }
 }

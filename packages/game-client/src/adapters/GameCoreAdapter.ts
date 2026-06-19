@@ -1,13 +1,20 @@
 import { getLanguage } from "../i18n/index.js";
 import {
+  assertCanPerformAction,
   DuelConfig,
   DuelController,
   DuelEvent,
   DuelPhase,
   DuelResult,
+  DuelState,
+  DuelWinner,
   DummyZegonBrain,
+  IZegonBrain,
   PlayerAction,
+  RoundContext,
   RoundOutcome,
+  ZegonAction,
+  ZegonDecision,
   createDailyDuel,
   decodeChallenge,
 } from "@zegon/game-core";
@@ -19,40 +26,61 @@ export interface GameCoreAdapterOptions {
   brainMode?: BrainMode;
   apiBaseUrl?: string;
   onEvent?: (event: DuelEvent) => void;
+  customBrain?: IZegonBrain;
+  forceOffline?: boolean;
 }
 
-export class ApiZegonBrain {
-  constructor(
-    private readonly duelId: string,
-    private readonly apiBaseUrl: string,
-  ) {}
+class ApiZegonBrain implements IZegonBrain {
+  private duelId: string | null = null;
 
-  async decide(ctx: Parameters<DummyZegonBrain["decide"]>[0]) {
+  constructor(private readonly apiBaseUrl: string) {}
+
+  setDuelId(duelId: string): void {
+    this.duelId = duelId;
+  }
+
+  async decide(ctx: RoundContext): Promise<ZegonDecision> {
+    if (!this.duelId) {
+      throw new Error("Duel not started — missing duelId");
+    }
+
     const res = await fetch(`${this.apiBaseUrl}/api/duel/round/commit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ duelId: this.duelId, context: ctx }),
+      body: JSON.stringify({
+        duelId: this.duelId,
+        context: ctx,
+        locale: getLanguage(),
+      }),
     });
+
     if (!res.ok) {
       throw new Error(`API commit failed: ${res.status}`);
     }
-    const data = (await res.json()) as {
-      decision: Awaited<ReturnType<DummyZegonBrain["decide"]>>;
-      commitHash: string;
+
+    const data = (await res.json()) as { taunt: string };
+    return {
+      predictedPlayerMove: PlayerAction.FIRE_HIGH,
+      zegonMove: ZegonAction.RELOAD,
+      confidence: 0,
+      taunt: data.taunt,
     };
-    return data;
   }
 }
 
 export class GameCoreAdapter {
   readonly controller: DuelController;
   private readonly brainMode: BrainMode;
+  private readonly offline: boolean;
   private readonly apiBaseUrl: string;
+  private readonly apiBrain: ApiZegonBrain | null;
   private _duelId: string | null = null;
+  private _lastAttestationHash: string | null = null;
   private unsubscribe: (() => void) | null = null;
 
   constructor(options: GameCoreAdapterOptions = {}) {
     this.brainMode = options.brainMode ?? "dummy";
+    this.offline = Boolean(options.customBrain || options.forceOffline);
     this.apiBaseUrl = options.apiBaseUrl ?? "";
 
     let config = options.config ?? {};
@@ -63,31 +91,68 @@ export class GameCoreAdapter {
     }
 
     const seed = config.seed ?? "standard";
-    const brain = new DummyZegonBrain(seed, getLanguage());
+    let brain: IZegonBrain;
+
+    if (options.customBrain) {
+      this.apiBrain = null;
+      brain = options.customBrain;
+    } else if (this.brainMode === "api" && !this.offline) {
+      this.apiBrain = new ApiZegonBrain(this.apiBaseUrl);
+      brain = this.apiBrain;
+    } else {
+      this.apiBrain = null;
+      brain = new DummyZegonBrain(seed, getLanguage());
+    }
+
     this.controller = new DuelController(brain, config);
 
     if (options.onEvent) {
-      this.unsubscribe = this.controller.on(options.onEvent);
+      this.unsubscribe = this.controller.on((event) => {
+        options.onEvent?.(event);
+        if (event.type === "duelEnd" && "result" in event && event.result) {
+          void this.recordDuelOnChain(event.result);
+        }
+      });
     }
   }
 
-  async initDuel(mode: "standard" | "daily" = "standard"): Promise<void> {
+  async initDuel(
+    mode: "standard" | "daily" | "tutorial" = "standard",
+    options?: { config?: Partial<DuelConfig> },
+  ): Promise<void> {
+    if (options?.config) {
+      Object.assign(this.controller.getState().config, options.config);
+    }
+
     if (mode === "daily") {
       const dailyConfig = createDailyDuel();
       Object.assign(this.controller.getState().config, dailyConfig);
     }
 
-    if (this.brainMode === "api") {
+    if (this.brainMode === "api" && !this.offline && mode !== "tutorial") {
       const res = await fetch(`${this.apiBaseUrl}/api/duel/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config: this.controller.getState().config }),
+        body: JSON.stringify({
+          config: this.controller.getState().config,
+          locale: getLanguage(),
+        }),
       });
+      if (!res.ok) {
+        throw new Error(`Failed to start duel: ${res.status}`);
+      }
       const data = (await res.json()) as { duelId: string };
       this._duelId = data.duelId;
+      this.apiBrain?.setDuelId(data.duelId);
     }
 
     await this.controller.startDuel();
+  }
+
+  patchState(
+    partial: Partial<Pick<DuelState, "ammo" | "blindsight" | "playerHp" | "zegonHp">>,
+  ): void {
+    this.controller.patchState(partial);
   }
 
   getState() {
@@ -130,8 +195,60 @@ export class GameCoreAdapter {
     return this.controller.getState().pendingZegonDecision?.taunt ?? null;
   }
 
-  submitAction(action: PlayerAction): RoundOutcome {
+  async submitAction(action: PlayerAction): Promise<RoundOutcome> {
+    const state = this.controller.getState();
+    assertCanPerformAction(state, action);
+
+    if (this.brainMode === "api" && !this.offline && this._duelId) {
+      const res = await fetch(`${this.apiBaseUrl}/api/duel/round/reveal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          duelId: this._duelId,
+          roundIndex: state.roundIndex,
+          playerAction: action,
+          playerActionTimestamp: Date.now(),
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`API reveal failed: ${res.status}`);
+      }
+
+      const data = (await res.json()) as { decision: ZegonDecision };
+      this.controller.setPendingDecision(data.decision);
+    }
+
     return this.controller.submitPlayerAction(action);
+  }
+
+  private async recordDuelOnChain(result: DuelResult): Promise<void> {
+    if (this.brainMode !== "api" || this.offline || !this._duelId) return;
+
+    const resultCode =
+      result.winner === DuelWinner.PLAYER
+        ? 1
+        : result.winner === DuelWinner.ZEGON
+          ? 2
+          : 0;
+
+    const attestationHash =
+      this._lastAttestationHash ??
+      `${this._duelId}-${result.score}`.padEnd(64, "0").slice(0, 64);
+
+    try {
+      await fetch(`${this.apiBaseUrl}/api/duel/record`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          duelId: this._duelId,
+          result: resultCode,
+          attestationHash,
+        }),
+      });
+    } catch {
+      // Non-fatal for local play
+    }
   }
 
   getResult(): DuelResult {
@@ -140,6 +257,10 @@ export class GameCoreAdapter {
 
   getDuelId(): string | null {
     return this._duelId;
+  }
+
+  getApiBaseUrl(): string {
+    return this.apiBaseUrl;
   }
 
   destroy(): void {

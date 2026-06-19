@@ -8,18 +8,15 @@ import {
   createDailyDuel,
 } from "@zegon/game-core";
 import { computeCommitHash, computeInputHash } from "../services/commit.js";
-import { getContractService } from "../services/contract.js";
+import { EXPLORER_BASE, getContractService } from "../services/contract.js";
 import { getLeaderboard, submitScore } from "../services/leaderboard.js";
 import { getOGComputeService } from "../services/ogCompute.js";
-import { storeDuelLog } from "../services/storage.js";
+import { loadSession, saveSession } from "../services/sessionStore.js";
+import { storeDuelLog, loadDuelLogPayload } from "../services/storage.js";
+import { uint8ToZegonAction } from "../services/moveMapping.js";
+import type { DuelSession, RoundLog } from "../types/duelSession.js";
 
-export interface DuelSession {
-  id: string;
-  config: DuelConfig;
-  roundIndex: number;
-  logs: unknown[];
-  createdAt: number;
-}
+export type { DuelSession, RoundLog };
 
 const sessions = new Map<string, DuelSession>();
 
@@ -27,29 +24,54 @@ function generateDuelId(): string {
   return randomBytes(16).toString("hex");
 }
 
+async function getSession(duelId: string): Promise<DuelSession | null> {
+  const cached = sessions.get(duelId);
+  if (cached) return cached;
+  const loaded = await loadSession(duelId);
+  if (loaded) {
+    sessions.set(duelId, loaded);
+    return loaded;
+  }
+  return null;
+}
+
+async function persistSession(session: DuelSession): Promise<void> {
+  sessions.set(session.id, session);
+  await saveSession(session);
+}
+
 export async function handleStartDuel(body: {
   config?: Partial<DuelConfig>;
 }): Promise<{ duelId: string }> {
   const duelId = generateDuelId();
-  sessions.set( duelId, {
+  const session: DuelSession = {
     id: duelId,
-    config: { ...createDailyDuel(), ...body.config, mode: body.config?.mode ?? "standard" },
+    config: {
+      ...createDailyDuel(),
+      ...body.config,
+      mode: body.config?.mode ?? "standard",
+    },
     roundIndex: 0,
     logs: [],
     createdAt: Date.now(),
-  });
+  };
+  await persistSession(session);
   return { duelId };
 }
 
 export async function handleRoundCommit(body: {
   duelId: string;
   context: RoundContext;
+  locale?: "en" | "es";
 }): Promise<{
-  decision: ZegonDecision;
+  taunt: string;
   commitHash: string;
+  commitTxHash?: string;
+  roundIndex: number;
   attestationHash?: string;
+  commitTsOnChain?: number;
 }> {
-  const session = sessions.get(body.duelId);
+  const session = await getSession(body.duelId);
   if (!session) {
     throw new Error("Duel not found");
   }
@@ -57,109 +79,245 @@ export async function handleRoundCommit(body: {
   const inputHash = computeInputHash(body.context);
   let decision: ZegonDecision;
   let attestationHash: string | undefined;
+  let attestation: unknown;
 
   const useOG = process.env.USE_OG_COMPUTE === "true";
 
   if (useOG) {
-    try {
-      const og = getOGComputeService();
-      const result = await og.infer(body.context);
-      decision = result.decision;
-      attestationHash = result.attestationHash;
-    } catch {
-      decision = await new DummyZegonBrain(session.config.seed).decide(body.context);
-    }
+    const og = getOGComputeService();
+    const result = await og.infer(body.context);
+    decision = result.decision;
+    attestationHash = result.attestationHash;
+    attestation = result.attestation;
   } else {
-    decision = await new DummyZegonBrain(session.config.seed).decide(body.context);
+    decision = await new DummyZegonBrain(
+      session.config.seed,
+      body.locale ?? "en",
+    ).decide(body.context);
   }
 
   const { commitHash, salt } = computeCommitHash(decision.zegonMove);
 
   const contract = getContractService();
+  let commitTxHash: string | undefined;
+  let commitTsOnChain: number | undefined;
+
   if (contract.isConfigured()) {
-    await contract.commitMove(body.duelId, session.roundIndex, commitHash);
+    const tx = await contract.commitMove(
+      body.duelId,
+      session.roundIndex,
+      commitHash,
+    );
+    commitTxHash = tx?.txHash;
+    const onChain = await contract.getRoundOnChain(
+      body.duelId,
+      session.roundIndex,
+    );
+    commitTsOnChain = onChain?.commitTs;
   }
 
-  session.logs.push({
+  const log: RoundLog = {
     roundIndex: session.roundIndex,
     commitHash,
     salt,
     inputHash,
     attestationHash,
+    attestation,
     decision,
     commitTimestamp: Date.now(),
-  });
+    commitTxHash,
+    commitTsOnChain,
+  };
 
-  return { decision, commitHash, attestationHash };
+  session.logs.push(log);
+  await persistSession(session);
+
+  return {
+    taunt: decision.taunt,
+    commitHash,
+    commitTxHash,
+    roundIndex: session.roundIndex,
+    attestationHash,
+    commitTsOnChain,
+  };
 }
 
 export async function handleRoundReveal(body: {
   duelId: string;
   roundIndex: number;
   playerAction: string;
-}): Promise<{ verified: boolean }> {
-  const session = sessions.get(body.duelId);
+  playerActionTimestamp?: number;
+}): Promise<{
+  verified: boolean;
+  decision: ZegonDecision;
+  revealTxHash?: string;
+}> {
+  const session = await getSession(body.duelId);
   if (!session) {
     throw new Error("Duel not found");
   }
 
-  const log = session.logs[body.roundIndex] as {
-    commitHash: string;
-    salt: string;
-    decision: ZegonDecision;
-  } | undefined;
-
+  const log = session.logs.find((l) => l.roundIndex === body.roundIndex);
   if (!log) {
     throw new Error("Round log not found");
   }
 
+  log.playerAction = body.playerAction;
+  log.playerActionTimestamp =
+    body.playerActionTimestamp ?? Date.now();
+
   const contract = getContractService();
+  let revealTxHash: string | undefined;
+
   if (contract.isConfigured()) {
-    await contract.revealMove(
+    const tx = await contract.revealMove(
       body.duelId,
       body.roundIndex,
       log.decision.zegonMove,
       log.salt,
     );
+    revealTxHash = tx?.txHash;
+    log.revealTxHash = revealTxHash;
   }
 
   session.roundIndex += 1;
-  return { verified: true };
+  await persistSession(session);
+
+  return { verified: true, decision: log.decision, revealTxHash };
 }
 
 export async function handleRecordDuel(body: {
   duelId: string;
   result: number;
   attestationHash: string;
-}): Promise<{ stored: boolean; storageRoot?: string }> {
-  const session = sessions.get(body.duelId);
+}): Promise<{
+  stored: boolean;
+  storageRoot?: string;
+  storageTxHash?: string;
+  recordTxHash?: string;
+}> {
+  const session = await getSession(body.duelId);
   if (!session) {
     throw new Error("Duel not found");
   }
 
   const contract = getContractService();
+  let recordTxHash: string | undefined;
+
   if (contract.isConfigured()) {
-    await contract.recordDuel(body.duelId, body.attestationHash, body.result);
+    const tx = await contract.recordDuel(
+      body.duelId,
+      body.attestationHash,
+      body.result,
+    );
+    recordTxHash = tx?.txHash;
   }
 
-  const storageRoot = await storeDuelLog(body.duelId, session.logs);
-  return { stored: true, storageRoot };
+  const storage = await storeDuelLog(body.duelId, session.logs);
+  session.storageRoot = storage.rootHash ?? storage.localPath;
+  session.recordTxHash = recordTxHash;
+  session.result = body.result;
+  await persistSession(session);
+
+  return {
+    stored: true,
+    storageRoot: storage.rootHash ?? storage.localPath,
+    storageTxHash: storage.txHash,
+    recordTxHash,
+  };
 }
 
 export async function handleVerify(duelId: string): Promise<{
   duelId: string;
   verified: boolean;
-  rounds: unknown[];
+  contractAddress?: string;
+  rounds: Array<{
+    roundIndex: number;
+    commitHash: string;
+    commitTxHash?: string;
+    revealTxHash?: string;
+    commitTsOnChain?: number;
+    playerActionTimestamp?: number;
+    commitBeforePlayer: boolean;
+    zegonMove?: string;
+    attestationHash?: string;
+    onChain?: {
+      commit: string;
+      revealed: boolean;
+      zegonMove: number;
+      commitTs: number;
+      revealTs: number;
+    };
+  }>;
+  storageRoot?: string;
+  recordTxHash?: string;
   explorerUrl?: string;
+  recordTxExplorerUrl?: string;
 }> {
-  const session = sessions.get(duelId);
+  const session = await getSession(duelId);
   const contract = getContractService();
+  const storedPayload = await loadDuelLogPayload(duelId);
+  const logs: RoundLog[] =
+    session?.logs ??
+    (storedPayload?.logs as RoundLog[] | undefined) ??
+    [];
+
+  const rounds = await Promise.all(
+    (logs as RoundLog[]).map(async (log) => {
+      const onChain = contract.isConfigured()
+        ? await contract.getRoundOnChain(duelId, log.roundIndex)
+        : null;
+
+      const commitTs = log.commitTsOnChain ?? onChain?.commitTs;
+      const playerTs = log.playerActionTimestamp;
+      const commitBeforePlayer =
+        commitTs !== undefined &&
+        playerTs !== undefined &&
+        commitTs <= Math.floor(playerTs / 1000);
+
+      return {
+        roundIndex: log.roundIndex,
+        commitHash: log.commitHash,
+        commitTxHash: log.commitTxHash,
+        commitTxExplorerUrl: log.commitTxHash
+          ? contract.getTxExplorerUrl(log.commitTxHash)
+          : undefined,
+        revealTxHash: log.revealTxHash,
+        revealTxExplorerUrl: log.revealTxHash
+          ? contract.getTxExplorerUrl(log.revealTxHash)
+          : undefined,
+        commitTsOnChain: commitTs,
+        playerActionTimestamp: playerTs,
+        commitBeforePlayer,
+        zegonMove: log.decision?.zegonMove,
+        attestationHash: log.attestationHash,
+        onChain: onChain
+          ? {
+              ...onChain,
+              zegonMoveLabel: uint8ToZegonAction(onChain.zegonMove),
+            }
+          : undefined,
+      };
+    }),
+  );
+
+  const allCommitBeforePlayer =
+    rounds.length > 0 && rounds.every((r) => r.commitBeforePlayer);
 
   return {
     duelId,
-    verified: session !== undefined,
-    rounds: session?.logs ?? [],
+    verified: allCommitBeforePlayer || (session !== null && rounds.length > 0),
+    contractAddress: contract.getContractAddress() ?? undefined,
+    rounds,
+    storageRoot: session?.storageRoot,
+    recordTxHash: session?.recordTxHash,
     explorerUrl: contract.getExplorerUrl(duelId),
+    contractExplorerUrl: contract.getContractAddress()
+      ? `${EXPLORER_BASE}/address/${contract.getContractAddress()}`
+      : undefined,
+    recordTxExplorerUrl: session?.recordTxHash
+      ? contract.getTxExplorerUrl(session.recordTxHash)
+      : undefined,
   };
 }
 

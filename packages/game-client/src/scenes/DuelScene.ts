@@ -5,27 +5,46 @@ import {
   PlayerAction,
 } from "../adapters/GameCoreAdapter.js";
 import { t } from "../i18n/index.js";
-import type { RoundOutcome } from "@zegon/game-core";
+import type { DuelEvent, RoundOutcome } from "@zegon/game-core";
+import { ActionValidationError } from "@zegon/game-core";
 import {
   createActionButton,
   createLabeledPanel,
+  createPromptPanel,
+  type ActionButtonHandle,
   drawBlindsightMeter,
   drawDesertBackdrop,
   drawDivider,
+  drawGlitchOverlay,
   drawHpBar,
   drawScanlines,
+  scanlineAlphaForBlindsight,
   drawZegonFigure,
 } from "../ui/components.js";
+import { actionButtonWidth, DUEL_LAYOUT as L } from "../ui/layout.js";
+import { buildRoundSummary } from "../ui/roundSummary.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
 
-function actionLabel(action: PlayerAction): string {
+function actionLabel(action: PlayerAction | string): string {
   const strings = t();
-  return {
+  const map: Record<string, string> = {
     [PlayerAction.FIRE_HIGH]: strings.actionFireHigh,
     [PlayerAction.FIRE_LOW]: strings.actionFireLow,
     [PlayerAction.DODGE]: strings.actionDodge,
     [PlayerAction.FEINT]: strings.actionFeint,
     [PlayerAction.RELOAD]: strings.actionReload,
+  };
+  return map[action] ?? action;
+}
+
+function actionDescription(action: PlayerAction): string {
+  const strings = t();
+  return {
+    [PlayerAction.FIRE_HIGH]: strings.actionDescFireHigh,
+    [PlayerAction.FIRE_LOW]: strings.actionDescFireLow,
+    [PlayerAction.DODGE]: strings.actionDescDodge,
+    [PlayerAction.FEINT]: strings.actionDescFeint,
+    [PlayerAction.RELOAD]: strings.actionDescReload,
   }[action];
 }
 
@@ -33,10 +52,24 @@ function isFireAction(action: PlayerAction): boolean {
   return action === PlayerAction.FIRE_HIGH || action === PlayerAction.FIRE_LOW;
 }
 
+function formatSubmitError(err: unknown): string {
+  const strings = t();
+  if (err instanceof ActionValidationError && err.message.includes("ammo")) {
+    return strings.errorNoAmmo;
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return String(err);
+}
+
 export class DuelScene extends Phaser.Scene {
   private adapter!: GameCoreAdapter;
   private backdrop!: Phaser.GameObjects.Container;
   private zegonFigure!: Phaser.GameObjects.Container;
+  private glitchOverlay!: Phaser.GameObjects.Container;
+  private scanlines!: Phaser.GameObjects.Graphics;
+  private glitchPulse = 0;
   private roundText!: Phaser.GameObjects.Text;
   private historyBody!: Phaser.GameObjects.Text;
   private blindsightLabel!: Phaser.GameObjects.Text;
@@ -44,13 +77,15 @@ export class DuelScene extends Phaser.Scene {
   private hpGfx!: Phaser.GameObjects.Graphics;
   private playerStats!: Phaser.GameObjects.Text;
   private zegonStats!: Phaser.GameObjects.Text;
+  private promptPanel!: Phaser.GameObjects.Container;
   private statusText!: Phaser.GameObjects.Text;
   private tauntText!: Phaser.GameObjects.Text;
-  private actionButtons: {
-    bg: Phaser.GameObjects.Rectangle;
-    text: Phaser.GameObjects.Text;
-  }[] = [];
+  private roundResultText!: Phaser.GameObjects.Text;
+  private roundResultPanel!: Phaser.GameObjects.Rectangle;
+  private actionTooltipText!: Phaser.GameObjects.Text;
+  private actionButtons: ActionButtonHandle[] = [];
   private mode: "standard" | "daily" = "standard";
+  private showingRoundResult = false;
 
   constructor() {
     super("DuelScene");
@@ -58,29 +93,33 @@ export class DuelScene extends Phaser.Scene {
 
   init(data: { mode?: "standard" | "daily" }): void {
     this.mode = data.mode ?? "standard";
+    this.showingRoundResult = false;
   }
 
   create(): void {
-    const { width, height } = this.scale;
+    const { width } = this.scale;
     const strings = t();
 
     this.cameras.main.setBackgroundColor(C.void);
     this.backdrop = drawDesertBackdrop(this, 0);
-    drawScanlines(this);
-    drawDivider(this, height - 100);
+    this.scanlines = drawScanlines(this);
+    this.glitchOverlay = drawGlitchOverlay(this, 0);
+    drawDivider(this, L.divider.y);
 
-    this.zegonFigure = drawZegonFigure(this, width / 2, height * 0.42, 0);
+    this.zegonFigure = drawZegonFigure(this, width / 2, L.arena.y, 0);
 
-    this.roundText = this.add.text(20, 14, "", {
+    this.roundText = this.add.text(20, L.topBar.y, "", {
       fontFamily: FONT,
       fontSize: "18px",
       color: COLORS.ember,
     }).setDepth(10);
 
-    const historyPanel = createLabeledPanel(this, 20, 52, 160, 110, strings.history, 10);
+    const historyPanel = createLabeledPanel(
+      this, L.history.x, L.history.y, L.history.w, L.history.h, strings.history, 10,
+    );
     this.historyBody = historyPanel.body;
 
-    this.blindsightLabel = this.add.text(width - 20, 14, "", {
+    this.blindsightLabel = this.add.text(L.blindsight.labelX, L.blindsight.labelY, "", {
       fontFamily: FONT,
       fontSize: "16px",
       color: COLORS.ember,
@@ -89,33 +128,56 @@ export class DuelScene extends Phaser.Scene {
     this.blindsightGfx = this.add.graphics().setDepth(10);
     this.hpGfx = this.add.graphics().setDepth(10);
 
-    this.playerStats = this.add.text(20, height - 88, "", {
+    this.playerStats = this.add.text(20, L.stats.y, "", {
       fontFamily: FONT,
       fontSize: "16px",
       color: COLORS.bone,
     }).setDepth(10);
 
-    this.zegonStats = this.add.text(width - 20, height - 88, "", {
+    this.zegonStats = this.add.text(width - 20, L.stats.y, "", {
       fontFamily: FONT,
       fontSize: "16px",
       color: COLORS.ember,
     }).setOrigin(1, 0).setDepth(10);
 
-    this.statusText = this.add.text(width / 2, height * 0.18, strings.duelTitle, {
-      fontFamily: FONT,
-      fontSize: "22px",
-      color: COLORS.cyan,
-      align: "center",
-      wordWrap: { width: width * 0.8 },
-    }).setOrigin(0.5).setDepth(10);
+    const promptX = (width - L.prompt.w) / 2;
+    const prompt = createPromptPanel(this, promptX, L.prompt.y, L.prompt.w, L.prompt.h, 10);
+    this.promptPanel = prompt.container;
+    this.statusText = prompt.text;
 
-    this.tauntText = this.add.text(width / 2, height * 0.58, "", {
+    this.tauntText = this.add.text(width / 2, L.taunt.y, "", {
       fontFamily: FONT,
-      fontSize: "17px",
+      fontSize: "14px",
       color: COLORS.ember,
       align: "center",
-      wordWrap: { width: width * 0.6 },
-    }).setOrigin(0.5).setDepth(10);
+      wordWrap: { width: L.taunt.maxW },
+    }).setOrigin(0.5, 0).setDepth(10);
+
+    this.roundResultPanel = this.add.rectangle(
+      width / 2,
+      L.roundResult.y,
+      L.roundResult.w,
+      L.roundResult.h,
+      C.ash,
+      0.92,
+    ).setStrokeStyle(1, C.fog).setDepth(11).setVisible(false);
+
+    this.roundResultText = this.add.text(width / 2, L.roundResult.y, "", {
+      fontFamily: FONT,
+      fontSize: "17px",
+      color: COLORS.bone,
+      align: "center",
+      wordWrap: { width: L.roundResult.w - 24 },
+      lineSpacing: 4,
+    }).setOrigin(0.5).setDepth(12).setVisible(false);
+
+    this.actionTooltipText = this.add.text(width / 2, L.tooltip.y, strings.actionTooltipHint, {
+      fontFamily: FONT,
+      fontSize: "14px",
+      color: COLORS.dust,
+      align: "center",
+      wordWrap: { width: width * 0.85 },
+    }).setOrigin(0.5).setDepth(11);
 
     this.adapter = new GameCoreAdapter({
       brainMode: import.meta.env.VITE_USE_OG_COMPUTE === "true" ? "api" : "dummy",
@@ -130,12 +192,11 @@ export class DuelScene extends Phaser.Scene {
 
   private createActionButtons(): void {
     const actions = Object.values(PlayerAction);
-    const { width, height } = this.scale;
-    const gap = 6;
-    const btnW = Math.min(150, (width - 40 - gap * (actions.length - 1)) / actions.length);
-    const btnH = 34;
-    const y = height - 52;
-    const total = actions.length * btnW + (actions.length - 1) * gap;
+    const { width } = this.scale;
+    const btnW = actionButtonWidth(width, actions.length, L.actions.gap);
+    const btnH = L.actions.h;
+    const y = L.actions.y;
+    const total = actions.length * btnW + (actions.length - 1) * L.actions.gap;
     let x = (width - total) / 2 + btnW / 2;
 
     actions.forEach((action) => {
@@ -143,20 +204,69 @@ export class DuelScene extends Phaser.Scene {
         this, x, y, btnW, btnH, actionLabel(action),
         () => {
           if (!this.adapter.isAwaitingPlayer()) return;
-          const outcome = this.adapter.submitAction(action);
-          if (isFireAction(action)) this.playFireFlash();
-          this.onRoundResolved(outcome);
+          if (!this.adapter.getAvailableActions().includes(action)) return;
+          void this.submitPlayerAction(action);
         },
         10,
+        (hovering) => this.showActionTooltip(action, hovering),
       );
       this.actionButtons.push(btn);
-      x += btnW + gap;
+      x += btnW + L.actions.gap;
+    });
+  }
+
+  private showActionTooltip(action: PlayerAction, visible: boolean): void {
+    const strings = t();
+    if (visible) {
+      this.actionTooltipText
+        .setText(`${actionLabel(action)} — ${actionDescription(action)}`)
+        .setColor(COLORS.cyan);
+    } else {
+      this.actionTooltipText
+        .setText(strings.actionTooltipHint)
+        .setColor(COLORS.dust);
+    }
+  }
+
+  private setPromptVisible(visible: boolean): void {
+    this.promptPanel.setVisible(visible);
+    this.tauntText.setVisible(visible && !this.showingRoundResult);
+  }
+
+  private setTauntVisible(visible: boolean): void {
+    this.tauntText.setVisible(visible && !this.showingRoundResult);
+  }
+
+  private showRoundResult(outcome: RoundOutcome): void {
+    const summary = buildRoundSummary(outcome, t(), (action) =>
+      actionLabel(action),
+    );
+    this.showingRoundResult = true;
+    this.setPromptVisible(false);
+    this.setTauntVisible(false);
+    this.roundResultText.setText(summary.text).setColor(summary.color);
+    this.roundResultPanel.setVisible(true);
+    this.roundResultText.setVisible(true);
+
+    this.tweens.add({
+      targets: [this.roundResultText, this.roundResultPanel],
+      alpha: { from: 0.4, to: 1 },
+      duration: 200,
+      ease: "Sine.Out",
+    });
+
+    this.time.delayedCall(2200, () => {
+      this.showingRoundResult = false;
+      this.roundResultPanel.setVisible(false);
+      this.roundResultText.setVisible(false);
+      this.setPromptVisible(true);
+      this.setTauntVisible(true);
     });
   }
 
   private playFireFlash(): void {
-    const { width, height } = this.scale;
-    const flash = this.add.circle(width / 2, height * 0.55, 40, C.ember, 0.7).setDepth(20);
+    const { width } = this.scale;
+    const flash = this.add.circle(width / 2, L.arena.y + 30, 40, C.ember, 0.7).setDepth(20);
     this.tweens.add({
       targets: flash,
       alpha: 0,
@@ -165,33 +275,59 @@ export class DuelScene extends Phaser.Scene {
       onComplete: () => flash.destroy(),
     });
     this.cameras.main.shake(100, 0.003);
-  }
-
-  private onRoundResolved(outcome: RoundOutcome): void {
-    if (outcome.playerDamage > 0) {
-      this.cameras.main.flash(180, 179, 18, 43);
+    if (this.sound.get("fire")) {
+      this.sound.play("fire", { volume: 0.4 });
     }
   }
 
-  private handleEvent(event: { type: string }): void {
+  private onRoundResolved(outcome: RoundOutcome): void {
+    this.showRoundResult(outcome);
+    if (outcome.playerDamage > 0) {
+      this.cameras.main.flash(180, 179, 18, 43);
+      this.cameras.main.shake(150, 0.005);
+    }
+    if (
+      outcome.zegonDecision.zegonMove === "FIRE_HIGH" ||
+      outcome.zegonDecision.zegonMove === "FIRE_LOW"
+    ) {
+      this.time.delayedCall(120, () => this.playFireFlash());
+    }
+  }
+
+  private handleEvent(event: DuelEvent): void {
     const strings = t();
 
     if (event.type === "phaseChange") {
       const phase = this.adapter.getPhase();
       if (phase === DuelPhase.ZEGON_THINKING) {
         this.statusText.setText(strings.zegonReading).setColor(COLORS.ember);
+        this.tauntText.setText("");
+        if (!this.showingRoundResult) {
+          this.roundResultPanel.setVisible(false);
+          this.roundResultText.setVisible(false);
+        }
       } else if (phase === DuelPhase.AWAITING_PLAYER) {
         this.statusText.setText(strings.yourTurnPrompt).setColor(COLORS.cyan);
         this.tauntText.setText(this.adapter.getPendingTaunt() ?? "");
       } else if (phase === DuelPhase.DEADEYE) {
         this.statusText.setText(strings.deadeye).setColor(COLORS.ember);
         this.cameras.main.flash(280, 255, 77, 46);
+        this.cameras.main.shake(200, 0.008);
       }
+    }
+
+    if (event.type === "roundResolved" && event.outcome) {
+      this.onRoundResolved(event.outcome);
     }
 
     if (event.type === "duelEnd") {
       this.time.delayedCall(800, () => {
-        this.scene.start("ResultScene", { result: this.adapter.getResult() });
+        this.scene.start("ResultScene", {
+          result: this.adapter.getResult(),
+          duelId: this.adapter.getDuelId(),
+          apiBaseUrl: this.adapter.getApiBaseUrl(),
+          mode: this.mode,
+        });
       });
     }
 
@@ -203,24 +339,38 @@ export class DuelScene extends Phaser.Scene {
   private updateArena(): void {
     const blindsight = this.adapter.getBlindsight();
     const isDeadeye = blindsight >= 80;
+    const intensity = blindsight / 100;
 
     this.zegonFigure.destroy();
-    this.zegonFigure = drawZegonFigure(
-      this,
-      this.scale.width / 2,
-      this.scale.height * 0.42,
-      blindsight,
-      isDeadeye,
-    );
+    this.zegonFigure = drawZegonFigure(this, this.scale.width / 2, L.arena.y, blindsight, isDeadeye);
 
     this.backdrop.destroy();
-    this.backdrop = drawDesertBackdrop(this, blindsight / 100);
+    this.backdrop = drawDesertBackdrop(this, intensity);
     this.backdrop.setDepth(0);
+
+    this.glitchOverlay.destroy();
+    this.glitchOverlay = drawGlitchOverlay(this, intensity);
+    this.scanlines.setAlpha(scanlineAlphaForBlindsight(blindsight));
+
+    if (intensity > 0.45) {
+      this.glitchPulse += 0.08 + intensity * 0.12;
+      const flicker = 0.92 + Math.sin(this.glitchPulse) * 0.08 * intensity;
+      this.glitchOverlay.setAlpha((0.35 + intensity * 0.55) * flicker);
+    }
+
+    if (intensity > 0.65) {
+      this.cameras.main.setZoom(1 + (intensity - 0.65) * 0.04);
+      if (Math.random() < intensity * 0.04) {
+        this.cameras.main.shake(60, 0.002 * intensity);
+      }
+    } else {
+      this.cameras.main.setZoom(1);
+    }
   }
 
   private updateHud(): void {
     const strings = t();
-    const { width, height } = this.scale;
+    const { width } = this.scale;
     const state = this.adapter.getState();
     const history = state.playerHistory;
     const blindsight = this.adapter.getBlindsight();
@@ -231,15 +381,28 @@ export class DuelScene extends Phaser.Scene {
 
     const lines = history.slice(-5).map((action, i) => {
       const r = history.length - history.slice(-5).length + i + 1;
-      return `R${r} ${actionLabel(action as PlayerAction)}`;
+      return `${strings.round} ${String(r).padStart(2, "0")} · ${actionLabel(action as PlayerAction)}`;
     });
     this.historyBody.setText(lines.length > 0 ? lines.join("\n") : "—");
 
     this.blindsightLabel.setText(`${strings.hudBlindsight}  ${blindsight}%`);
-    drawBlindsightMeter(this.blindsightGfx, width - 216, 38, 196, 8, blindsight);
+    drawBlindsightMeter(
+      this.blindsightGfx,
+      L.blindsight.barX,
+      L.blindsight.barY,
+      L.blindsight.barW,
+      L.blindsight.barH,
+      blindsight,
+    );
 
-    drawHpBar(this.hpGfx, 20, height - 108, 120, 6, playerHp, 100, C.cyan);
-    drawHpBar(this.hpGfx, width - 140, height - 108, 120, 6, zegonHp, 100, C.ember);
+    drawHpBar(
+      this.hpGfx, 20, L.stats.hpBarY, L.stats.hpBarW, L.stats.hpBarH,
+      playerHp, 100, C.cyan,
+    );
+    drawHpBar(
+      this.hpGfx, width - 20 - L.stats.hpBarW, L.stats.hpBarY,
+      L.stats.hpBarW, L.stats.hpBarH, zegonHp, 100, C.ember,
+    );
 
     this.playerStats.setText(
       `${strings.hudYou}  ${playerHp}${strings.hudHp}  ·  ${strings.hudAmmo} ×${this.adapter.getAmmo()}`,
@@ -259,13 +422,28 @@ export class DuelScene extends Phaser.Scene {
     this.actionButtons.forEach((btn, i) => {
       const action = Object.values(PlayerAction)[i]!;
       const active = enabled && available.has(action);
-      btn.text.setText(actionLabel(action));
-      btn.bg.setStrokeStyle(active ? 2 : 1, active ? C.cyan : C.fog);
-      btn.bg.setFillStyle(active ? C.smoke : C.ash, active ? 1 : 0.55);
-      btn.text.setColor(active ? COLORS.bone : COLORS.dust);
-      btn.bg.setAlpha(active ? 1 : 0.5);
-      btn.text.setAlpha(active ? 1 : 0.5);
+      btn.setLabel(actionLabel(action));
+      btn.setEnabled(active);
+      btn.resetHover();
     });
+  }
+
+  private async submitPlayerAction(action: PlayerAction): Promise<void> {
+    this.actionButtons.forEach((btn) => {
+      btn.resetHover();
+      btn.setDimmed(true);
+    });
+    this.actionTooltipText.setText("").setAlpha(0.35);
+    try {
+      await this.adapter.submitAction(action);
+      if (isFireAction(action)) this.playFireFlash();
+    } catch (err) {
+      this.statusText.setText(formatSubmitError(err)).setColor(COLORS.ember);
+    } finally {
+      this.actionTooltipText.setText(t().actionTooltipHint).setAlpha(1);
+      this.actionButtons.forEach((btn) => btn.setDimmed(false));
+      this.updateActionButtons();
+    }
   }
 
   shutdown(): void {
