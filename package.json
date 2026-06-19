@@ -16,6 +16,7 @@
     "smoke:compute": "pnpm --filter @zegon/game-server smoke:compute"
   },
   "devDependencies": {
+    "@vercel/node": "^5.1.8",
     "typescript": "^5.7.3"
   },
   "packageManager": "pnpm@9.15.4"

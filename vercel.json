@@ -8,12 +8,12 @@
       "config": { "distDir": "packages/game-client/dist" }
     },
     {
-      "src": "packages/game-server/api/duel/[...slug].ts",
+      "src": "api/[...slug].ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/packages/game-server/api/duel/[...slug].ts" },
+    { "src": "/api/(.*)", "dest": "/api/[...slug].ts?slug=$1" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/packages/game-client/dist/index.html" }
   ]

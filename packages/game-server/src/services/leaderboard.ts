@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { leaderboardDir } from "../utils/paths.js";
 
 export interface LeaderboardEntry {
   playerId: string;
@@ -7,7 +8,7 @@ export interface LeaderboardEntry {
   timestamp: number;
 }
 
-const DATA_DIR = process.env.LEADERBOARD_DIR ?? join(process.cwd(), ".leaderboard");
+const DATA_DIR = leaderboardDir();
 
 async function loadBoard(seed: string): Promise<LeaderboardEntry[]> {
   try {

@@ -1,8 +1,9 @@
 import { writeFile, readFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { ethers } from "ethers";
+import { duelLogDir } from "../utils/paths.js";
 
-const DATA_DIR = process.env.DUEL_LOG_DIR ?? join(process.cwd(), ".duel-logs");
+const DATA_DIR = duelLogDir();
 const INDEXER_RPC =
   process.env.OG_STORAGE_INDEXER ??
   "https://indexer-storage-turbo.0g.ai";

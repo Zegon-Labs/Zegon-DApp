@@ -15,3 +15,5 @@ packages/game-server/api/**/*.js
 packages/game-server/api/**/*.js.map
 packages/game-server/api/**/*.d.ts
 packages/game-server/api/**/*.d.ts.map
+
+.vercel

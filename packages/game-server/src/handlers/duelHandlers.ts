@@ -14,6 +14,7 @@ import { getOGComputeService } from "../services/ogCompute.js";
 import { loadSession, saveSession } from "../services/sessionStore.js";
 import { storeDuelLog, loadDuelLogPayload } from "../services/storage.js";
 import { uint8ToZegonAction } from "../services/moveMapping.js";
+import { encodeSessionToken, decodeSessionToken } from "../utils/sessionToken.js";
 import type { DuelSession, RoundLog } from "../types/duelSession.js";
 
 export type { DuelSession, RoundLog };
@@ -24,7 +25,17 @@ function generateDuelId(): string {
   return randomBytes(16).toString("hex");
 }
 
-async function getSession(duelId: string): Promise<DuelSession | null> {
+async function getSession(
+  duelId: string,
+  sessionToken?: string,
+): Promise<DuelSession | null> {
+  if (sessionToken) {
+    const decoded = decodeSessionToken(sessionToken);
+    if (decoded?.id === duelId) {
+      sessions.set(duelId, decoded);
+      return decoded;
+    }
+  }
   const cached = sessions.get(duelId);
   if (cached) return cached;
   const loaded = await loadSession(duelId);
@@ -42,7 +53,7 @@ async function persistSession(session: DuelSession): Promise<void> {
 
 export async function handleStartDuel(body: {
   config?: Partial<DuelConfig>;
-}): Promise<{ duelId: string }> {
+}): Promise<{ duelId: string; sessionToken: string }> {
   const duelId = generateDuelId();
   const session: DuelSession = {
     id: duelId,
@@ -56,13 +67,14 @@ export async function handleStartDuel(body: {
     createdAt: Date.now(),
   };
   await persistSession(session);
-  return { duelId };
+  return { duelId, sessionToken: encodeSessionToken(session) };
 }
 
 export async function handleRoundCommit(body: {
   duelId: string;
   context: RoundContext;
   locale?: "en" | "es";
+  sessionToken?: string;
 }): Promise<{
   taunt: string;
   commitHash: string;
@@ -70,8 +82,9 @@ export async function handleRoundCommit(body: {
   roundIndex: number;
   attestationHash?: string;
   commitTsOnChain?: number;
+  sessionToken: string;
 }> {
-  const session = await getSession(body.duelId);
+  const session = await getSession(body.duelId, body.sessionToken);
   if (!session) {
     throw new Error("Duel not found");
   }
@@ -139,6 +152,7 @@ export async function handleRoundCommit(body: {
     roundIndex: session.roundIndex,
     attestationHash,
     commitTsOnChain,
+    sessionToken: encodeSessionToken(session),
   };
 }
 
@@ -147,12 +161,14 @@ export async function handleRoundReveal(body: {
   roundIndex: number;
   playerAction: string;
   playerActionTimestamp?: number;
+  sessionToken?: string;
 }): Promise<{
   verified: boolean;
   decision: ZegonDecision;
   revealTxHash?: string;
+  sessionToken: string;
 }> {
-  const session = await getSession(body.duelId);
+  const session = await getSession(body.duelId, body.sessionToken);
   if (!session) {
     throw new Error("Duel not found");
   }
@@ -183,20 +199,27 @@ export async function handleRoundReveal(body: {
   session.roundIndex += 1;
   await persistSession(session);
 
-  return { verified: true, decision: log.decision, revealTxHash };
+  return {
+    verified: true,
+    decision: log.decision,
+    revealTxHash,
+    sessionToken: encodeSessionToken(session),
+  };
 }
 
 export async function handleRecordDuel(body: {
   duelId: string;
   result: number;
   attestationHash: string;
+  sessionToken?: string;
 }): Promise<{
   stored: boolean;
   storageRoot?: string;
   storageTxHash?: string;
   recordTxHash?: string;
+  sessionToken?: string;
 }> {
-  const session = await getSession(body.duelId);
+  const session = await getSession(body.duelId, body.sessionToken);
   if (!session) {
     throw new Error("Duel not found");
   }
@@ -224,6 +247,7 @@ export async function handleRecordDuel(body: {
     storageRoot: storage.rootHash ?? storage.localPath,
     storageTxHash: storage.txHash,
     recordTxHash,
+    sessionToken: encodeSessionToken(session),
   };
 }
 
@@ -236,6 +260,8 @@ export async function handleVerify(duelId: string): Promise<{
     commitHash: string;
     commitTxHash?: string;
     revealTxHash?: string;
+    commitTxExplorerUrl?: string;
+    revealTxExplorerUrl?: string;
     commitTsOnChain?: number;
     playerActionTimestamp?: number;
     commitBeforePlayer: boolean;
@@ -247,11 +273,13 @@ export async function handleVerify(duelId: string): Promise<{
       zegonMove: number;
       commitTs: number;
       revealTs: number;
+      zegonMoveLabel?: string;
     };
   }>;
   storageRoot?: string;
   recordTxHash?: string;
   explorerUrl?: string;
+  contractExplorerUrl?: string;
   recordTxExplorerUrl?: string;
 }> {
   const session = await getSession(duelId);

@@ -1,9 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { DuelSession } from "../types/duelSession.js";
+import { sessionDir } from "../utils/paths.js";
 
-const SESSION_DIR =
-  process.env.DUEL_SESSION_DIR ?? join(process.cwd(), ".duel-sessions");
+const SESSION_DIR = sessionDir();
 
 export async function saveSession(session: DuelSession): Promise<void> {
   await mkdir(SESSION_DIR, { recursive: true });

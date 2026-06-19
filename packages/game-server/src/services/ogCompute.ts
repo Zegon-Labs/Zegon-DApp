@@ -126,7 +126,9 @@ export class OGComputeService {
         process.env.OG_RPC_URL ?? "https://evmrpc-testnet.0g.ai",
       );
       const signer = new ethers.Wallet(pk, provider);
-      const broker = await createZGComputeNetworkBroker(signer);
+      const broker = await createZGComputeNetworkBroker(
+        signer as Parameters<typeof createZGComputeNetworkBroker>[0],
+      );
 
       await ensureLedgerFunded(broker);
 

@@ -32,11 +32,19 @@ export interface GameCoreAdapterOptions {
 
 class ApiZegonBrain implements IZegonBrain {
   private duelId: string | null = null;
+  private sessionToken: string | null = null;
 
-  constructor(private readonly apiBaseUrl: string) {}
+  constructor(
+    private readonly apiBaseUrl: string,
+    private readonly onSessionToken: (token: string) => void,
+  ) {}
 
   setDuelId(duelId: string): void {
     this.duelId = duelId;
+  }
+
+  setSessionToken(token: string | null): void {
+    this.sessionToken = token;
   }
 
   async decide(ctx: RoundContext): Promise<ZegonDecision> {
@@ -51,6 +59,7 @@ class ApiZegonBrain implements IZegonBrain {
         duelId: this.duelId,
         context: ctx,
         locale: getLanguage(),
+        sessionToken: this.sessionToken ?? undefined,
       }),
     });
 
@@ -58,7 +67,12 @@ class ApiZegonBrain implements IZegonBrain {
       throw new Error(`API commit failed: ${res.status}`);
     }
 
-    const data = (await res.json()) as { taunt: string };
+    const data = (await res.json()) as { taunt: string; sessionToken: string };
+    if (data.sessionToken) {
+      this.sessionToken = data.sessionToken;
+      this.onSessionToken(data.sessionToken);
+    }
+
     return {
       predictedPlayerMove: PlayerAction.FIRE_HIGH,
       zegonMove: ZegonAction.RELOAD,
@@ -75,6 +89,7 @@ export class GameCoreAdapter {
   private readonly apiBaseUrl: string;
   private readonly apiBrain: ApiZegonBrain | null;
   private _duelId: string | null = null;
+  private _sessionToken: string | null = null;
   private _lastAttestationHash: string | null = null;
   private unsubscribe: (() => void) | null = null;
 
@@ -97,7 +112,9 @@ export class GameCoreAdapter {
       this.apiBrain = null;
       brain = options.customBrain;
     } else if (this.brainMode === "api" && !this.offline) {
-      this.apiBrain = new ApiZegonBrain(this.apiBaseUrl);
+      this.apiBrain = new ApiZegonBrain(this.apiBaseUrl, (token) => {
+        this._sessionToken = token;
+      });
       brain = this.apiBrain;
     } else {
       this.apiBrain = null;
@@ -141,9 +158,11 @@ export class GameCoreAdapter {
       if (!res.ok) {
         throw new Error(`Failed to start duel: ${res.status}`);
       }
-      const data = (await res.json()) as { duelId: string };
+      const data = (await res.json()) as { duelId: string; sessionToken: string };
       this._duelId = data.duelId;
+      this._sessionToken = data.sessionToken;
       this.apiBrain?.setDuelId(data.duelId);
+      this.apiBrain?.setSessionToken(data.sessionToken);
     }
 
     await this.controller.startDuel();
@@ -208,6 +227,7 @@ export class GameCoreAdapter {
           roundIndex: state.roundIndex,
           playerAction: action,
           playerActionTimestamp: Date.now(),
+          sessionToken: this._sessionToken ?? undefined,
         }),
       });
 
@@ -215,7 +235,14 @@ export class GameCoreAdapter {
         throw new Error(`API reveal failed: ${res.status}`);
       }
 
-      const data = (await res.json()) as { decision: ZegonDecision };
+      const data = (await res.json()) as {
+        decision: ZegonDecision;
+        sessionToken: string;
+      };
+      if (data.sessionToken) {
+        this._sessionToken = data.sessionToken;
+        this.apiBrain?.setSessionToken(data.sessionToken);
+      }
       this.controller.setPendingDecision(data.decision);
     }
 
@@ -244,6 +271,7 @@ export class GameCoreAdapter {
           duelId: this._duelId,
           result: resultCode,
           attestationHash,
+          sessionToken: this._sessionToken ?? undefined,
         }),
       });
     } catch {
