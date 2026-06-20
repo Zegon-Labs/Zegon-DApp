@@ -225,27 +225,26 @@ export function createHubActionButton(
   if (actionId) {
     drawActionIcon(iconGfx, iconX, 0, actionId, C.bone, 12);
   }
-  const text = scene.add.text(actionId ? -w / 2 + 32 : 0, 0, label.replace(/ /g, "_"), {
+  const text = scene.add.text(actionId ? -w / 2 + 32 : 0, 0, label, {
     fontFamily: FONT,
-    fontSize: "14px",
+    fontSize: "13px",
     color: COLORS.bone,
     align: "left",
   }).setOrigin(actionId ? 0 : 0.5, 0.5);
 
   const container = scene.add.container(x, y, [bg, iconGfx, text]).setDepth(depth);
+  const hitArea = new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h);
   let enabled = false;
   let hovering = false;
   let dimmed = false;
 
   const applyStyle = (): void => {
-    scene.tweens.killTweensOf(bg);
     if (!enabled) {
       bg.setStrokeStyle(1, C.fog, 0.5);
       bg.setFillStyle(C.ash, 0.45);
       text.setColor(COLORS.dust);
       bg.setAlpha(dimmed ? 0.35 : 0.55);
       text.setAlpha(dimmed ? 0.35 : 0.55);
-      bg.setScale(1);
       if (actionId) {
         iconGfx.clear();
         drawActionIcon(iconGfx, iconX, 0, actionId, C.fog, 12);
@@ -273,30 +272,29 @@ export function createHubActionButton(
     }
   };
 
-  bg.setInteractive({ useHandCursor: true });
-  bg.disableInteractive();
+  const clearHover = (): void => {
+    if (!hovering) return;
+    hovering = false;
+    onHover?.(false);
+    applyStyle();
+  };
 
-  bg.on("pointerover", () => {
-    if (!enabled || dimmed) return;
+  container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+  if (container.input) container.input.cursor = "pointer";
+  container.disableInteractive();
+
+  container.on("pointerover", () => {
+    if (!enabled || dimmed || hovering) return;
     hovering = true;
     playActionHover();
     onHover?.(true);
     applyStyle();
-    scene.tweens.add({ targets: bg, scaleX: 1.04, scaleY: 1.08, duration: 90, ease: "Sine.Out" });
   });
-  bg.on("pointerout", () => {
-    hovering = false;
-    onHover?.(false);
-    scene.tweens.add({
-      targets: bg,
-      scaleX: 1,
-      scaleY: 1,
-      duration: 110,
-      ease: "Sine.In",
-      onComplete: () => applyStyle(),
-    });
+  container.on("pointerout", () => {
+    if (!enabled || dimmed) return;
+    clearHover();
   });
-  bg.on("pointerdown", () => {
+  container.on("pointerdown", () => {
     if (!enabled || dimmed) return;
     onClick();
   });
@@ -306,27 +304,29 @@ export function createHubActionButton(
   return {
     container,
     setEnabled(next: boolean) {
+      if (enabled === next) return;
       enabled = next;
       if (!next) {
-        hovering = false;
-        bg.disableInteractive();
+        clearHover();
+        container.disableInteractive();
       } else if (!dimmed) {
-        bg.setInteractive({ useHandCursor: true });
+        container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
       }
       applyStyle();
     },
     setDimmed(next: boolean) {
+      if (dimmed === next) return;
       dimmed = next;
-      if (dimmed) hovering = false;
+      if (dimmed) clearHover();
       if (!dimmed && enabled) {
-        bg.setInteractive({ useHandCursor: true });
+        container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+      } else if (dimmed) {
+        container.disableInteractive();
       }
       applyStyle();
     },
     resetHover() {
-      hovering = false;
-      bg.setScale(1);
-      applyStyle();
+      clearHover();
     },
   };
 }

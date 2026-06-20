@@ -4,46 +4,95 @@ import { COLORS } from "./theme.js";
 
 type ActionLabelFn = (action: string) => string;
 
+export type RoundSummaryLineRole = "headline" | "outcome" | "delta" | "damage" | "note";
+
+export interface RoundSummaryLine {
+  text: string;
+  role: RoundSummaryLineRole;
+}
+
+export interface RoundSummaryResult {
+  lines: RoundSummaryLine[];
+  color: string;
+  durationMs: number;
+}
+
+/** Time to read after the last line finishes animating in. */
+const READ_AFTER_REVEAL_MS = 4800;
+const REVEAL_BASE_MS = 80;
+const REVEAL_STAGGER_MS = 90;
+const REVEAL_ANIM_MS = 340;
+
+function displayDuration(lineCount: number): number {
+  const revealEnd =
+    REVEAL_BASE_MS + Math.max(0, lineCount - 1) * REVEAL_STAGGER_MS + REVEAL_ANIM_MS;
+  return revealEnd + READ_AFTER_REVEAL_MS;
+}
+
 export function buildRoundSummary(
   outcome: RoundOutcome,
   strings: LocaleStrings,
   labelAction: ActionLabelFn,
-): { text: string; color: string } {
+): RoundSummaryResult {
   const zegonMove = labelAction(outcome.zegonDecision.zegonMove);
-  const playerMove = labelAction(outcome.playerAction);
-
-  const lines: string[] = [
-    `${strings.zegonPlayed}: ${zegonMove}`,
-    `${strings.youPlayed}: ${playerMove}`,
+  const lines: RoundSummaryLine[] = [
+    {
+      text: `${strings.zegonPlayed}: ${zegonMove}`.toUpperCase(),
+      role: "headline",
+    },
   ];
 
   if (outcome.predictionCorrect) {
-    lines.push(`${strings.roundSummaryRead} · ${strings.zegonReadYou}`);
+    lines.push({
+      text: `${strings.roundSummaryRead} · ${strings.zegonReadYou}`,
+      role: "outcome",
+    });
   } else {
-    lines.push(strings.roundSummarySurprised);
+    lines.push({
+      text: strings.roundSummarySurprised,
+      role: "outcome",
+    });
   }
 
   const bsDelta =
     outcome.blindsightDelta >= 0
       ? `+${outcome.blindsightDelta}`
       : String(outcome.blindsightDelta);
-  lines.push(`${strings.hudBlindsight} ${bsDelta}`);
+  lines.push({
+    text: `${strings.hudBlindsight} ${bsDelta}`,
+    role: "delta",
+  });
 
   if (outcome.playerDamage > 0) {
-    lines.push(`${strings.roundSummaryYouHit} −${outcome.playerDamage} ${strings.hudHp}`);
+    lines.push({
+      text: `${strings.roundSummaryYouHit} −${outcome.playerDamage} ${strings.hudHp}`,
+      role: "damage",
+    });
   }
   if (outcome.zegonDamage > 0) {
-    lines.push(`${strings.roundSummaryZegonHit} −${outcome.zegonDamage} ${strings.hudHp}`);
+    lines.push({
+      text: `${strings.roundSummaryZegonHit} −${outcome.zegonDamage} ${strings.hudHp}`,
+      role: "damage",
+    });
   }
   if (outcome.playerDamage === 0 && outcome.zegonDamage === 0) {
-    lines.push(strings.roundSummaryNoDamage);
+    lines.push({
+      text: strings.roundSummaryNoDamage,
+      role: "note",
+    });
   }
 
   if (outcome.deadeyeTriggered) {
-    lines.push(strings.roundSummaryDeadeyeOn);
+    lines.push({
+      text: strings.roundSummaryDeadeyeOn,
+      role: "note",
+    });
   }
   if (outcome.deadeyeConsumed) {
-    lines.push(strings.roundSummaryDeadeyeUsed);
+    lines.push({
+      text: strings.roundSummaryDeadeyeUsed,
+      role: "note",
+    });
   }
 
   let color: string = COLORS.bone;
@@ -55,5 +104,9 @@ export function buildRoundSummary(
     color = COLORS.ember;
   }
 
-  return { text: lines.join("\n"), color };
+  return {
+    lines,
+    color,
+    durationMs: displayDuration(lines.length),
+  };
 }

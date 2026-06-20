@@ -1,10 +1,32 @@
 import Phaser from "phaser";
 import { DUEL_LAYOUT as L } from "../layout.js";
+import type { RoundSummaryLine, RoundSummaryLineRole } from "../roundSummary.js";
 import { COLORS, FONT_DISPLAY } from "../theme.js";
 
-const LINE_STEP = 21;
+const LINE_STEP = 22;
 
-/** Round-result copy — right side, blood red, staggered line reveal. */
+function lineStyle(role: RoundSummaryLineRole): {
+  fontSize: string;
+  color: string;
+  letterSpacing: number;
+} {
+  switch (role) {
+    case "headline":
+      return { fontSize: "19px", color: COLORS.ember, letterSpacing: 2.4 };
+    case "outcome":
+      return { fontSize: "16px", color: COLORS.blood, letterSpacing: 1.4 };
+    case "delta":
+      return { fontSize: "15px", color: COLORS.bone, letterSpacing: 1.2 };
+    case "damage":
+      return { fontSize: "15px", color: COLORS.blood, letterSpacing: 1.2 };
+    case "note":
+      return { fontSize: "14px", color: COLORS.dust, letterSpacing: 1 };
+    default:
+      return { fontSize: "16px", color: COLORS.blood, letterSpacing: 1.2 };
+  }
+}
+
+/** Round-result copy — right side, staggered line reveal. */
 export class RoundResultToast {
   readonly container: Phaser.GameObjects.Container;
   private readonly anchorX: number;
@@ -26,22 +48,22 @@ export class RoundResultToast {
       .setVisible(false);
   }
 
-  show(text: string, _color?: string, durationMs = 2200): void {
+  show(lines: RoundSummaryLine[], durationMs: number): void {
     this.hideTimer?.remove(false);
     this.killEntryTweens();
     this.clearLines();
 
-    const lines = text.split("\n").filter((line) => line.length > 0);
     const scene = this.container.scene;
 
     lines.forEach((line, index) => {
+      const style = lineStyle(line.role);
       const lineText = scene.add
-        .text(0, index * LINE_STEP, line, {
+        .text(0, index * LINE_STEP, line.text, {
           fontFamily: FONT_DISPLAY,
-          fontSize: "16px",
-          color: COLORS.blood,
+          fontSize: style.fontSize,
+          color: style.color,
           align: "right",
-          letterSpacing: 1.2,
+          letterSpacing: style.letterSpacing,
           wordWrap: { width: this.maxW },
         })
         .setOrigin(1, 0)
@@ -55,8 +77,8 @@ export class RoundResultToast {
         targets: lineText,
         alpha: 1,
         x: 0,
-        duration: 320,
-        delay: 60 + index * 70,
+        duration: 340,
+        delay: 80 + index * 90,
         ease: "Back.easeOut",
       });
       this.entryTweens.push(tween);
@@ -79,7 +101,7 @@ export class RoundResultToast {
       alpha: 0,
       x: this.anchorX + 16,
       y: this.anchorY + 6,
-      duration: 220,
+      duration: 280,
       ease: "Sine.In",
       onComplete: () => {
         this.clearLines();

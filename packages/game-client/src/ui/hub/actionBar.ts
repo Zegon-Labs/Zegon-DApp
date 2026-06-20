@@ -7,6 +7,7 @@ export class ActionBar {
   private readonly buttons: HubActionButtonHandle[] = [];
   private readonly buttonContainers: Phaser.GameObjects.Container[] = [];
   private readonly actions: PlayerAction[];
+  private readonly enabledSnapshot: boolean[] = [];
 
   constructor(
     scene: Phaser.Scene,
@@ -38,6 +39,7 @@ export class ActionBar {
       );
       btn.setEnabled(false);
       this.buttons.push(btn);
+      this.enabledSnapshot.push(false);
       this.buttonContainers.push(btn.container);
       x += btnW + L.actions.gap;
     });
@@ -54,8 +56,9 @@ export class ActionBar {
     this.buttons.forEach((btn, i) => {
       const action = this.actions[i]!;
       const active = canAct && allowed.has(action);
+      if (this.enabledSnapshot[i] === active) return;
+      this.enabledSnapshot[i] = active;
       btn.setEnabled(active);
-      btn.resetHover();
     });
   }
 

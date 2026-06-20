@@ -123,6 +123,7 @@ export class DuelScene extends Phaser.Scene {
   private readingDotsPhase = 0;
   private readingDotsElapsed = 0;
   private glitchAmbientOn = false;
+  private hoveredAction: PlayerAction | null = null;
 
   constructor() {
     super("DuelScene");
@@ -272,17 +273,25 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private showActionTooltip(action: PlayerAction, visible: boolean): void {
-    if (visible) {
+    this.hoveredAction = visible ? action : null;
+    this.syncActionHintLine();
+  }
+
+  private syncActionHintLine(): void {
+    if (this.hoveredAction) {
       this.actionHintText.setAlpha(0);
       this.actionTooltipText
-        .setText(`${actionLabel(action)} · ${actionDescription(action)}`)
+        .setText(
+          `${actionLabel(this.hoveredAction)} · ${actionDescription(this.hoveredAction)}`,
+        )
         .setColor(COLORS.blood)
         .setAlpha(1);
-    } else {
-      this.actionTooltipText.setText("").setAlpha(0);
-      if (this.adapter?.isAwaitingPlayer()) {
-        this.actionHintText.setAlpha(0.75);
-      }
+      return;
+    }
+
+    this.actionTooltipText.setText("").setAlpha(0);
+    if (this.adapter?.isAwaitingPlayer() && !this.showingRoundResult) {
+      this.actionHintText.setAlpha(0.75);
     }
   }
 
@@ -292,13 +301,19 @@ export class DuelScene extends Phaser.Scene {
     );
     this.showingRoundResult = true;
     playSfx("round_resolve");
-    this.roundResultToast.show(summary.text, summary.color);
+    this.roundResultToast.show(summary.lines, summary.durationMs);
+    this.hoveredAction = null;
+    this.actionBar.resetHoverAll();
     this.actionHintText.setAlpha(0.2);
     this.actionTooltipText.setAlpha(0);
+    this.updateActionButtons();
 
-    this.time.delayedCall(2200, () => {
+    this.time.delayedCall(summary.durationMs, () => {
       this.showingRoundResult = false;
-      this.actionHintText.setAlpha(this.adapter.isAwaitingPlayer() ? 0.75 : 0.2);
+      this.syncActionHintLine();
+      if (!this.hoveredAction) {
+        this.actionHintText.setAlpha(this.adapter.isAwaitingPlayer() ? 0.75 : 0.2);
+      }
       this.updateActionButtons();
     });
   }
@@ -418,7 +433,7 @@ export class DuelScene extends Phaser.Scene {
         }
         this.statusLineText.setText(strings.lockedIn).setColor(COLORS.dust);
         this.chooseActionText.setAlpha(1);
-        this.actionHintText.setAlpha(0.75);
+        this.syncActionHintLine();
       } else if (phase === DuelPhase.DEADEYE) {
         stopSfxLoop("zegon_thinking");
         this.setZegonReadingActive(false);
@@ -565,7 +580,6 @@ export class DuelScene extends Phaser.Scene {
   private updateHud(): void {
     const strings = t();
     const state = this.adapter.getState();
-    const history = state.playerHistory;
     const blindsight = this.adapter.getBlindsight();
     const weapon = state.config.weapon;
     const maxAmmo = getWeapon(weapon).maxAmmo;
@@ -582,14 +596,9 @@ export class DuelScene extends Phaser.Scene {
     );
     this.updateRoundPips(state.roundIndex, state.config.maxRounds);
 
-    const lines =
-      history.length > 0
-        ? history.map((action, i) =>
-            `R${i + 1} ${actionLabel(action as PlayerAction)}`.toUpperCase(),
-          )
-        : state.roundLogs.map((log, i) =>
-            `R${i + 1} ${actionLabel(log.playerAction)}`.toUpperCase(),
-          );
+    const lines = state.roundLogs.map((log, i) =>
+      `R${i + 1} ${actionLabel(log.playerAction)}`.toUpperCase(),
+    );
     this.historyLog.setLines(lines);
 
     const deadeyeThreshold = getEffectiveDeadeyeThreshold(state.config.modifiers);
@@ -616,20 +625,22 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private updateActionButtons(): void {
-    const awaiting = this.adapter.isAwaitingPlayer();
-    if (this.showingRoundResult && !awaiting) {
+    if (this.showingRoundResult) {
       this.actionBar.setEnabledMap(false, new Set());
       return;
     }
+    const awaiting = this.adapter.isAwaitingPlayer();
     const available = new Set(this.adapter.getAvailableActions());
     this.actionBar.setEnabledMap(awaiting, available);
   }
 
   private async submitPlayerAction(action: PlayerAction): Promise<void> {
+    if (this.showingRoundResult) return;
     if (!this.adapter.isAwaitingPlayer()) return;
     if (!this.adapter.getAvailableActions().includes(action)) return;
 
     this.actionBar.setDimmedAll(true);
+    this.hoveredAction = null;
     this.actionHintText.setAlpha(0);
     this.actionTooltipText.setText("").setAlpha(0);
     playActionSfx(action);

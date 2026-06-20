@@ -11,7 +11,6 @@ export class DuelHistoryLog {
   private readonly bodyTop: number;
   private readonly viewH: number;
   private readonly viewW: number;
-  private lineCount = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -21,6 +20,7 @@ export class DuelHistoryLog {
   ) {
     const padX = 14;
     const titleH = 28;
+    const bodyX = -layout.w / 2 + padX;
     this.bodyTop = -layout.h / 2 + titleH + 8;
     this.viewH = layout.h - titleH - 16;
     this.viewW = layout.w - padX * 2;
@@ -43,7 +43,7 @@ export class DuelHistoryLog {
       }).setOrigin(0, 0),
     );
 
-    this.body = scene.add.text(-layout.w / 2 + padX, this.bodyTop, "—", {
+    this.body = scene.add.text(bodyX, this.bodyTop, "—", {
       fontFamily: FONT,
       fontSize: "15px",
       color: COLORS.bone,
@@ -51,31 +51,21 @@ export class DuelHistoryLog {
       wordWrap: { width: this.viewW },
       fixedWidth: this.viewW,
     }).setOrigin(0, 0);
-    this.body.setCrop(0, 0, this.viewW, this.viewH);
+
+    const maskGfx = scene.make.graphics({});
+    maskGfx.fillStyle(0xffffff);
+    maskGfx.fillRect(bodyX, this.bodyTop, this.viewW, this.viewH);
+    this.body.setMask(maskGfx.createGeometryMask());
     this.container.add(this.body);
   }
 
   /** Replace log lines; scrolls down when content exceeds the panel. */
   setLines(lines: string[]): void {
     const next = lines.length > 0 ? lines : ["—"];
-    const grew = next.length > this.lineCount;
-    this.lineCount = next.length;
-
     this.body.setText(next.join("\n"));
 
     const overflow = Math.max(0, this.body.height - this.viewH);
-    const targetY = overflow > 0 ? this.bodyTop - overflow : this.bodyTop;
-
-    if (grew && overflow > 0) {
-      this.container.scene.tweens.add({
-        targets: this.body,
-        y: targetY,
-        duration: 220,
-        ease: "Sine.Out",
-      });
-    } else {
-      this.body.setY(targetY);
-    }
+    this.body.setY(this.bodyTop - overflow);
   }
 
   destroy(): void {
