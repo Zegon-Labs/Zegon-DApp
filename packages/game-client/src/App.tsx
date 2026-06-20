@@ -8,11 +8,16 @@ import { ProfileSetupModal } from "./components/ProfileSetupModal.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
 import { gameBridge, type AppView } from "./game/bridge.js";
 import { fetchProfile, hasNickname } from "./services/profile.js";
+import { startBackgroundMusic } from "./services/music.js";
 import { getWalletAddress, onWalletChange } from "./services/wallet.js";
 
 export default function App() {
   const [view, setView] = useState<AppView>({ type: "hub" });
   const [profileSetupAddress, setProfileSetupAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    startBackgroundMusic();
+  }, []);
 
   useEffect(() => gameBridge.onNavigate(setView), []);
 

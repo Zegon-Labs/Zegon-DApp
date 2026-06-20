@@ -54,10 +54,9 @@ export function onPreferencesChange(listener: PrefsListener): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Placeholder for future audio engine hookup. */
 export function applyPreferences(prefs: GamePreferences): void {
   if (typeof document !== "undefined") {
     document.documentElement.classList.toggle("zegon-reduced-motion", prefs.reducedMotion);
   }
-  void prefs;
+  void import("./music.js").then(({ applyMusicVolume }) => applyMusicVolume(prefs));
 }
