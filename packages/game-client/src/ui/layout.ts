@@ -12,10 +12,7 @@ export const DUEL_LAYOUT = {
   prompt: { y: 84, w: 660, h: 66 },
   taunt: { y: 162, maxW: 750 },
 
-  topBar: { x: 24, y: 22 },
-  roundPips: { x: 24, y: 46, gap: 7, size: 12 },
-
-  history: { x: 24, y: 72, w: 210, h: 152 },
+  history: { x: 24, y: 18, w: 240, visibleRows: 6, pipGap: 5, pipSize: 8 },
 
   blindsight: {
     panelW: 220,
@@ -35,13 +32,14 @@ export const DUEL_LAYOUT = {
 
   stats: {
     panelW: 240,
-    panelH: 112,
+    panelH: 108,
     playerX: 20,
-    y: 618,
+    y: 592,
     iconSize: 18,
     iconGap: 5,
     rowGap: 8,
     pad: 12,
+    nameRowH: 26,
   },
 
   roundToast: { x: 1256, y: 292, maxW: 260 },

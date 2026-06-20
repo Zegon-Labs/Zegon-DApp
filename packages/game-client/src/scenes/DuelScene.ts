@@ -108,8 +108,6 @@ export class DuelScene extends Phaser.Scene {
   private glitchPulse = 0;
   private glitchIntensityCache = -1;
   private lastShakeAt = 0;
-  private roundText!: Phaser.GameObjects.Text;
-  private roundPipsGfx!: Phaser.GameObjects.Graphics;
   private historyLog!: DuelHistoryLog;
   private statusLineText!: Phaser.GameObjects.Text;
   private chooseActionText!: Phaser.GameObjects.Text;
@@ -164,15 +162,6 @@ export class DuelScene extends Phaser.Scene {
     this.combatHud = new CombatHud(this, 9);
 
     addHubLogo(this, width / 2, L.header.logoY, L.header.logoMaxW, 11);
-
-    this.roundText = this.add.text(L.topBar.x, L.topBar.y, "", {
-      fontFamily: FONT,
-      fontSize: "22px",
-      color: COLORS.ember,
-      letterSpacing: 2,
-    }).setDepth(11);
-
-    this.roundPipsGfx = this.add.graphics().setDepth(11);
 
     this.historyLog = new DuelHistoryLog(this, strings.history, 12);
     this.roundResultToast = new RoundResultToast(this, 14);
@@ -395,23 +384,6 @@ export class DuelScene extends Phaser.Scene {
     }
   }
 
-  private updateRoundPips(roundIndex: number, maxRounds: number): void {
-    const g = this.roundPipsGfx;
-    g.clear();
-    const slots = Math.min(maxRounds, 9);
-    for (let i = 0; i < slots; i++) {
-      const cx = L.roundPips.x + i * (L.roundPips.size + L.roundPips.gap) + L.roundPips.size / 2;
-      const cy = L.roundPips.y + L.roundPips.size / 2;
-      const filled = i <= roundIndex;
-      g.fillStyle(filled ? C.blood : C.fog, filled ? 1 : 0.35);
-      g.fillCircle(cx, cy, L.roundPips.size / 2 - 1);
-      if (i === roundIndex) {
-        g.lineStyle(1, C.ember, 0.9);
-        g.strokeCircle(cx, cy, L.roundPips.size / 2);
-      }
-    }
-  }
-
   private handleEvent(event: DuelEvent): void {
     const strings = t();
 
@@ -594,15 +566,14 @@ export class DuelScene extends Phaser.Scene {
         : "0G FALLBACK"
       : "LOCAL";
 
-    this.roundText.setText(
-      `${strings.round} ${String(state.roundIndex + 1).padStart(2, "0")}`.toUpperCase(),
-    );
-    this.updateRoundPips(state.roundIndex, state.config.maxRounds);
-
     const lines = state.roundLogs.map((log, i) =>
       `R${i + 1} ${actionLabel(log.playerAction)}`.toUpperCase(),
     );
-    this.historyLog.setLines(lines);
+    this.historyLog.update({
+      roundLabel: `${strings.round} ${String(state.roundIndex + 1).padStart(2, "0")}`.toUpperCase(),
+      roundIndex: state.roundIndex,
+      lines,
+    });
 
     const deadeyeThreshold = getEffectiveDeadeyeThreshold(state.config.modifiers);
     const deadeyeNearThreshold = Math.max(70, deadeyeThreshold - 5);

@@ -156,6 +156,7 @@ export interface LocaleStrings {
   challengeLink: string;
   dailyAlreadySubmitted: string;
   duelNotVerified: string;
+  heroCharacterSpeak: string;
   connectWallet: string;
   heroTagline: string;
   heroPlaySubtitle: string;
@@ -358,6 +359,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialLessonProgress: "Lesson {current}/{total}",
     tutorialStepProgress: "Practice {current}/{total}",
     tutorialHudHint: "Bars: HP bottom · Blindsight top-right · Ammo under you",
+    heroCharacterSpeak: "Listen to ZEGON",
     connectWallet: "CONNECT WALLET",
     heroTagline: "It can't see you. It reads you.",
     heroPlaySubtitle: "Enter the duel",
@@ -518,7 +520,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryMirrorStandoff: "Mismo disparo — tablas, sin daño",
     roundSummaryMirrorReadHit:
       "Disparo espejo · ZEGON te leyó, su bala igual te alcanza",
-    roundSummaryBlindsightFloor: "Ceguera-vista ya en cero",
+    roundSummaryBlindsightFloor: "Ciego-vista ya en cero",
     errorNoAmmo: "Sin munición · recargá primero.",
     tutorial: "TUTORIAL",
     tutorialTitle: "Bienvenido al duelo",
@@ -589,6 +591,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialLessonProgress: "Lección {current}/{total}",
     tutorialStepProgress: "Práctica {current}/{total}",
     tutorialHudHint: "Barras: PS abajo · Ciego-vista arriba-derecha · Munición bajo vos",
+    heroCharacterSpeak: "Escuchar a ZEGON",
     connectWallet: "CONECTAR WALLET",
     heroTagline: "No te ve. Te lee.",
     heroPlaySubtitle: "Entrá al duelo",

@@ -104,7 +104,7 @@ export class FighterHudBlock {
     this.nameText.setText(state.name.toUpperCase());
     this.iconGfx.clear();
 
-    const rowY = this.panelY + this.pad + 22;
+    const rowY = this.panelY + this.pad + L.stats.nameRowH;
     const filledHp = this.hpSlots(state.hp, maxHp);
     const leftEdge = this.panelX + this.pad + this.iconSize / 2;
     const rightEdge = this.panelX + this.panelW - this.pad - this.iconSize / 2;
@@ -137,7 +137,7 @@ export class FighterHudBlock {
   }
 
   hpBarCenterY(): number {
-    return this.panelY + this.pad + 22;
+    return this.panelY + this.pad + L.stats.nameRowH;
   }
 
   hpBarCenterX(): number {

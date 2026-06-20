@@ -1,7 +1,11 @@
 import type { CSSProperties } from "react";
 import { HERO_SMOKE_PARTICLES } from "./heroSmokeParticles.js";
+import { useLocale } from "../hooks/useLocale.js";
+import { playHubCharacterVoice } from "../services/voice.js";
 
 export function HeroCharacter() {
+  const { strings } = useLocale();
+
   return (
     <div
       className="hero__character-wrap"
@@ -41,8 +45,10 @@ export function HeroCharacter() {
           />
           <button
             type="button"
-            className="hero__character-seam"
-            aria-label="Grieta roja"
+            className="hero__character-hit"
+            aria-label={strings.heroCharacterSpeak}
+            data-skip-ui-click
+            onClick={() => playHubCharacterVoice()}
           />
           <div className="hero__character-seam-bloom" aria-hidden="true" />
           <div className="hero__character-ground" aria-hidden="true" />

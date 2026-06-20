@@ -250,54 +250,50 @@ body:has(.hero) {
   transition: opacity 0.35s ease, filter 0.35s ease;
 }
 
-.hero__character-seam {
+.hero__character-hit {
   position: absolute;
-  left: 50%;
-  top: 21%;
-  width: clamp(16px, 5%, 40px);
-  height: clamp(52px, 16%, 128px);
-  transform: translateX(-50%);
+  inset: 0;
   z-index: 5;
   border: none;
   padding: 0;
   margin: 0;
   background: transparent;
-  cursor: default;
-  border-radius: 45% / 12%;
+  cursor: pointer;
+  border-radius: 2px;
   -webkit-tap-highlight-color: transparent;
   pointer-events: auto;
 }
 
-.hero__character-seam:focus {
+.hero__character-hit:focus {
   outline: none;
 }
 
-.hero__character-seam:focus-visible {
+.hero__character-hit:focus-visible {
   outline: 1px solid rgba(255, 77, 46, 0.35);
   outline-offset: 4px;
 }
 
-.hero__character-seam:hover ~ .hero__character-seam-bloom,
-.hero__character-seam:focus-visible ~ .hero__character-seam-bloom,
-.hero__character-seam:active ~ .hero__character-seam-bloom,
-.hero__character-figure:has(.hero__character-seam:hover) .hero__character-seam-bloom,
-.hero__character-figure:has(.hero__character-seam:focus-visible) .hero__character-seam-bloom,
-.hero__character-figure:has(.hero__character-seam:active) .hero__character-seam-bloom {
+.hero__character-hit:hover ~ .hero__character-seam-bloom,
+.hero__character-hit:focus-visible ~ .hero__character-seam-bloom,
+.hero__character-hit:active ~ .hero__character-seam-bloom,
+.hero__character-figure:has(.hero__character-hit:hover) .hero__character-seam-bloom,
+.hero__character-figure:has(.hero__character-hit:focus-visible) .hero__character-seam-bloom,
+.hero__character-figure:has(.hero__character-hit:active) .hero__character-seam-bloom {
   opacity: 0.82;
   filter: blur(22px);
   animation: seam-backlight 2.4s ease-in-out infinite;
 }
 
-.hero__character-figure:has(.hero__character-seam:hover) .hero__character-img,
-.hero__character-figure:has(.hero__character-seam:focus-visible) .hero__character-img,
-.hero__character-figure:has(.hero__character-seam:active) .hero__character-img {
+.hero__character-figure:has(.hero__character-hit:hover) .hero__character-img,
+.hero__character-figure:has(.hero__character-hit:focus-visible) .hero__character-img,
+.hero__character-figure:has(.hero__character-hit:active) .hero__character-img {
   filter: brightness(1.07) contrast(1.1) saturate(1.05)
     drop-shadow(0 0 24px rgba(255, 45, 58, 0.28));
 }
 
-.hero__character-figure:has(.hero__character-seam:hover)::before,
-.hero__character-figure:has(.hero__character-seam:focus-visible)::before,
-.hero__character-figure:has(.hero__character-seam:active)::before {
+.hero__character-figure:has(.hero__character-hit:hover)::before,
+.hero__character-figure:has(.hero__character-hit:focus-visible)::before,
+.hero__character-figure:has(.hero__character-hit:active)::before {
   opacity: 1;
 }
 
@@ -1363,13 +1359,13 @@ body:has(.hero) {
     transform: none;
   }
 
-  .hero__character-figure:has(.hero__character-seam:hover) .hero__character-seam-bloom,
-  .hero__character-figure:has(.hero__character-seam:focus-visible) .hero__character-seam-bloom {
+  .hero__character-figure:has(.hero__character-hit:hover) .hero__character-seam-bloom,
+  .hero__character-figure:has(.hero__character-hit:focus-visible) .hero__character-seam-bloom {
     opacity: 0.7;
   }
 
-  .hero__character-figure:has(.hero__character-seam:hover)::before,
-  .hero__character-figure:has(.hero__character-seam:focus-visible)::before {
+  .hero__character-figure:has(.hero__character-hit:hover)::before,
+  .hero__character-figure:has(.hero__character-hit:focus-visible)::before {
     opacity: 0.85;
   }
 }
@@ -1717,6 +1713,43 @@ html.zegon-reduced-motion .hero__footer-built:hover {
   text-transform: uppercase;
   color: var(--ember);
   text-align: center;
+}
+
+.hero__panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.hero__panel-header .hero__panel-title {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+}
+
+.hero__panel-nav-back {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(255, 77, 46, 0.35);
+  border-radius: 2px;
+  background: rgba(20, 18, 28, 0.92);
+  color: var(--ember);
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.hero__panel-nav-back:hover {
+  border-color: rgba(255, 77, 46, 0.65);
+  background: rgba(179, 18, 43, 0.18);
 }
 
 .hero__panel-back {

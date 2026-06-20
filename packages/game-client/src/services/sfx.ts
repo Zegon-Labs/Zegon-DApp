@@ -231,7 +231,6 @@ export function playZegonMoveSfx(move: string): void {
 }
 
 export function playDuelEndSfx(winner: string): void {
-  if (winner === "PLAYER") playSfx("duel_end_win");
-  else if (winner === "ZEGON") playSfx("duel_end_lose");
-  else playSfx("duel_end_draw");
+  if (winner === "ZEGON") playSfx("duel_end_lose");
+  else if (winner === "DRAW") playSfx("duel_end_draw");
 }

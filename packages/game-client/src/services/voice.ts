@@ -47,14 +47,17 @@ function stopCurrentVoice(): void {
 
 export function playVoice(
   id: VoiceId,
-  options?: { volume?: number; delayMs?: number },
+  options?: { volume?: number; delayMs?: number; interrupt?: boolean },
 ): void {
   const vol = resolveVoiceVolume(options?.volume ?? 0.92);
   if (vol <= 0) return;
 
   const play = (): void => {
     pendingDelay = null;
-    stopCurrentVoice();
+    if (options?.interrupt !== false) {
+      stopHubCharacterVoice();
+      stopCurrentVoice();
+    }
     const audio = new Audio(VOICE[id]);
     audio.preload = "auto";
     audio.volume = Math.min(1, vol);
@@ -74,6 +77,72 @@ export function playVoice(
   }
 
   play();
+}
+
+/** Ambient hub lines when the player taps ZEGON on the landing. */
+const HUB_CHARACTER_VOICES: readonly VoiceId[] = [
+  "smell_pattern",
+  "your_soul_whispers",
+  "nothing_to_read_yet",
+  "blind_sees_patterns",
+  "listening",
+  "patterns_in_dust",
+  "step_into_dust",
+  "your_turn_outlaw",
+];
+
+let hubVoiceAudio: HTMLAudioElement | null = null;
+let hubVoiceBusy = false;
+let lastHubVoiceId: VoiceId | null = null;
+
+function pickHubCharacterVoice(): VoiceId {
+  const pool =
+    lastHubVoiceId && HUB_CHARACTER_VOICES.length > 1
+      ? HUB_CHARACTER_VOICES.filter((id) => id !== lastHubVoiceId)
+      : HUB_CHARACTER_VOICES;
+  const id = pool[Math.floor(Math.random() * pool.length)]!;
+  lastHubVoiceId = id;
+  return id;
+}
+
+function stopHubCharacterVoice(): void {
+  if (!hubVoiceAudio) {
+    hubVoiceBusy = false;
+    return;
+  }
+  hubVoiceAudio.pause();
+  hubVoiceAudio.currentTime = 0;
+  hubVoiceAudio = null;
+  hubVoiceBusy = false;
+}
+
+/** Play one random hub line — ignores clicks while a line is already playing. */
+export function playHubCharacterVoice(): void {
+  if (hubVoiceBusy) return;
+
+  const vol = resolveVoiceVolume(0.9);
+  if (vol <= 0) return;
+
+  hubVoiceBusy = true;
+  const id = pickHubCharacterVoice();
+  const audio = new Audio(VOICE[id]);
+  audio.preload = "auto";
+  audio.volume = Math.min(1, vol);
+  hubVoiceAudio = audio;
+
+  const onDone = (): void => {
+    if (hubVoiceAudio !== audio) return;
+    hubVoiceAudio = null;
+    hubVoiceBusy = false;
+  };
+
+  audio.onended = onDone;
+  audio.onerror = onDone;
+  void audio.play().catch(onDone);
+}
+
+export function isHubCharacterVoicePlaying(): boolean {
+  return hubVoiceBusy;
 }
 
 function normalizeTaunt(text: string): string {
@@ -138,6 +207,8 @@ export function playDuelEndVoice(winner: string): void {
 
 export function stopAllVoice(): void {
   stopCurrentVoice();
+  stopHubCharacterVoice();
+  lastHubVoiceId = null;
 }
 
 export function resetVoiceState(): void {

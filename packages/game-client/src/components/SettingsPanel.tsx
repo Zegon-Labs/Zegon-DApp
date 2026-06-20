@@ -159,6 +159,15 @@ export function SettingsPanel({
     notify.success(strings.saved);
   }
 
+  function handleClose() {
+    playSfx("ui_modal_close");
+    if (overlay && onClose) {
+      onClose();
+    } else {
+      gameBridge.navigate({ type: "hub" });
+    }
+  }
+
   return (
     <div
       className={`hero__overlay${overlay ? " hero__overlay--game" : ""}`}
@@ -166,7 +175,17 @@ export function SettingsPanel({
       aria-modal="true"
     >
       <div className="hero__panel hero__panel--wide hero__panel--scroll">
-        <h2 className="hero__panel-title">{strings.settingsTitle}</h2>
+        <div className="hero__panel-header">
+          <button
+            type="button"
+            className="hero__panel-nav-back"
+            aria-label={strings.back}
+            onClick={handleClose}
+          >
+            ←
+          </button>
+          <h2 className="hero__panel-title">{strings.settingsTitle}</h2>
+        </div>
 
         <SettingsSection title={strings.settingsSectionProfile}>
           {wallet ? (
@@ -293,14 +312,7 @@ export function SettingsPanel({
         <button
           type="button"
           className="btn btn--secondary hero__panel-back"
-          onClick={() => {
-            playSfx("ui_modal_close");
-            if (overlay && onClose) {
-              onClose();
-            } else {
-              gameBridge.navigate({ type: "hub" });
-            }
-          }}
+          onClick={handleClose}
         >
           {strings.back}
         </button>

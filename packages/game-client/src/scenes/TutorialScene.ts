@@ -117,7 +117,7 @@ export class TutorialScene extends Phaser.Scene {
     this.promptBar = prompt.container;
     this.statusText = prompt.text;
 
-    this.stepLabel = this.add.text(width / 2, L.topBar.y, "", {
+    this.stepLabel = this.add.text(width / 2, L.history.y, "", {
       fontFamily: FONT_DISPLAY,
       fontSize: "21px",
       color: COLORS.ember,
