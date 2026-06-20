@@ -602,16 +602,25 @@ body:has(.hero) {
 }
 
 .hero__menu {
+  --menu-w: min(100%, 310px);
+  --menu-gap: clamp(5px, 1vh, 8px);
+  --menu-px: 13px;
+  --menu-py: clamp(8px, 1.25vh, 10px);
+  --menu-fs-xs: clamp(9px, 2.1vw, 10px);
+  --menu-fs-sm: clamp(10px, 2.35vw, 11px);
+  --menu-fs-md: clamp(11px, 2.55vw, 13px);
+  --menu-fs-lg: clamp(13px, 2.9vw, 15px);
+
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  width: 100%;
-  max-width: min(100%, 300px);
+  width: var(--menu-w);
+  max-width: var(--menu-w);
   height: 100%;
   max-height: 100%;
-  overflow: hidden;
+  overflow: visible;
   padding: 0;
-  gap: 0;
+  gap: var(--menu-gap);
   justify-content: center;
   flex-shrink: 0;
   position: relative;
@@ -625,7 +634,8 @@ body:has(.hero) {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: 8px;
+  gap: clamp(4px, 0.7vh, 6px);
+  margin-bottom: clamp(2px, 0.5vh, 4px);
 }
 
 .hero__menu .hero__logo {
@@ -633,10 +643,12 @@ body:has(.hero) {
   justify-content: center;
   width: 100%;
   cursor: default;
+  margin: 0;
 }
 
 .hero__menu .hero__logo-img {
-  max-width: 200px;
+  width: 100%;
+  max-width: clamp(148px, 36vw, 176px);
   margin: 0 auto;
   transition: transform 0.22s ease, filter 0.22s ease;
 }
@@ -650,84 +662,117 @@ body:has(.hero) {
 }
 
 .hero__menu .hero__tagline {
-  margin: 2px 0 3px;
-  font-size: clamp(10px, 1.4vw, 13px);
+  margin: 0;
+  font-size: var(--menu-fs-md);
+  line-height: 1.25;
+  letter-spacing: 0.1em;
 }
 
 .hero__menu .hero__brain-badge {
-  font-size: 9px;
+  font-size: var(--menu-fs-xs);
   margin: 0;
+  letter-spacing: 0.1em;
 }
 
 .hero__menu .hero__actions {
-  gap: 4px;
+  width: 100%;
+  gap: var(--menu-gap);
 }
 
 .hero__menu .btn--primary {
-  padding: 7px 12px 6px;
+  padding: var(--menu-py) var(--menu-px);
+}
+
+.hero__menu .btn--tutorial {
+  margin-bottom: 0;
 }
 
 .hero__menu .btn__title {
-  font-size: clamp(13px, 1.6vw, 15px);
-  letter-spacing: 0.05em;
+  font-size: var(--menu-fs-lg);
+  letter-spacing: 0.06em;
+  line-height: 1.15;
 }
 
 .hero__menu .btn__subtitle {
-  margin-top: 1px;
-  font-size: 9px;
+  margin-top: 3px;
+  font-size: var(--menu-fs-sm);
+  line-height: 1.2;
+  letter-spacing: 0.08em;
 }
 
 .hero__menu .btn--secondary {
-  padding: 6px 12px;
-  font-size: 11px;
-  gap: 5px;
+  padding: var(--menu-py) var(--menu-px);
+  font-size: var(--menu-fs-md);
+  gap: 7px;
+  letter-spacing: 0.06em;
 }
 
 .hero__menu .btn__icon {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 
 .hero__menu .hero__divider {
-  margin: 5px 0;
-  font-size: 9px;
-  gap: 8px;
+  margin: 0;
+  font-size: var(--menu-fs-xs);
+  gap: 10px;
+  letter-spacing: 0.16em;
 }
 
 .hero__menu .daily-card {
-  padding: 6px 8px;
-  margin-top: 2px;
-  gap: 4px;
+  width: 100%;
+  max-width: none;
+  padding: var(--menu-py) var(--menu-px);
+  margin: 0;
+  gap: var(--menu-gap);
+  border-radius: 2px;
 }
 
 .hero__menu .daily-card__title {
-  font-size: 12px;
+  font-size: var(--menu-fs-lg);
+  line-height: 1.15;
 }
 
 .hero__menu .daily-card__meta {
-  font-size: 9px;
-  line-height: 1.3;
+  font-size: var(--menu-fs-sm);
+  line-height: 1.35;
 }
 
 .hero__menu .daily-card__staked {
-  font-size: 10px;
+  font-size: var(--menu-fs-sm);
 }
 
 .hero__menu .hero__menu-grid {
-  gap: 4px;
-  margin-top: 2px;
+  width: 100%;
+  gap: var(--menu-gap);
+  margin: 0;
 }
 
 .hero__menu .btn--menu {
-  padding: 6px 8px;
-  font-size: 10px;
+  padding: var(--menu-py) var(--menu-px);
+  font-size: var(--menu-fs-md);
+  letter-spacing: 0.06em;
 }
 
 .hero__menu .hero__guest-note {
-  margin: 5px 0 0;
-  padding-top: 6px;
-  font-size: 8px;
-  justify-content: center;
+  margin: 0;
+  padding-top: calc(var(--menu-gap) + 3px);
+  font-size: var(--menu-fs-sm);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: rgba(180, 173, 196, 0.94);
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: 7px;
+}
+
+.hero__menu .hero__guest-note svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
 }
 
 .hero__ui {
@@ -1337,7 +1382,7 @@ html.zegon-reduced-motion .hero__footer-built:hover {
     align-items: center;
     justify-content: flex-start;
     row-gap: clamp(8px, 2vh, 16px);
-    max-width: min(100%, 400px);
+    max-width: min(100%, 310px);
     padding: 8px 16px 4px;
     min-height: 0;
     overflow: hidden;
@@ -1370,14 +1415,27 @@ html.zegon-reduced-motion .hero__footer-built:hover {
 
   .hero__menu {
     order: 1;
-    max-width: min(100%, 340px);
-    width: 100%;
+    --menu-w: min(100%, 310px);
+    --menu-gap: clamp(5px, 1vh, 7px);
+    --menu-py: clamp(7px, 1.2vh, 9px);
+    --menu-fs-lg: clamp(12px, 3vw, 14px);
+    --menu-fs-md: clamp(11px, 2.45vw, 12px);
+    --menu-fs-sm: clamp(10px, 2.25vw, 11px);
+    --menu-fs-xs: clamp(9px, 2.05vw, 10px);
+    width: var(--menu-w);
+    max-width: var(--menu-w);
     margin: 0 auto;
     transform: none;
   }
 
   .hero__menu .hero__logo-img {
-    max-width: 180px;
+    max-width: clamp(140px, 38vw, 164px);
+  }
+
+  @media (max-width: 380px) {
+    .hero__menu .hero__guest-note {
+      font-size: clamp(8px, 2.35vw, 10px);
+    }
   }
 
   .hero__footer {
@@ -1504,7 +1562,7 @@ html.zegon-reduced-motion .hero__footer-built:hover {
   }
 
   .hero__menu .hero__logo-img {
-    max-width: 160px;
+    max-width: clamp(132px, 36vw, 156px);
   }
 
   .hero__footer {
