@@ -1,5 +1,7 @@
 # ZEGON — Landing (referencia de diseño)
 
+**Landing en vivo:** [zegon-landing.vercel.app](https://zegon-landing.vercel.app) · **Juego:** [zegon-dapp.vercel.app](https://zegon-dapp.vercel.app)
+
 La landing de referencia vive aquí. **La versión integrada al juego** está en:
 
 - `packages/game-client/public/landing/` — assets (`bg.png`, `character.png`, `logo.png`)

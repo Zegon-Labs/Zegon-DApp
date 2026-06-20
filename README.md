@@ -1,5 +1,7 @@
 # ZEGON — Outdraw the Blind
 
+**▶ Jugar:** [zegon-dapp.vercel.app](https://zegon-dapp.vercel.app) · **Landing:** [zegon-landing.vercel.app](https://zegon-landing.vercel.app) · [Zegon-Landing repo](https://github.com/Zegon-Labs/Zegon-Landing)
+
 Duelo por turnos vs ZEGON, un pistolero IA **vendado** (inferencia sellada en 0G Compute). Cada ronda deja prueba **commit-reveal on-chain** en Galileo antes de que elijas tu jugada.
 
 ## Features 0G
