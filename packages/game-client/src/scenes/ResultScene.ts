@@ -4,7 +4,8 @@ import { format, t } from "../i18n/index.js";
 import { gameBridge } from "../game/bridge.js";
 import { getCachedProfile } from "../services/profile.js";
 import { getWalletAddress } from "../services/wallet.js";
-import { createMenuButton, drawScanlines } from "../ui/components.js";
+import { createHubMenuButton, createHubScreenPanel } from "../ui/hub/index.js";
+import { drawScanlines } from "../ui/components.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
 import { buildChallengeUrlFromResult, generateShareCard } from "../utils/shareCard.js";
 
@@ -54,8 +55,7 @@ export class ResultScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(C.void);
     drawScanlines(this);
 
-    const panel = this.add.rectangle(width / 2, height / 2, 460, 380, C.ash, 0.95);
-    panel.setStrokeStyle(1, C.fog);
+    createHubScreenPanel(this, width / 2, height / 2, 460, 380);
 
     const winnerLabel =
       result.winner === "PLAYER"
@@ -105,7 +105,7 @@ export class ResultScene extends Phaser.Scene {
       void this.submitDailyScore(result, dailyLabel, duelId);
     }
 
-    createMenuButton(this, width / 2, height / 2 + 90, strings.verifyOnChain, () => {
+    createHubMenuButton(this, width / 2, height / 2 + 90, strings.verifyOnChain, () => {
       if (duelId) {
         window.open(`/verify.html?duel=${encodeURIComponent(duelId)}`, "_blank");
       } else {
@@ -117,7 +117,7 @@ export class ResultScene extends Phaser.Scene {
       void this.loadVerifySummary(`${apiBase}/api/duel/verify/${duelId}`, verifyLabel);
     }
 
-    createMenuButton(this, width / 2, height / 2 + 140, strings.share, () => {
+    createHubMenuButton(this, width / 2, height / 2 + 140, strings.share, () => {
       const text = format(strings.shareText, {
         score: result.score,
         timesRead: result.timesRead,
@@ -125,20 +125,20 @@ export class ResultScene extends Phaser.Scene {
       void navigator.clipboard?.writeText(text);
     });
 
-    createMenuButton(this, width / 2, height / 2 + 190, strings.shareCard, () => {
+    createHubMenuButton(this, width / 2, height / 2 + 190, strings.shareCard, () => {
       void generateShareCard(result, {
         archetype: data.archetype,
         brainMode: data.brainMode,
       });
     });
 
-    createMenuButton(this, width / 2, height / 2 + 240, strings.challengeLink, () => {
+    createHubMenuButton(this, width / 2, height / 2 + 240, strings.challengeLink, () => {
       const seed = mode === "daily" ? createDailyDuel().seed! : `standard-${data.archetype ?? "reader"}`;
       const url = buildChallengeUrlFromResult(seed, data.archetype);
       void navigator.clipboard?.writeText(url);
     });
 
-    createMenuButton(this, width / 2, height / 2 + 290, strings.menu, () => {
+    createHubMenuButton(this, width / 2, height / 2 + 290, strings.menu, () => {
       gameBridge.navigate({ type: "hub" });
     });
   }

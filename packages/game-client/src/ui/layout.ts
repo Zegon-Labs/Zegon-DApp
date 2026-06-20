@@ -14,6 +14,8 @@ export const DUEL_LAYOUT = {
   prompt: { y: 84, w: 660, h: 66 },
   taunt: { y: 162, maxW: 750 },
   roundResult: { y: 528, w: 780, h: 84, maxH: 138 },
+  /** Compact round feedback — right side, below chrome buttons. */
+  roundToast: { x: 1008, y: 178, w: 248, h: 108 },
 
   arena: { y: 342 },
   divider: { y: 498 },

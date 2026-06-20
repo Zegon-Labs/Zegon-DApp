@@ -361,16 +361,17 @@ export class TutorialScene extends Phaser.Scene {
       this.statusText.setText(strings.roundSummaryDeadeyeOn).setColor(COLORS.ember);
     } else if (outcome.predictionCorrect) {
       this.statusText.setText(
-        `${strings.tutorialGood} — ${strings.roundSummaryRead} (+15 ${strings.hudBlindsight})`,
+        `${strings.tutorialGood} · ${strings.roundSummaryRead} (+15 ${strings.hudBlindsight})`,
       ).setColor(COLORS.ember);
     } else if (outcome.playerDamage > 0) {
-      showFloatingDamage(this, 80, L.stats.hpBarY - 20, outcome.playerDamage, "player");
-      this.statusText.setText(`${strings.roundSummaryYouHit} — ${strings.tutorialHpTitle}`).setColor(COLORS.ember);
+      const anchor = this.combatHud.playerDamageAnchor();
+      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
+      this.statusText.setText(`${strings.roundSummaryYouHit} · ${strings.tutorialHpTitle}`).setColor(COLORS.ember);
       this.cameras.main.flash(120, 179, 18, 43);
     } else if (outcome.zegonDamage > 0) {
-      this.statusText.setText(`${strings.tutorialGood} — ${strings.roundSummaryZegonHit}`).setColor(COLORS.bone);
+      this.statusText.setText(`${strings.tutorialGood} · ${strings.roundSummaryZegonHit}`).setColor(COLORS.bone);
     } else if (outcome.blindsightDelta < 0) {
-      this.statusText.setText(`${strings.tutorialGood} — ${strings.roundSummarySurprised}`).setColor(COLORS.bone);
+      this.statusText.setText(`${strings.tutorialGood} · ${strings.roundSummarySurprised}`).setColor(COLORS.bone);
     } else {
       this.statusText.setText(strings.tutorialGood).setColor(COLORS.bone);
     }
@@ -388,7 +389,8 @@ export class TutorialScene extends Phaser.Scene {
       playerLabel: strings.hudYou,
       zegonLabel: strings.hudZegon,
       ammoLabel: strings.hudAmmo,
-      blindsightLabel: strings.hudBlindsight,
+      blindsightLabel: `${strings.hudBlindsight}  ${blindsight}%`,
+      zegonDetail: blindsight >= 80 ? strings.deadeyeNear : undefined,
     });
 
     this.arenaView.update(blindsight, blindsight >= 100);

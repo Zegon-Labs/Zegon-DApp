@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { format, t } from "../i18n/index.js";
-import { createMenuButton, drawScanlines } from "../ui/components.js";
+import { createHubMenuButton, createHubScreenPanel } from "../ui/hub/index.js";
+import { drawScanlines } from "../ui/components.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
 
 interface LeaderboardEntry {
@@ -21,8 +22,7 @@ export class LeaderboardScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(C.void);
     drawScanlines(this);
 
-    const panel = this.add.rectangle(width / 2, height / 2, 480, 360, C.ash, 0.95);
-    panel.setStrokeStyle(1, C.fog);
+    createHubScreenPanel(this, width / 2, height / 2, 480, 360);
 
     this.add.text(width / 2, height / 2 - 150, strings.leaderboardTitle, {
       fontFamily: FONT,
@@ -38,7 +38,7 @@ export class LeaderboardScene extends Phaser.Scene {
       lineSpacing: 8,
     }).setOrigin(0.5);
 
-    createMenuButton(this, width / 2, height / 2 + 130, strings.back, () => {
+    createHubMenuButton(this, width / 2, height / 2 + 130, strings.back, () => {
       this.scene.start("TitleScene");
     });
 

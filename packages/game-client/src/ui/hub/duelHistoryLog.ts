@@ -50,7 +50,7 @@ export class DuelHistoryLog {
     const mask = maskGfx.createGeometryMask();
     maskGfx.setVisible(false);
 
-    this.body = scene.add.text(-layout.w / 2 + padX, this.baseY(), "—", {
+    this.body = scene.add.text(-layout.w / 2 + padX, this.baseY(), "...", {
       fontFamily: FONT,
       fontSize: "20px",
       color: COLORS.bone,
@@ -67,7 +67,7 @@ export class DuelHistoryLog {
 
   /** Replace log lines; scrolls down when content exceeds the panel. */
   setLines(lines: string[]): void {
-    const next = lines.length > 0 ? lines : ["—"];
+    const next = lines.length > 0 ? lines : ["..."];
     const grew = next.length > this.lineCount;
     this.lineCount = next.length;
 

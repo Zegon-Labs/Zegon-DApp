@@ -23,6 +23,7 @@ import {
   createLandingBackdrop,
   DuelHistoryLog,
   preloadLandingBackdrop,
+  RoundResultToast,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { buildRoundSummary } from "../ui/roundSummary.js";
@@ -79,10 +80,8 @@ export class DuelScene extends Phaser.Scene {
   private roundText!: Phaser.GameObjects.Text;
   private historyLog!: DuelHistoryLog;
   private statusText!: Phaser.GameObjects.Text;
-  private promptBar!: Phaser.GameObjects.Container;
   private tauntText!: Phaser.GameObjects.Text;
-  private roundResultText!: Phaser.GameObjects.Text;
-  private roundResultPanel!: Phaser.GameObjects.Rectangle;
+  private roundResultToast!: RoundResultToast;
   private actionTooltipText!: Phaser.GameObjects.Text;
   private mode: "standard" | "daily" = "standard";
   private archetypeLabel = "";
@@ -130,7 +129,6 @@ export class DuelScene extends Phaser.Scene {
     }
 
     const prompt = createHubPromptBar(this, 10);
-    this.promptBar = prompt.container;
     this.statusText = prompt.text;
 
     this.roundText = this.add.text(30, L.topBar.y, "", {
@@ -140,6 +138,7 @@ export class DuelScene extends Phaser.Scene {
     }).setDepth(11);
 
     this.historyLog = new DuelHistoryLog(this, strings.history, 10);
+    this.roundResultToast = new RoundResultToast(this, 14);
 
     this.tauntText = this.add.text(width / 2, L.taunt.y, "", {
       fontFamily: FONT,
@@ -148,24 +147,6 @@ export class DuelScene extends Phaser.Scene {
       align: "center",
       wordWrap: { width: L.taunt.maxW },
     }).setOrigin(0.5, 0).setDepth(10);
-
-    this.roundResultPanel = this.add.rectangle(
-      width / 2,
-      L.roundResult.y,
-      L.roundResult.w,
-      L.roundResult.h,
-      C.ash,
-      0.94,
-    ).setStrokeStyle(1, C.fog).setDepth(14).setVisible(false);
-
-    this.roundResultText = this.add.text(width / 2, L.roundResult.y, "", {
-      fontFamily: FONT,
-      fontSize: "20px",
-      color: COLORS.bone,
-      align: "center",
-      wordWrap: { width: L.roundResult.w - 42 },
-      lineSpacing: 3,
-    }).setOrigin(0.5).setDepth(15).setVisible(false);
 
     this.actionTooltipText = this.add.text(width / 2, L.tooltip.y, strings.actionTooltipHint, {
       fontFamily: FONT,
@@ -250,7 +231,7 @@ export class DuelScene extends Phaser.Scene {
     const strings = t();
     if (visible) {
       this.actionTooltipText
-        .setText(`${actionLabel(action)} — ${actionDescription(action)}`)
+        .setText(`${actionLabel(action)} · ${actionDescription(action)}`)
         .setColor(COLORS.ember);
     } else {
       this.actionTooltipText
@@ -259,56 +240,17 @@ export class DuelScene extends Phaser.Scene {
     }
   }
 
-  private setPromptVisible(visible: boolean): void {
-    this.promptBar.setVisible(visible);
-    this.tauntText.setVisible(visible && !this.showingRoundResult);
-  }
-
-  private setTauntVisible(visible: boolean): void {
-    this.tauntText.setVisible(visible && !this.showingRoundResult);
-  }
-
   private showRoundResult(outcome: RoundOutcome): void {
-    const { width } = this.scale;
     const summary = buildRoundSummary(outcome, t(), (action) =>
       actionLabel(action),
     );
     this.showingRoundResult = true;
-    this.setPromptVisible(false);
-    this.setTauntVisible(false);
-
-    const lineCount = summary.text.split("\n").length;
-    const panelH = Math.min(
-      L.roundResult.maxH,
-      Math.max(L.roundResult.h, 27 + lineCount * 21),
-    );
-    const panelY = L.roundResult.y;
-
-    this.roundResultPanel.setSize(L.roundResult.w, panelH);
-    this.roundResultPanel.setPosition(width / 2, panelY);
-    this.roundResultText.setPosition(width / 2, panelY);
-    this.roundResultText.setText(summary.text).setColor(summary.color);
-    this.roundResultPanel.setVisible(true);
-    this.roundResultText.setVisible(true);
-    this.roundResultPanel.setAlpha(0.4);
-    this.roundResultText.setAlpha(0.4);
-
-    this.actionTooltipText.setAlpha(0.15);
-
-    this.tweens.add({
-      targets: [this.roundResultText, this.roundResultPanel],
-      alpha: 1,
-      duration: 200,
-      ease: "Sine.Out",
-    });
+    this.roundResultToast.show(summary.text, summary.color);
+    this.actionTooltipText.setAlpha(0.35);
 
     this.time.delayedCall(2200, () => {
       this.showingRoundResult = false;
-      this.roundResultPanel.setVisible(false);
-      this.roundResultText.setVisible(false);
       this.actionTooltipText.setAlpha(1);
-      this.setPromptVisible(true);
-      this.setTauntVisible(true);
     });
   }
 
@@ -330,20 +272,15 @@ export class DuelScene extends Phaser.Scene {
 
   private onRoundResolved(outcome: RoundOutcome): void {
     this.showRoundResult(outcome);
-    const { width } = this.scale;
     if (outcome.playerDamage > 0) {
-      showFloatingDamage(this, 120, L.stats.hpBarY - 30, outcome.playerDamage, "player");
+      const anchor = this.combatHud.playerDamageAnchor();
+      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
       this.cameras.main.flash(180, 179, 18, 43);
       this.cameras.main.shake(150, 0.005);
     }
     if (outcome.zegonDamage > 0) {
-      showFloatingDamage(
-        this,
-        width - 120,
-        L.stats.hpBarY - 30,
-        outcome.zegonDamage,
-        "zegon",
-      );
+      const anchor = this.combatHud.zegonDamageAnchor();
+      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.zegonDamage, "zegon");
     }
     if (
       outcome.zegonDecision.zegonMove === "FIRE_HIGH" ||
@@ -362,8 +299,7 @@ export class DuelScene extends Phaser.Scene {
         this.statusText.setText(strings.zegonReading).setColor(COLORS.ember);
         this.tauntText.setText("");
         if (!this.showingRoundResult) {
-          this.roundResultPanel.setVisible(false);
-          this.roundResultText.setVisible(false);
+          this.roundResultToast.hide();
         }
       } else if (phase === DuelPhase.AWAITING_PLAYER) {
         this.statusText.setText(strings.yourTurnPrompt).setColor(COLORS.bone);
@@ -446,6 +382,7 @@ export class DuelScene extends Phaser.Scene {
       zegonLabel: strings.hudZegon,
       ammoLabel: strings.hudAmmo,
       blindsightLabel: `${strings.hudBlindsight}  ${blindsight}%`,
+      zegonDetail: blindsight >= 80 ? strings.deadeyeNear : undefined,
     });
   }
 
@@ -485,5 +422,6 @@ export class DuelScene extends Phaser.Scene {
     this.actionBar?.destroy();
     this.arenaView?.destroy();
     this.historyLog?.destroy();
+    this.roundResultToast?.destroy();
   }
 }

@@ -15,13 +15,12 @@ export function buildRoundSummary(
   const lines: string[] = [
     `${strings.zegonPlayed}: ${zegonMove}`,
     `${strings.youPlayed}: ${playerMove}`,
-    "—",
   ];
 
   if (outcome.predictionCorrect) {
-    lines.push(`${strings.roundSummaryRead} → ${strings.zegonReadYou}`);
+    lines.push(`${strings.roundSummaryRead} · ${strings.zegonReadYou}`);
   } else {
-    lines.push(`${strings.roundSummarySurprised}`);
+    lines.push(strings.roundSummarySurprised);
   }
 
   const bsDelta =
@@ -31,14 +30,10 @@ export function buildRoundSummary(
   lines.push(`${strings.hudBlindsight} ${bsDelta}`);
 
   if (outcome.playerDamage > 0) {
-    lines.push(
-      `${strings.roundSummaryYouHit}: −${outcome.playerDamage} ${strings.hudHp}`,
-    );
+    lines.push(`${strings.roundSummaryYouHit} −${outcome.playerDamage} ${strings.hudHp}`);
   }
   if (outcome.zegonDamage > 0) {
-    lines.push(
-      `${strings.roundSummaryZegonHit}: −${outcome.zegonDamage} ${strings.hudHp}`,
-    );
+    lines.push(`${strings.roundSummaryZegonHit} −${outcome.zegonDamage} ${strings.hudHp}`);
   }
   if (outcome.playerDamage === 0 && outcome.zegonDamage === 0) {
     lines.push(strings.roundSummaryNoDamage);

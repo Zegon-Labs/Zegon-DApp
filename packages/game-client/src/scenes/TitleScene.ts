@@ -10,11 +10,10 @@ import {
 } from "../services/wallet.js";
 import { isTutorialDone } from "../tutorial/steps.js";
 import {
-  createAccentMenuButton,
-  createMenuButton,
-  createSmallButton,
-  drawScanlines,
-} from "../ui/components.js";
+  createHubAccentMenuButton,
+  createHubMenuButton,
+} from "../ui/hub/index.js";
+import { createSmallButton, drawScanlines } from "../ui/components.js";
 import { titleButtonY, TITLE_LAYOUT } from "../ui/layout.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
 
@@ -52,23 +51,23 @@ export class TitleScene extends Phaser.Scene {
       ? `${strings.tutorial}  ${strings.tutorialDoneBadge}`
       : strings.tutorial;
 
-    createAccentMenuButton(this, width / 2, titleButtonY(0), tutorialLabel, () => {
+    createHubAccentMenuButton(this, width / 2, titleButtonY(0), tutorialLabel, () => {
       this.scene.start("TutorialScene");
     });
 
-    createMenuButton(this, width / 2, titleButtonY(1), strings.duel, () => {
+    createHubMenuButton(this, width / 2, titleButtonY(1), strings.duel, () => {
       this.scene.start("DuelScene", { mode: "standard" });
     });
 
-    createMenuButton(this, width / 2, titleButtonY(2), strings.daily, () => {
+    createHubMenuButton(this, width / 2, titleButtonY(2), strings.daily, () => {
       this.scene.start("DuelScene", { mode: "daily" });
     });
 
-    createMenuButton(this, width / 2, titleButtonY(3), strings.leaderboard, () => {
+    createHubMenuButton(this, width / 2, titleButtonY(3), strings.leaderboard, () => {
       this.scene.start("LeaderboardScene");
     });
 
-    createMenuButton(this, width / 2, titleButtonY(4), strings.settings, () => {
+    createHubMenuButton(this, width / 2, titleButtonY(4), strings.settings, () => {
       this.scene.start("SettingsScene");
     });
 

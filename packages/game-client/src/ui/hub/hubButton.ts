@@ -293,3 +293,70 @@ export function createHubActionButton(
     },
   };
 }
+
+/** Hub menu row — positioned secondary button (title / result screens). */
+export function createHubMenuButton(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  label: string,
+  onClick: () => void,
+  width = 260,
+): HubButtonHandle {
+  const btn = createHubSecondaryButton(scene, label, onClick, width);
+  btn.container.setPosition(x, y);
+  return btn;
+}
+
+/** Hub menu row — positioned primary / accent button. */
+export function createHubAccentMenuButton(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  label: string,
+  onClick: () => void,
+  width = 260,
+): HubButtonHandle {
+  const btn = createHubPrimaryButton(scene, label, onClick, width);
+  btn.container.setPosition(x, y);
+  return btn;
+}
+
+/** Toggle / choice chip — language picker, options. */
+export function createHubChoiceButton(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  label: string,
+  active: boolean,
+  onClick: () => void,
+  width = 150,
+): HubButtonHandle {
+  const h = 36;
+  const bg = scene.add.rectangle(0, 0, width, h, C.smoke, 0.92);
+  bg.setStrokeStyle(active ? 2 : 1, active ? C.blood : C.fog, active ? 0.95 : 0.9);
+
+  const text = scene.add.text(0, 0, label, {
+    fontFamily: FONT,
+    fontSize: "22px",
+    color: active ? COLORS.ember : COLORS.bone,
+  }).setOrigin(0.5);
+
+  const container = scene.add.container(x, y, [bg, text]);
+  bg.setInteractive({ useHandCursor: true });
+
+  bg.on("pointerover", () => {
+    bg.setStrokeStyle(2, C.blood, 0.85);
+    text.setColor(COLORS.ember);
+  });
+  bg.on("pointerout", () => {
+    bg.setStrokeStyle(active ? 2 : 1, active ? C.blood : C.fog, active ? 0.95 : 0.9);
+    text.setColor(active ? COLORS.ember : COLORS.bone);
+  });
+  bg.on("pointerdown", onClick);
+
+  return {
+    container,
+    destroy: () => container.destroy(true),
+  };
+}
