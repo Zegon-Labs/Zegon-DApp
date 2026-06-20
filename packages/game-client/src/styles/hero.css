@@ -381,6 +381,99 @@ button {
 }
 
 /* =========================================================
+   VERIFY CALLOUT (hub principal)
+   ========================================================= */
+
+.verify-card {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 0 20px;
+  padding: 10px 12px 10px;
+  background: rgba(20, 18, 28, 0.85);
+  border: 1px solid rgba(179, 18, 43, 0.35);
+  border-radius: 5px;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.verify-card__glow {
+  display: none;
+}
+
+.verify-card__header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.verify-card__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(179, 18, 43, 0.35);
+  border-radius: 3px;
+  color: var(--blood);
+  background: rgba(179, 18, 43, 0.08);
+}
+
+.verify-card__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.verify-card__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.verify-card__headline {
+  margin: 0 0 3px;
+  font-family: var(--font-display);
+  font-size: clamp(11px, 1.8vw, 13px);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bone);
+  line-height: 1.2;
+}
+
+.verify-card__sub {
+  margin: 0;
+  font-size: clamp(10px, 1.5vw, 11px);
+  line-height: 1.35;
+  letter-spacing: 0.03em;
+  color: var(--dust);
+  text-transform: uppercase;
+}
+
+.verify-card__cta {
+  position: relative;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--blood);
+  background: linear-gradient(180deg, rgba(179, 18, 43, 0.3), rgba(179, 18, 43, 0.12));
+  color: var(--bone);
+  font-family: var(--font-display);
+  font-size: clamp(11px, 1.7vw, 13px);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.verify-card__cta:hover {
+  border-color: var(--ember);
+  background: rgba(179, 18, 43, 0.22);
+  transform: none;
+}
+
+/* =========================================================
    COPYS DE VERIFICACIÓN / GUEST
    ========================================================= */
 
@@ -426,7 +519,7 @@ button {
   z-index: 3;
   width: 100%;
   max-width: 720px;
-  margin-top: clamp(36px, 6vw, 56px);
+  margin-top: clamp(20px, 4vw, 32px);
   padding: 0 24px 40px;
   display: flex;
   flex-direction: column;
@@ -438,7 +531,7 @@ button {
   align-items: center;
   gap: 14px;
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
   margin-bottom: 32px;
 }
 
@@ -446,6 +539,11 @@ button {
   flex: 1;
   height: 1px;
   background: var(--fog);
+  transform-origin: center;
+}
+
+.hero__footer-line--pulse {
+  animation: built-line-breathe 3.6s ease-in-out infinite;
 }
 
 .hero__footer-label {
@@ -457,11 +555,60 @@ button {
 }
 
 .hero__footer-og {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero__footer-og-glow {
+  position: absolute;
+  inset: -6px -8px;
+  border-radius: 4px;
+  background: radial-gradient(circle, rgba(179, 18, 43, 0.2), transparent 70%);
+  animation: og-glow-pulse 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero__footer-og-text {
+  position: relative;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 22px;
-  letter-spacing: 0.02em;
-  color: var(--ember);
+  font-size: clamp(20px, 3vw, 24px);
+  letter-spacing: 0.04em;
+  color: var(--blood);
+  animation: og-text-pulse 5s ease-in-out infinite;
+  text-shadow: none;
+}
+
+@keyframes built-line-breathe {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.85;
+    background: linear-gradient(90deg, transparent, rgba(179, 18, 43, 0.45), transparent);
+  }
+}
+
+@keyframes og-glow-pulse {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes og-text-pulse {
+  0%, 100% {
+    color: var(--blood);
+    opacity: 0.9;
+  }
+  50% {
+    color: var(--ember);
+    opacity: 1;
+  }
 }
 
 .hero__footer-features {
@@ -473,24 +620,58 @@ button {
 }
 
 .footer-feature {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  padding: 12px 8px 10px;
   color: var(--dust);
+  border: 1px solid rgba(179, 18, 43, 0.22);
+  border-radius: 5px;
+  background: rgba(20, 18, 28, 0.5);
+  overflow: hidden;
+}
+
+.footer-feature__glow {
+  display: none;
+}
+
+.footer-feature__icon-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 3px;
+  border: 1px solid rgba(179, 18, 43, 0.35);
+  background: rgba(179, 18, 43, 0.08);
+  color: var(--blood);
+}
+
+.footer-feature--compute .footer-feature__icon-wrap,
+.footer-feature--chain .footer-feature__icon-wrap,
+.footer-feature--storage .footer-feature__icon-wrap {
+  color: var(--blood);
 }
 
 .footer-feature__title {
+  position: relative;
+  z-index: 1;
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--bone);
+  color: var(--ember);
 }
 
 .footer-feature__desc {
+  position: relative;
+  z-index: 1;
   margin: 0;
-  font-size: 11.5px;
+  font-size: 10.5px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--dust);
@@ -504,9 +685,34 @@ button {
   .hero__bg-img,
   .hero__character-img,
   .hero__logo-img,
-  .smoke-layer {
+  .smoke-layer,
+  .verify-card,
+  .verify-card__glow,
+  .verify-card__icon,
+  .hero__footer-line--pulse,
+  .hero__footer-og-glow,
+  .hero__footer-og-text,
+  .footer-feature,
+  .footer-feature__glow,
+  .footer-feature__icon-wrap,
+  .footer-feature__title,
+  .footer-feature__desc {
     animation: none !important;
   }
+}
+
+html.zegon-reduced-motion .verify-card,
+html.zegon-reduced-motion .verify-card__glow,
+html.zegon-reduced-motion .verify-card__icon,
+html.zegon-reduced-motion .hero__footer-line--pulse,
+html.zegon-reduced-motion .hero__footer-og-glow,
+html.zegon-reduced-motion .hero__footer-og-text,
+html.zegon-reduced-motion .footer-feature,
+html.zegon-reduced-motion .footer-feature__glow,
+html.zegon-reduced-motion .footer-feature__icon-wrap,
+html.zegon-reduced-motion .footer-feature__title,
+html.zegon-reduced-motion .footer-feature__desc {
+  animation: none !important;
 }
 
 /* =========================================================
@@ -528,6 +734,10 @@ button {
 
   .hero__footer-features {
     gap: 10px;
+  }
+
+  .footer-feature {
+    padding: 12px 8px 10px;
   }
 
   .footer-feature__title,

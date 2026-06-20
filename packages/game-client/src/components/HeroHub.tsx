@@ -12,7 +12,7 @@ import {
 } from "../services/wallet.js";
 import { fetchProfile, hasNickname } from "../services/profile.js";
 import { isTutorialDone } from "../tutorial/steps.js";
-import { ArchetypeSelector } from "./ArchetypeSelector.js";
+import { ArchetypePickerModal } from "./ArchetypePickerModal.js";
 import type { ZegonArchetypeId } from "@zegon/game-core";
 import { getDailyArchetype } from "@zegon/game-core";
 import {
@@ -45,10 +45,24 @@ function LockIcon() {
   );
 }
 
+function VerifyShieldIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3 4 7v6c0 4.5 3.4 7.7 8 9 4.6-1.3 8-4.5 8-9V7l-8-4Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="m9 12 2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   const { strings, language: lang } = useLocale();
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
-  const [archetype, setArchetype] = useState<ZegonArchetypeId>("reader");
+  const [showArchetypePicker, setShowArchetypePicker] = useState(false);
   const [poolInfo, setPoolInfo] = useState<Awaited<ReturnType<typeof fetchDailyPool>> | null>(null);
   const [staked, setStaked] = useState(false);
   const [brainLabel, setBrainLabel] = useState("…");
@@ -124,6 +138,11 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     gameBridge.startScene("DuelScene", { mode: "daily" });
   }
 
+  function startStandardDuel(archetypeId: ZegonArchetypeId) {
+    setShowArchetypePicker(false);
+    gameBridge.startScene("DuelScene", { mode: "standard", archetypeId });
+  }
+
   return (
     <main className="hero">
       <div className="hero__bg" aria-hidden="true">
@@ -156,15 +175,10 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             <span className="btn__subtitle">{strings.tutorialTitle}</span>
           </button>
 
-          <p className="hero__section-label">{strings.pickArchetype}</p>
-          <ArchetypeSelector value={archetype} onChange={setArchetype} />
-
           <button
             type="button"
             className="btn btn--primary"
-            onClick={() =>
-              gameBridge.startScene("DuelScene", { mode: "standard", archetypeId: archetype })
-            }
+            onClick={() => setShowArchetypePicker(true)}
           >
             <span className="btn__title">{strings.duel}</span>
             <span className="btn__subtitle">{strings.heroPlaySubtitle}</span>
@@ -215,21 +229,6 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           </div>
         </div>
 
-        <p className="hero__verify-copy">
-          {strings.heroVerifyLine1}
-          <br />
-          {strings.heroVerifyLine2a}
-          <span className="text-accent">{strings.heroVerifyLine2b}</span>.
-        </p>
-
-        <button
-          type="button"
-          className="hero__verify-link"
-          onClick={() => window.open("/verify-guide.html", "_blank")}
-        >
-          {strings.hubVerifyLink}
-        </button>
-
         <p className="hero__guest-note">
           <LockIcon />
           {strings.heroGuestNote}
@@ -237,40 +236,84 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
       </div>
 
       <footer className="hero__footer">
+        <section className="verify-card" aria-labelledby="verify-card-title">
+          <div className="verify-card__glow" aria-hidden="true" />
+          <div className="verify-card__header">
+            <span className="verify-card__icon">
+              <VerifyShieldIcon />
+            </span>
+            <div className="verify-card__copy">
+              <p id="verify-card-title" className="verify-card__headline">
+                {strings.heroVerifyLine1}
+              </p>
+              <p className="verify-card__sub">
+                {strings.heroVerifyLine2a}
+                <span className="text-accent">{strings.heroVerifyLine2b}</span>.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="verify-card__cta"
+            onClick={() => window.open("/verify-guide.html", "_blank")}
+          >
+            {strings.hubVerifyLink}
+          </button>
+        </section>
+
         <div className="hero__footer-built">
-          <span className="hero__footer-line" aria-hidden="true" />
+          <span className="hero__footer-line hero__footer-line--pulse" aria-hidden="true" />
           <span className="hero__footer-label">{strings.heroBuiltOn}</span>
-          <span className="hero__footer-og">0G</span>
-          <span className="hero__footer-line" aria-hidden="true" />
+          <span className="hero__footer-og">
+            <span className="hero__footer-og-glow" aria-hidden="true" />
+            <span className="hero__footer-og-text">0G</span>
+          </span>
+          <span className="hero__footer-line hero__footer-line--pulse" aria-hidden="true" />
         </div>
 
         <div className="hero__footer-features">
-          <div className="footer-feature">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
+          <div className="footer-feature footer-feature--compute">
+            <span className="footer-feature__glow" aria-hidden="true" />
+            <span className="footer-feature__icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </span>
             <p className="footer-feature__title">{strings.footerComputeTitle}</p>
             <p className="footer-feature__desc">{strings.footerComputeDesc}</p>
           </div>
-          <div className="footer-feature">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 3 4 7v6c0 4.5 3.4 7.7 8 9 4.6-1.3 8-4.5 8-9V7l-8-4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-            </svg>
+          <div className="footer-feature footer-feature--chain">
+            <span className="footer-feature__glow" aria-hidden="true" />
+            <span className="footer-feature__icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3 4 7v6c0 4.5 3.4 7.7 8 9 4.6-1.3 8-4.5 8-9V7l-8-4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              </svg>
+            </span>
             <p className="footer-feature__title">{strings.footerChainTitle}</p>
             <p className="footer-feature__desc">{strings.footerChainDesc}</p>
           </div>
-          <div className="footer-feature">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <ellipse cx="12" cy="5.5" rx="7.5" ry="2.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M4.5 5.5V12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V5.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M4.5 12v6.5c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V12" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
+          <div className="footer-feature footer-feature--storage">
+            <span className="footer-feature__glow" aria-hidden="true" />
+            <span className="footer-feature__icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <ellipse cx="12" cy="5.5" rx="7.5" ry="2.5" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M4.5 5.5V12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V5.5" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M4.5 12v6.5c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V12" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            </span>
             <p className="footer-feature__title">{strings.footerStorageTitle}</p>
             <p className="footer-feature__desc">{strings.footerStorageDesc}</p>
           </div>
         </div>
       </footer>
+
+      {showArchetypePicker && (
+        <ArchetypePickerModal
+          onConfirm={startStandardDuel}
+          onClose={() => setShowArchetypePicker(false)}
+        />
+      )}
     </main>
   );
 }
