@@ -143,7 +143,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
       <div className="hero__atmosphere" aria-hidden="true" />
 
       <div className="hero__layout">
-        <div className="hero__spacer" aria-hidden="true" />
+        <HeroCharacter />
 
         <section className="hero__menu" aria-label="Menú principal">
           <div className="hero__menu-head">
@@ -225,17 +225,15 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
         </section>
       </div>
 
-      <HeroCharacter />
-
       <footer className="hero__footer">
         <div className="hero__footer-built">
-          <span className="hero__footer-line hero__footer-line--pulse" aria-hidden="true" />
+          <span className="hero__footer-line" aria-hidden="true" />
           <span className="hero__footer-label">{strings.heroBuiltOn}</span>
           <span className="hero__footer-og">
             <span className="hero__footer-og-glow" aria-hidden="true" />
             <span className="hero__footer-og-text">0G</span>
           </span>
-          <span className="hero__footer-line hero__footer-line--pulse" aria-hidden="true" />
+          <span className="hero__footer-line" aria-hidden="true" />
         </div>
 
         <div className="hero__footer-features">
