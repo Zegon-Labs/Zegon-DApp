@@ -819,6 +819,10 @@ html.zegon-reduced-motion .footer-feature__desc {
   animation: overlay-in 0.28s ease-out;
 }
 
+.hero__overlay--game {
+  z-index: 120;
+}
+
 @keyframes overlay-in {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -879,25 +883,31 @@ html.zegon-reduced-motion .footer-feature__desc {
   inset: 0;
   z-index: 50;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   background: var(--void);
-  padding: 16px;
+  padding: 0;
 }
 
 .game-stage__frame {
   width: 100%;
-  max-width: 854px;
-  border: 1px solid rgba(255,77,46,0.35);
-  box-shadow: 0 0 40px -12px rgba(179,18,43,0.4);
-  border-radius: 2px;
+  height: 100%;
+  max-width: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
   overflow: hidden;
+}
+
+.game-stage__canvas {
+  width: 100%;
+  height: 100%;
 }
 
 .game-stage__frame canvas {
   display: block;
   width: 100% !important;
-  height: auto !important;
+  height: 100% !important;
 }
 
 #root {
@@ -1032,7 +1042,57 @@ html, body {
 
 .settings-slider input[type="range"] {
   width: 100%;
+  height: 6px;
+  margin: 0;
   accent-color: var(--blood);
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.settings-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--blood) 0%,
+    var(--blood) var(--range-progress, 50%),
+    rgba(58, 53, 80, 0.85) var(--range-progress, 50%),
+    rgba(58, 53, 80, 0.85) 100%
+  );
+}
+
+.settings-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--bone);
+  background: var(--blood);
+  box-shadow: 0 0 8px rgba(179, 18, 43, 0.55);
+}
+
+.settings-slider input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(58, 53, 80, 0.85);
+}
+
+.settings-slider input[type="range"]::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--blood);
+}
+
+.settings-slider input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--bone);
+  background: var(--blood);
+  box-shadow: 0 0 8px rgba(179, 18, 43, 0.55);
 }
 
 .leaderboard-table {

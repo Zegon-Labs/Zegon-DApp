@@ -10,7 +10,28 @@
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <audio
+      id="zegon-bgm"
+      autoplay
+      loop
+      playsinline
+      preload="auto"
+      src="/audio/ghosts-in-spur-dust.mp3"
+      style="display: none"
+    ></audio>
     <div id="root"></div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        var track = document.getElementById("zegon-bgm");
+        if (!track) return;
+        track.volume = 0.56;
+        var play = function () {
+          track.play().catch(function () {});
+        };
+        play();
+        track.addEventListener("canplaythrough", play, { once: true });
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

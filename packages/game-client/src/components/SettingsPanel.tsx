@@ -108,13 +108,20 @@ function SliderRow({
         min={0}
         max={100}
         value={value}
+        style={{ ["--range-progress" as string]: `${value}%` }}
         onChange={(e) => onChange(Number(e.target.value))}
       />
     </label>
   );
 }
 
-export function SettingsPanel() {
+export function SettingsPanel({
+  overlay = false,
+  onClose,
+}: {
+  overlay?: boolean;
+  onClose?: () => void;
+}) {
   const { strings, language, setLanguage } = useLocale();
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
   const [nickname, setNickname] = useState("");
@@ -176,7 +183,11 @@ export function SettingsPanel() {
   }
 
   return (
-    <div className="hero__overlay" role="dialog" aria-modal="true">
+    <div
+      className={`hero__overlay${overlay ? " hero__overlay--game" : ""}`}
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="hero__panel hero__panel--wide hero__panel--scroll">
         <h2 className="hero__panel-title">{strings.settingsTitle}</h2>
 
@@ -309,7 +320,13 @@ export function SettingsPanel() {
         <button
           type="button"
           className="btn btn--secondary hero__panel-back"
-          onClick={() => gameBridge.navigate({ type: "hub" })}
+          onClick={() => {
+            if (overlay && onClose) {
+              onClose();
+            } else {
+              gameBridge.navigate({ type: "hub" });
+            }
+          }}
         >
           {strings.back}
         </button>

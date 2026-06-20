@@ -38,7 +38,7 @@ export function PhaserHost({ visible }: PhaserHostProps) {
       aria-hidden={!visible}
     >
       <div className="game-stage__frame">
-        <div ref={containerRef} className="aspect-[854/480] w-full" />
+        <div ref={containerRef} className="game-stage__canvas" />
       </div>
     </div>
   );

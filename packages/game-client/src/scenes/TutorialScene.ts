@@ -7,24 +7,26 @@ import {
   PlayerAction,
 } from "../adapters/GameCoreAdapter.js";
 import type { DuelEvent, RoundOutcome } from "@zegon/game-core";
+import { ALL_PLAYER_ACTIONS } from "@zegon/game-core";
 import {
-  createActionButton,
-  createPromptPanel,
-  createSmallButton,
-  createTutorialBubble,
-  type ActionButtonHandle,
-  drawBlindsightMeter,
-  drawDesertBackdrop,
-  drawDivider,
   drawGlitchOverlay,
-  drawHpBar,
   drawScanlines,
   scanlineAlphaForBlindsight,
-  drawZegonFigure,
 } from "../ui/components.js";
-import { actionButtonWidth, DUEL_LAYOUT as L, TUTORIAL_BUBBLE } from "../ui/layout.js";
+import {
+  ActionBar,
+  ArenaView,
+  CombatHud,
+  createHubGameChrome,
+  createHubPromptBar,
+  createHubPracticeStrip,
+  createHubTutorialModal,
+  createLandingBackdrop,
+  preloadLandingBackdrop,
+} from "../ui/hub/index.js";
+import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
-import { C, COLORS, FONT } from "../ui/theme.js";
+import { C, COLORS, FONT_DISPLAY } from "../ui/theme.js";
 import { gameBridge } from "../game/bridge.js";
 import {
   getPracticeForRound,
@@ -56,20 +58,17 @@ function localeText(key: keyof LocaleStrings): string {
 export class TutorialScene extends Phaser.Scene {
   private adapter!: GameCoreAdapter;
   private tutorialBrain!: ScriptedZegonBrain;
-  private gameUi: Array<Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible> = [];
-  private modalLayer!: Phaser.GameObjects.Container;
-  private zegonFigure!: Phaser.GameObjects.Container;
-  private backdrop!: Phaser.GameObjects.Container;
-  private blindsightGfx!: Phaser.GameObjects.Graphics;
-  private hpGfx!: Phaser.GameObjects.Graphics;
+  private combatHud!: CombatHud;
+  private actionBar!: ActionBar;
+  private arenaView!: ArenaView;
+  private promptBar!: Phaser.GameObjects.Container;
   private statusText!: Phaser.GameObjects.Text;
   private stepLabel!: Phaser.GameObjects.Text;
-  private hudHintText!: Phaser.GameObjects.Text;
-  private playerHudText!: Phaser.GameObjects.Text;
   private glitchOverlay!: Phaser.GameObjects.Container;
   private scanlines!: Phaser.GameObjects.Graphics;
   private glitchPulse = 0;
-  private actionButtons: ActionButtonHandle[] = [];
+  private modalLayer!: Phaser.GameObjects.Container;
+  private gameLayer!: Phaser.GameObjects.Container;
   private segmentIndex = 0;
   private duelStarted = false;
   private waitingAdvance = false;
@@ -79,61 +78,41 @@ export class TutorialScene extends Phaser.Scene {
     super("TutorialScene");
   }
 
+  preload(): void {
+    preloadLandingBackdrop(this);
+  }
+
   create(): void {
     const { width } = this.scale;
     const strings = t();
 
     this.cameras.main.setBackgroundColor(C.void);
-    this.scanlines = drawScanlines(this);
-    this.glitchOverlay = drawGlitchOverlay(this, 0);
+    createLandingBackdrop(this, 0);
+    this.scanlines = drawScanlines(this, 98, 0.04);
+    this.glitchOverlay = drawGlitchOverlay(this, 0, 97);
 
     this.modalLayer = this.add.container(0, 0).setDepth(110);
+    this.gameLayer = this.add.container(0, 0).setDepth(10);
 
-    this.backdrop = drawDesertBackdrop(this, 0);
-    this.track(this.backdrop);
-    drawDivider(this, L.divider.y);
-
-    this.zegonFigure = drawZegonFigure(this, width / 2, L.arena.y, 0);
-    this.track(this.zegonFigure);
-
-    this.blindsightGfx = this.add.graphics().setDepth(8);
-    this.hpGfx = this.add.graphics().setDepth(8);
-    this.track(this.blindsightGfx, this.hpGfx);
-
-    const blindsightLabel = this.add.text(L.blindsight.labelX, L.blindsight.labelY, strings.hudBlindsight, {
-      fontFamily: FONT,
-      fontSize: "14px",
-      color: COLORS.ember,
-    }).setOrigin(1, 0).setDepth(8);
-    this.track(blindsightLabel);
-
-    const promptX = (width - L.prompt.w) / 2;
-    const prompt = createPromptPanel(this, promptX, L.prompt.y, L.prompt.w, L.prompt.h, 8);
+    this.arenaView = new ArenaView(this, 5);
+    this.combatHud = new CombatHud(this, 9);
+    const prompt = createHubPromptBar(this, 10);
+    this.promptBar = prompt.container;
     this.statusText = prompt.text;
-    this.track(prompt.container);
 
-    this.stepLabel = this.add.text(20, L.topBar.y, "", {
-      fontFamily: FONT,
-      fontSize: "15px",
-      color: COLORS.cyan,
-    }).setDepth(9);
-    this.track(this.stepLabel);
+    this.stepLabel = this.add.text(width / 2, L.topBar.y, "", {
+      fontFamily: FONT_DISPLAY,
+      fontSize: "21px",
+      color: COLORS.ember,
+      letterSpacing: 2,
+    }).setOrigin(0.5, 0).setDepth(11);
 
-    this.playerHudText = this.add.text(20, L.stats.y, "", {
-      fontFamily: FONT,
-      fontSize: "14px",
-      color: COLORS.bone,
-    }).setDepth(9);
-    this.track(this.playerHudText);
-
-    this.hudHintText = this.add.text(width / 2, L.stats.y - 14, strings.tutorialHudHint, {
-      fontFamily: FONT,
-      fontSize: "11px",
-      color: COLORS.dust,
-      align: "center",
-      wordWrap: { width: width - 40 },
-    }).setOrigin(0.5, 0).setDepth(9);
-    this.track(this.hudHintText);
+    this.gameLayer.add([
+      this.arenaView.container,
+      this.combatHud.container,
+      this.promptBar,
+      this.stepLabel,
+    ]);
 
     this.tutorialBrain = new ScriptedZegonBrain(buildTutorialScripts(getLanguage()));
     this.adapter = new GameCoreAdapter({
@@ -142,59 +121,43 @@ export class TutorialScene extends Phaser.Scene {
       onEvent: (event) => this.handleEvent(event),
     });
 
-    this.createActionButtons();
+    this.actionBar = new ActionBar(
+      this,
+      [...ALL_PLAYER_ACTIONS],
+      actionLabel,
+      (action) => void this.onAction(action),
+      12,
+    );
+    this.actionBar.addTo(this.gameLayer);
+
     this.setGameVisible(false);
     this.runCurrentSegment();
 
-    createSmallButton(this, width - 12, 10, strings.tutorialSkip, () => {
-      markTutorialDone();
-      gameBridge.navigate({ type: "hub" });
-    }).setDepth(60);
-  }
-
-  private track(...objects: Array<Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible>): void {
-    this.gameUi.push(...objects);
+    createHubGameChrome(this, {
+      skip: {
+        label: strings.tutorialSkip,
+        onClick: () => {
+          markTutorialDone();
+          gameBridge.navigate({ type: "hub" });
+        },
+      },
+      settings: {
+        label: strings.settings,
+        onClick: () => gameBridge.openSettingsOverlay(),
+      },
+    });
   }
 
   private setGameVisible(visible: boolean): void {
-    for (const obj of this.gameUi) {
-      obj.setVisible(visible);
-    }
-    for (const btn of this.actionButtons) {
-      btn.container.setVisible(visible);
-    }
+    this.gameLayer.setVisible(visible);
+    this.actionBar.setVisible(visible);
     if (!visible) {
-      this.resetPresentationEffects();
+      this.glitchOverlay.setVisible(false);
+      this.scanlines.setVisible(false);
     } else {
       this.glitchOverlay.setVisible(true);
       this.scanlines.setVisible(true);
     }
-  }
-
-  /** Hide glitch/scanlines so tutorial modals stay on top and readable. */
-  private resetPresentationEffects(): void {
-    this.glitchOverlay.setVisible(false);
-    this.scanlines.setVisible(false);
-  }
-
-  private createActionButtons(): void {
-    const actions = Object.values(PlayerAction);
-    const { width } = this.scale;
-    const btnW = actionButtonWidth(width, actions.length, L.actions.gap);
-    const y = L.actions.y;
-    const total = actions.length * btnW + (actions.length - 1) * L.actions.gap;
-    let x = (width - total) / 2 + btnW / 2;
-
-    actions.forEach((action) => {
-      const btn = createActionButton(
-        this, x, y, btnW, L.actions.h, actionLabel(action),
-        () => void this.onAction(action),
-        8,
-      );
-      this.actionButtons.push(btn);
-      x += btnW + L.actions.gap;
-    });
-    this.updateActionButtons(false);
   }
 
   private runCurrentSegment(): void {
@@ -203,8 +166,7 @@ export class TutorialScene extends Phaser.Scene {
 
     if (seg.kind === "modal") {
       this.setGameVisible(false);
-      this.resetPresentationEffects();
-      this.showModal(
+      this.showLessonModal(
         localeText(seg.titleKey as keyof LocaleStrings),
         localeText(seg.bodyKey as keyof LocaleStrings),
         seg.lesson,
@@ -219,7 +181,6 @@ export class TutorialScene extends Phaser.Scene {
     if (seg.kind === "finish") {
       markTutorialDone();
       this.setGameVisible(false);
-      this.resetPresentationEffects();
       this.showFinishModal(
         localeText(seg.titleKey as keyof LocaleStrings),
         localeText(seg.bodyKey as keyof LocaleStrings),
@@ -232,108 +193,80 @@ export class TutorialScene extends Phaser.Scene {
     }
   }
 
-  private showModal(
+  private showLessonModal(
     title: string,
     body: string,
     lesson: number | undefined,
     onContinue: () => void,
   ): void {
     const strings = t();
-    const { width, height } = this.scale;
     this.modalLayer.removeAll(true);
-    this.resetPresentationEffects();
-
-    const dim = this.add
-      .rectangle(width / 2, height / 2, width, height, C.void, 0.88)
-      .setDepth(109);
-    this.modalLayer.add(dim);
 
     const subtitle = lesson
       ? format(strings.tutorialLessonProgress, { current: lesson, total: LESSON_COUNT })
       : undefined;
 
     const badge = subtitle
-      ? `▸ ${strings.tutorialTip} · ${subtitle}`
-      : `▸ ${strings.tutorialTip}`;
+      ? `${strings.tutorialTip} · ${subtitle}`
+      : strings.tutorialTip;
 
-    const centered = lesson === undefined;
-
-    const bubble = createTutorialBubble(this, {
+    const modal = createHubTutorialModal(this, {
       title,
       body,
       badge,
       buttonLabel: strings.tutorialOk,
       onDismiss: onContinue,
-      x: centered ? width / 2 : TUTORIAL_BUBBLE.lesson.x,
-      y: centered ? height / 2 - 8 : TUTORIAL_BUBBLE.lesson.y,
-      entrance: centered ? "fade" : "slide",
-      depth: 110,
+      depth: 120,
     });
-    this.modalLayer.add(bubble);
+    this.modalLayer.add(modal);
   }
 
-  private showPracticeInstructionPopup(instruction: string, roundIndex: number): void {
+  private showPracticeInstruction(instruction: string, roundIndex: number): void {
     const strings = t();
     this.modalLayer.removeAll(true);
     this.waitingInstruction = true;
-    this.updateActionButtons(false);
+    this.actionBar.setEnabledMap(false, new Set());
 
     const stepLabel = format(strings.tutorialStepProgress, {
       current: roundIndex + 1,
       total: PRACTICE_SEGMENTS.length,
     });
 
-    const bubble = createTutorialBubble(this, {
+    const strip = createHubPracticeStrip(this, {
+      badge: `${strings.tutorialTip} · ${stepLabel}`,
       body: instruction,
-      badge: `▸ ${strings.tutorialTip} · ${stepLabel}`,
       buttonLabel: strings.tutorialOk,
       onDismiss: () => {
         this.waitingInstruction = false;
         this.updateActionButtons(true);
       },
-      x: TUTORIAL_BUBBLE.practice.x,
-      y: TUTORIAL_BUBBLE.practice.y,
-      depth: 50,
     });
-    this.modalLayer.add(bubble);
-  }
-
-  private setPracticeFeedback(text: string, color: string = COLORS.bone): void {
-    this.statusText.setText(text).setColor(color);
+    this.modalLayer.add(strip);
   }
 
   private showFinishModal(title: string, body: string): void {
     const strings = t();
-    const { width, height } = this.scale;
     this.modalLayer.removeAll(true);
-    this.resetPresentationEffects();
+    this.setGameVisible(false);
 
-    const dim = this.add
-      .rectangle(width / 2, height / 2, width, height, C.void, 0.88)
-      .setDepth(109);
-    this.modalLayer.add(dim);
-
-    const bubble = createTutorialBubble(this, {
+    const modal = createHubTutorialModal(this, {
       title,
       body,
-      badge: `▸ ${strings.tutorialTip}`,
+      badge: strings.tutorialCompleteBadge,
       buttonLabel: strings.tutorialBackToMenu,
       onDismiss: () => gameBridge.navigate({ type: "hub" }),
-      x: width / 2,
-      y: height / 2 - 8,
-      entrance: "fade",
-      depth: 110,
+      depth: 120,
     });
-    this.modalLayer.add(bubble);
+    this.modalLayer.add(modal);
   }
 
   private async beginDuel(): Promise<void> {
     this.modalLayer.removeAll(true);
     this.setGameVisible(true);
-    this.hudHintText.setVisible(false);
     this.duelStarted = true;
     this.waitingAdvance = false;
     this.waitingInstruction = false;
+    this.statusText.setText(t().tutorialPracticeTitle).setColor(COLORS.bone);
     await this.adapter.initDuel("tutorial", { config: { maxRounds: PRACTICE_SEGMENTS.length } });
   }
 
@@ -351,17 +284,13 @@ export class TutorialScene extends Phaser.Scene {
         total: PRACTICE_SEGMENTS.length,
       }),
     );
-    this.showPracticeInstructionPopup(
+    this.showPracticeInstruction(
       localeText(step.instructionKey as keyof LocaleStrings),
       roundIndex,
     );
 
-    if (step.forceAmmoZero) {
-      this.adapter.patchState({ ammo: 0 });
-    }
-    if (step.forceDeadeye) {
-      this.adapter.patchState({ blindsight: 100, isDeadeye: true });
-    }
+    if (step.forceAmmoZero) this.adapter.patchState({ ammo: 0 });
+    if (step.forceDeadeye) this.adapter.patchState({ blindsight: 100, isDeadeye: true });
 
     this.updateActionButtons(true);
   }
@@ -371,20 +300,14 @@ export class TutorialScene extends Phaser.Scene {
 
     const step = getPracticeForRound(this.adapter.getState().roundIndex);
     if (!step || !step.allowedActions.includes(action)) {
-      this.setPracticeFeedback(t().tutorialWrong, COLORS.ember);
+      this.statusText.setText(t().tutorialWrong).setColor(COLORS.ember);
       return;
     }
 
-    if (step.forceAmmoZero) {
-      this.adapter.patchState({ ammo: 0 });
-    }
-    if (step.forceDeadeye) {
-      this.adapter.patchState({ blindsight: 100, isDeadeye: true });
-    }
-    this.actionButtons.forEach((btn) => {
-      btn.resetHover();
-      btn.setDimmed(true);
-    });
+    if (step.forceAmmoZero) this.adapter.patchState({ ammo: 0 });
+    if (step.forceDeadeye) this.adapter.patchState({ blindsight: 100, isDeadeye: true });
+
+    this.actionBar.setDimmedAll(true);
     void this.adapter.submitAction(action);
   }
 
@@ -396,9 +319,9 @@ export class TutorialScene extends Phaser.Scene {
       if (phase === DuelPhase.ZEGON_THINKING) {
         this.statusText.setText(strings.zegonReading).setColor(COLORS.ember);
         this.waitingAdvance = false;
-        this.actionButtons.forEach((btn) => btn.setDimmed(false));
+        this.actionBar.setDimmedAll(false);
       } else if (phase === DuelPhase.AWAITING_PLAYER) {
-        this.statusText.setText(strings.yourMove).setColor(COLORS.cyan);
+        this.statusText.setText(strings.yourMove).setColor(COLORS.bone);
         this.syncStepUi();
       } else if (phase === DuelPhase.DEADEYE) {
         this.statusText.setText(strings.deadeye).setColor(COLORS.ember);
@@ -412,14 +335,19 @@ export class TutorialScene extends Phaser.Scene {
 
     if (event.type === "duelEnd") {
       this.setGameVisible(false);
-      this.resetPresentationEffects();
+      this.modalLayer.removeAll(true);
+      this.waitingInstruction = false;
+      this.waitingAdvance = false;
+
       while (
         this.segmentIndex < TUTORIAL_FLOW.length &&
-        TUTORIAL_FLOW[this.segmentIndex]?.kind === "practice"
+        TUTORIAL_FLOW[this.segmentIndex]?.kind !== "finish"
       ) {
         this.segmentIndex += 1;
       }
-      this.time.delayedCall(500, () => this.runCurrentSegment());
+
+      markTutorialDone();
+      this.time.delayedCall(650, () => this.runCurrentSegment());
       return;
     }
 
@@ -430,77 +358,44 @@ export class TutorialScene extends Phaser.Scene {
   private onRoundResolved(outcome: RoundOutcome): void {
     const strings = t();
     if (outcome.deadeyeTriggered) {
-      this.setPracticeFeedback(strings.roundSummaryDeadeyeOn, COLORS.ember);
+      this.statusText.setText(strings.roundSummaryDeadeyeOn).setColor(COLORS.ember);
     } else if (outcome.predictionCorrect) {
-      this.setPracticeFeedback(
+      this.statusText.setText(
         `${strings.tutorialGood} — ${strings.roundSummaryRead} (+15 ${strings.hudBlindsight})`,
-        COLORS.ember,
-      );
+      ).setColor(COLORS.ember);
     } else if (outcome.playerDamage > 0) {
       showFloatingDamage(this, 80, L.stats.hpBarY - 20, outcome.playerDamage, "player");
-      this.setPracticeFeedback(
-        `${strings.roundSummaryYouHit} — ${strings.tutorialHpTitle}`,
-        COLORS.ember,
-      );
+      this.statusText.setText(`${strings.roundSummaryYouHit} — ${strings.tutorialHpTitle}`).setColor(COLORS.ember);
       this.cameras.main.flash(120, 179, 18, 43);
     } else if (outcome.zegonDamage > 0) {
-      this.setPracticeFeedback(
-        `${strings.tutorialGood} — ${strings.roundSummaryZegonHit}`,
-        COLORS.cyan,
-      );
+      this.statusText.setText(`${strings.tutorialGood} — ${strings.roundSummaryZegonHit}`).setColor(COLORS.bone);
     } else if (outcome.blindsightDelta < 0) {
-      this.setPracticeFeedback(
-        `${strings.tutorialGood} — ${strings.roundSummarySurprised}`,
-        COLORS.cyan,
-      );
+      this.statusText.setText(`${strings.tutorialGood} — ${strings.roundSummarySurprised}`).setColor(COLORS.bone);
     } else {
-      this.setPracticeFeedback(strings.tutorialGood, COLORS.cyan);
+      this.statusText.setText(strings.tutorialGood).setColor(COLORS.bone);
     }
   }
 
   private updateHud(): void {
-    const { width } = this.scale;
     const strings = t();
     const blindsight = this.adapter.getBlindsight();
-    const playerHp = this.adapter.getPlayerHp();
-    const zegonHp = this.adapter.getZegonHp();
-    const ammo = this.adapter.getAmmo();
 
-    drawBlindsightMeter(
-      this.blindsightGfx,
-      L.blindsight.barX,
-      L.blindsight.barY,
-      L.blindsight.barW,
-      L.blindsight.barH,
+    this.combatHud.update({
+      playerHp: this.adapter.getPlayerHp(),
+      zegonHp: this.adapter.getZegonHp(),
+      ammo: this.adapter.getAmmo(),
       blindsight,
-    );
-    this.hpGfx.clear();
-    drawHpBar(
-      this.hpGfx, 20, L.stats.hpBarY, L.stats.hpBarW, L.stats.hpBarH,
-      playerHp, 100, C.cyan,
-    );
-    drawHpBar(
-      this.hpGfx, width - 20 - L.stats.hpBarW, L.stats.hpBarY,
-      L.stats.hpBarW, L.stats.hpBarH, zegonHp, 100, C.ember,
-    );
+      playerLabel: strings.hudYou,
+      zegonLabel: strings.hudZegon,
+      ammoLabel: strings.hudAmmo,
+      blindsightLabel: strings.hudBlindsight,
+    });
 
-    this.playerHudText.setText(
-      `${strings.hudYou} ${playerHp}${strings.hudHp} · ${strings.hudAmmo} ×${ammo}  |  ${strings.hudZegon} ${zegonHp}${strings.hudHp}`,
-    );
-
-    this.zegonFigure.destroy();
-    this.zegonFigure = drawZegonFigure(
-      this, width / 2, L.arena.y, blindsight, blindsight >= 80,
-    );
-    this.track(this.zegonFigure);
-
-    this.backdrop.destroy();
-    this.backdrop = drawDesertBackdrop(this, blindsight / 100);
-    this.track(this.backdrop);
+    this.arenaView.update(blindsight, blindsight >= 100);
 
     const intensity = blindsight / 100;
     this.glitchOverlay.destroy();
-    this.glitchOverlay = drawGlitchOverlay(this, intensity);
+    this.glitchOverlay = drawGlitchOverlay(this, intensity, 97);
     this.scanlines.setAlpha(scanlineAlphaForBlindsight(blindsight));
 
     if (intensity > 0.45) {
@@ -520,15 +415,14 @@ export class TutorialScene extends Phaser.Scene {
       this.adapter.isAwaitingPlayer() &&
       allowed.size > 0;
 
-    this.actionButtons.forEach((btn, i) => {
-      const action = Object.values(PlayerAction)[i]!;
-      const active = canAct && allowed.has(action);
-      btn.setEnabled(active);
-      btn.resetHover();
-    });
+    this.actionBar.setEnabledMap(canAct, allowed);
+    if (!canAct) this.actionBar.resetHoverAll();
   }
 
   shutdown(): void {
     this.adapter?.destroy();
+    this.combatHud?.destroy();
+    this.actionBar?.destroy();
+    this.arenaView?.destroy();
   }
 }

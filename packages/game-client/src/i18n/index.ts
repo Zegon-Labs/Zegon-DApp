@@ -92,9 +92,15 @@ export interface LocaleStrings {
   tutorialStepDeadeye: string;
   tutorialComplete: string;
   tutorialCompleteBody: string;
+  tutorialCompleteBadge: string;
   tutorialWrong: string;
   tutorialGood: string;
   tutorialSkip: string;
+  duelSurrender: string;
+  duelSurrenderTitle: string;
+  duelSurrenderBody: string;
+  duelSurrenderConfirm: string;
+  duelSurrenderCancel: string;
   tutorialContinue: string;
   tutorialOk: string;
   tutorialTip: string;
@@ -293,12 +299,18 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "RELOAD again — ZEGON will shoot. Watch your HP drop (−damage).",
     tutorialStepDeadeye:
       "DEADEYE active! ZEGON fires — DODGE if you can (almost lethal).",
-    tutorialComplete: "You're ready",
+    tutorialComplete: "Tutorial complete",
     tutorialCompleteBody:
-      "You know HP, Blindsight, DEADEYE, all five actions, and ammo.\n\nHead back to the menu when you're ready.",
+      "You learned HP, Blindsight, DEADEYE, all five actions, and ammo.\n\nYou're ready for a real duel.",
+    tutorialCompleteBadge: "Completed",
     tutorialWrong: "Not that one — follow the hint.",
     tutorialGood: "Nice.",
     tutorialSkip: "SKIP",
+    duelSurrender: "SURRENDER",
+    duelSurrenderTitle: "Surrender?",
+    duelSurrenderBody: "You'll return to the menu and this duel will end without a score.",
+    duelSurrenderConfirm: "YES, SURRENDER",
+    duelSurrenderCancel: "KEEP FIGHTING",
     tutorialContinue: "CONTINUE",
     tutorialOk: "OK!",
     tutorialTip: "TIP",
@@ -495,12 +507,18 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "RECARGÁ otra vez — ZEGON dispara. Mirá bajar tus PS (−daño).",
     tutorialStepDeadeye:
       "¡DEADEYE activo! ZEGON dispara — ESQUIVÁ si podés (casi letal).",
-    tutorialComplete: "Estás listo",
+    tutorialComplete: "Tutorial completado",
     tutorialCompleteBody:
-      "Ya conocés PS, ciego-vista, DEADEYE, las cinco acciones y la munición.\n\nVolvé al menú cuando quieras seguir.",
+      "Aprendiste PS, ciego-vista, DEADEYE, las cinco acciones y la munición.\n\nEstás listo para un duelo real.",
+    tutorialCompleteBadge: "Completado",
     tutorialWrong: "Esa no — seguí la pista.",
     tutorialGood: "Bien.",
     tutorialSkip: "SALTAR",
+    duelSurrender: "RENDIRSE",
+    duelSurrenderTitle: "¿Rendirse?",
+    duelSurrenderBody: "Volverás al menú y este duelo terminará sin puntuación.",
+    duelSurrenderConfirm: "SÍ, RENDIRME",
+    duelSurrenderCancel: "SEGUIR LUCHANDO",
     tutorialContinue: "CONTINUAR",
     tutorialOk: "¡OKEY!",
     tutorialTip: "TIP",

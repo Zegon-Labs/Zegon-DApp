@@ -3,6 +3,7 @@ import { BlankScene } from "../scenes/BlankScene.js";
 import { DuelScene } from "../scenes/DuelScene.js";
 import { ResultScene } from "../scenes/ResultScene.js";
 import { TutorialScene } from "../scenes/TutorialScene.js";
+import { GAME_HEIGHT, GAME_WIDTH } from "../ui/layout.js";
 import { C } from "../ui/theme.js";
 
 let gameInstance: Phaser.Game | null = null;
@@ -16,13 +17,18 @@ export function createPhaserGame(parent: HTMLElement): Phaser.Game {
 
   gameInstance = new Phaser.Game({
     type: Phaser.AUTO,
-    width: 854,
-    height: 480,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
     parent,
     backgroundColor: C.void,
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+    render: {
+      antialias: true,
+      roundPixels: false,
+      pixelArt: false,
     },
     scene: [BlankScene, TutorialScene, DuelScene, ResultScene],
   });

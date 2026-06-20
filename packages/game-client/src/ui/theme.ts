@@ -32,3 +32,4 @@ export const COLORS = {
 } as const;
 
 export const FONT = "VT323, monospace";
+export const FONT_DISPLAY = "'Oswald', 'Arial Narrow', sans-serif";

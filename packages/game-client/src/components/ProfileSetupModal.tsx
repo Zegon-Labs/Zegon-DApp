@@ -66,21 +66,19 @@ export function ProfileSetupModal({ address, onComplete, onSkip }: ProfileSetupM
         />
         <p className="settings-hint">{strings.nicknameHint}</p>
         {error && <p className="settings-error">{error}</p>}
-        <div className="settings-actions">
-          <button
-            type="button"
-            className="btn btn--primary"
-            disabled={saving}
-            onClick={() => void handleSave()}
-          >
-            {strings.profileSave}
+        <button
+          type="button"
+          className="btn btn--primary"
+          disabled={saving}
+          onClick={() => void handleSave()}
+        >
+          <span className="btn__title">{strings.profileSave}</span>
+        </button>
+        {onSkip && (
+          <button type="button" className="btn btn--secondary hero__panel-back" onClick={onSkip}>
+            {strings.profileSkip}
           </button>
-          {onSkip && (
-            <button type="button" className="btn btn--menu" onClick={onSkip}>
-              {strings.profileSkip}
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
