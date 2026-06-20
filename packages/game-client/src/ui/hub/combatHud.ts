@@ -5,13 +5,19 @@ import { FighterHudBlock } from "./fighterHudBlock.js";
 export interface CombatHudState {
   playerHp: number;
   zegonHp: number;
+  maxHp: number;
   ammo: number;
+  maxAmmo: number;
   blindsight: number;
   playerLabel: string;
   zegonLabel: string;
-  ammoLabel: string;
+  weaponLabel: string;
+  hudWeapon: string;
+  hudStatus: string;
   blindsightLabel: string;
-  zegonDetail?: string;
+  blindsightFlavor: string;
+  nextMoveHint: string;
+  zegonStatus?: string;
 }
 
 export class CombatHud {
@@ -21,12 +27,17 @@ export class CombatHud {
   private readonly blindsightMeter: BlindsightMeter;
 
   constructor(scene: Phaser.Scene, depth = 9) {
-    const { width } = scene.scale;
-    const margin = 30;
-
     this.container = scene.add.container(0, 0).setDepth(depth);
-    this.playerBlock = new FighterHudBlock(scene, { edgeX: margin, align: "left", depth });
-    this.zegonBlock = new FighterHudBlock(scene, { edgeX: width - margin, align: "right", depth });
+    this.playerBlock = new FighterHudBlock(scene, {
+      align: "left",
+      variant: "player",
+      depth,
+    });
+    this.zegonBlock = new FighterHudBlock(scene, {
+      align: "right",
+      variant: "zegon",
+      depth,
+    });
     this.blindsightMeter = new BlindsightMeter(scene, depth);
 
     this.container.add([
@@ -40,14 +51,25 @@ export class CombatHud {
     this.playerBlock.update({
       name: state.playerLabel,
       hp: state.playerHp,
-      detail: `${state.ammoLabel} ×${state.ammo}`,
+      maxHp: state.maxHp,
+      ammo: state.ammo,
+      maxAmmo: state.maxAmmo,
+      weaponLabel: state.weaponLabel,
+      detail: state.hudWeapon,
     });
     this.zegonBlock.update({
       name: state.zegonLabel,
       hp: state.zegonHp,
-      detail: state.zegonDetail,
+      maxHp: state.maxHp,
+      statusLabel: state.zegonStatus,
+      detail: state.hudStatus,
     });
-    this.blindsightMeter.update(state.blindsightLabel, state.blindsight);
+    this.blindsightMeter.update(
+      state.blindsightLabel,
+      state.blindsight,
+      state.blindsightFlavor,
+      state.nextMoveHint,
+    );
   }
 
   playerDamageAnchor(): { x: number; y: number } {
@@ -62,10 +84,6 @@ export class CombatHud {
       x: this.zegonBlock.hpBarCenterX(),
       y: this.zegonBlock.hpBarCenterY(),
     };
-  }
-
-  setVisible(visible: boolean): void {
-    this.container.setVisible(visible);
   }
 
   destroy(): void {

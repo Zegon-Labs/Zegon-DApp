@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Language } from "../i18n/index.js";
 import { gameBridge } from "../game/bridge.js";
+import { playSfx } from "../services/sfx.js";
 import { useLocale } from "../hooks/useLocale.js";
 import { notify } from "../lib/toast.js";
 import {
@@ -321,6 +322,7 @@ export function SettingsPanel({
           type="button"
           className="btn btn--secondary hero__panel-back"
           onClick={() => {
+            playSfx("ui_modal_close");
             if (overlay && onClose) {
               onClose();
             } else {

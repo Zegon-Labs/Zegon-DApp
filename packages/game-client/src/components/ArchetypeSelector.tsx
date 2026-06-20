@@ -3,6 +3,7 @@ import {
   type ZegonArchetypeId,
 } from "@zegon/game-core";
 import { useLocale } from "../hooks/useLocale.js";
+import { playSfx } from "../services/sfx.js";
 
 interface ArchetypeSelectorProps {
   value: ZegonArchetypeId;
@@ -25,7 +26,10 @@ export function ArchetypeSelector({ value, onChange }: ArchetypeSelectorProps) {
             key={arch.id}
             type="button"
             className={`archetype-card${selected ? " archetype-card--selected" : ""}`}
-            onClick={() => onChange(arch.id)}
+            onClick={() => {
+              if (value !== arch.id) playSfx("ui_select");
+              onChange(arch.id);
+            }}
           >
             <span className="archetype-card__name">{name}</span>
             <span className="archetype-card__adv">{advantage}</span>

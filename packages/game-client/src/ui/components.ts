@@ -70,7 +70,48 @@ export function drawGlitchOverlay(
 
 /** Scanline alpha tied to blindsight 0–100. */
 export function scanlineAlphaForBlindsight(blindsight: number): number {
-  return 0.05 + (blindsight / 100) * 0.14;
+  return 0.04 + (blindsight / 100) * 0.22;
+}
+
+/** Pulse scanline opacity — ramps with blindsight, faster blink at higher values. */
+export function scanlinePulseAlpha(blindsight: number, phase: number): number {
+  const base = scanlineAlphaForBlindsight(blindsight);
+  if (blindsight < 18) return base;
+  const intensity = (blindsight - 18) / 82;
+  const speed = 1.5 + intensity * 4.2;
+  const pulse = 0.3 + 0.7 * Math.abs(Math.sin(phase * speed));
+  return base * (0.45 + intensity * pulse * 1.15);
+}
+
+/** Full-screen blink alpha — whole-screen pulse scales with blindsight. */
+export function blindsightBlinkAlpha(blindsight: number, phase: number): number {
+  if (blindsight < 10) return 0;
+  const t = (blindsight - 10) / 90;
+  const speed = 1.2 + t * 3.8;
+  const wave = Math.abs(Math.sin(phase * speed));
+  return wave * t * (0.05 + t * 0.28);
+}
+
+export interface BlindsightShakeParams {
+  intervalMs: number;
+  durationMs: number;
+  intensity: number;
+}
+
+/** Periodic camera shake — null below threshold. */
+export function blindsightShakeParams(blindsight: number): BlindsightShakeParams | null {
+  if (blindsight < 22) return null;
+  const t = (blindsight - 22) / 78;
+  return {
+    intervalMs: 1200 - t * 820,
+    durationMs: 65 + t * 95,
+    intensity: 0.0012 + t * 0.0055,
+  };
+}
+
+/** One-shot surge when blindsight rises after a round. */
+export function blindsightSurgeStrength(delta: number): number {
+  return Math.min(1, Math.max(0, delta / 22));
 }
 
 export interface CenterPopupOptions {

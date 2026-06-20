@@ -8,6 +8,7 @@ import { SettingsPanel } from "./components/SettingsPanel.js";
 import { gameBridge, type AppView } from "./game/bridge.js";
 import { fetchProfile, hasNickname } from "./services/profile.js";
 import { getWalletAddress, onWalletChange } from "./services/wallet.js";
+import { playSfx, playUiClick, playUiHover } from "./services/sfx.js";
 
 export default function App() {
   const [view, setView] = useState<AppView>({ type: "hub" });
@@ -44,6 +45,36 @@ export default function App() {
   useEffect(() => {
     if (!inGame) setInGameSettings(false);
   }, [inGame]);
+
+  useEffect(() => {
+    if (profileSetupAddress) playSfx("ui_modal_open");
+  }, [profileSetupAddress]);
+
+  useEffect(() => {
+    if (inGameSettings) playSfx("ui_modal_open");
+  }, [inGameSettings]);
+
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest("[data-skip-ui-click]")) return;
+      if (target.closest(".btn, .archetype-card, .hero__verify-link")) {
+        playUiClick();
+      }
+    };
+    const onOver = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest(".btn, .archetype-card")) {
+        playUiHover();
+      }
+    };
+    document.addEventListener("click", onClick);
+    document.addEventListener("mouseover", onOver);
+    return () => {
+      document.removeEventListener("click", onClick);
+      document.removeEventListener("mouseover", onOver);
+    };
+  }, []);
 
   return (
     <>

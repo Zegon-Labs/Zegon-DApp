@@ -49,7 +49,7 @@ class ApiZegonBrain implements IZegonBrain {
     }) => void,
   ) {}
 
-  setDuelId(duelId: string): void {
+  setDuelId(duelId: string | null): void {
     this.duelId = duelId;
   }
 
@@ -91,7 +91,10 @@ class ApiZegonBrain implements IZegonBrain {
     });
 
     if (!res.ok) {
-      throw new Error(`API commit failed: ${res.status}`);
+      const detail = await res.text().catch(() => "");
+      throw new Error(
+        `API commit failed: ${res.status}${detail ? ` — ${detail}` : ""}`,
+      );
     }
 
     const data = (await res.json()) as {
@@ -197,21 +200,30 @@ export class GameCoreAdapter {
     mode: "standard" | "daily" | "tutorial" = "standard",
     options?: { config?: Partial<DuelConfig>; archetypeId?: string },
   ): Promise<void> {
-    if (options?.config) {
-      Object.assign(this.controller.getState().config, options.config);
-    }
+    let mergedConfig: Partial<DuelConfig> = { ...options?.config };
 
     if (mode === "daily") {
-      const dailyConfig = createDailyDuel();
-      Object.assign(this.controller.getState().config, dailyConfig);
+      mergedConfig = { ...mergedConfig, ...createDailyDuel() };
     }
 
     if (mode === "standard" && options?.archetypeId) {
-      const std = createStandardDuelWithArchetype(
-        options.archetypeId as ZegonArchetypeId,
-      );
-      Object.assign(this.controller.getState().config, std);
+      mergedConfig = {
+        ...mergedConfig,
+        ...createStandardDuelWithArchetype(
+          options.archetypeId as ZegonArchetypeId,
+        ),
+      };
     }
+
+    this.controller.resetForNewDuel(mergedConfig);
+    this._duelId = null;
+    this._sessionToken = null;
+    this._lastAttestationHash = null;
+    this._lastCommitTxHash = null;
+    this._brainMode = "dummy";
+    this.apiBrain?.resetAttestations();
+    this.apiBrain?.setDuelId(null);
+    this.apiBrain?.setSessionToken(null);
 
     if (this.brainMode === "api" && !this.offline && mode !== "tutorial") {
       const res = await fetch(`${this.apiBaseUrl}/api/duel/start`, {
@@ -301,7 +313,10 @@ export class GameCoreAdapter {
       });
 
       if (!res.ok) {
-        throw new Error(`API reveal failed: ${res.status}`);
+        const detail = await res.text().catch(() => "");
+        throw new Error(
+          `API reveal failed: ${res.status}${detail ? ` — ${detail}` : ""}`,
+        );
       }
 
       const data = (await res.json()) as {

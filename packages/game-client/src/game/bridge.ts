@@ -14,6 +14,10 @@ let settingsOverlayListener: SettingsOverlayListener | null = null;
 
 export const gameBridge = {
   navigate(view: AppView) {
+    void import("../services/sfx.js").then(({ playSfx }) => playSfx("ui_navigate"));
+    if (view.type === "hub") {
+      void import("./phaser.js").then((m) => m.stopToBlank());
+    }
     navigateListener?.(view);
   },
 

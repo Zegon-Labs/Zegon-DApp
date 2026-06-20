@@ -11,7 +11,7 @@ import { ALL_PLAYER_ACTIONS } from "@zegon/game-core";
 import {
   drawGlitchOverlay,
   drawScanlines,
-  scanlineAlphaForBlindsight,
+  scanlinePulseAlpha,
 } from "../ui/components.js";
 import {
   ActionBar,
@@ -28,6 +28,14 @@ import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
 import { C, COLORS, FONT_DISPLAY } from "../ui/theme.js";
 import { gameBridge } from "../game/bridge.js";
+import {
+  playActionSfx,
+  playRoundOutcomeSfx,
+  playSfx,
+  startSfxLoop,
+  stopAllSfxLoops,
+  stopSfxLoop,
+} from "../services/sfx.js";
 import {
   getPracticeForRound,
   LESSON_COUNT,
@@ -201,6 +209,7 @@ export class TutorialScene extends Phaser.Scene {
   ): void {
     const strings = t();
     this.modalLayer.removeAll(true);
+    playSfx("ui_modal_open");
 
     const subtitle = lesson
       ? format(strings.tutorialLessonProgress, { current: lesson, total: LESSON_COUNT })
@@ -215,7 +224,10 @@ export class TutorialScene extends Phaser.Scene {
       body,
       badge,
       buttonLabel: strings.tutorialOk,
-      onDismiss: onContinue,
+      onDismiss: () => {
+        playSfx("tutorial_slide_next");
+        onContinue();
+      },
       depth: 120,
     });
     this.modalLayer.add(modal);
@@ -225,6 +237,7 @@ export class TutorialScene extends Phaser.Scene {
     const strings = t();
     this.modalLayer.removeAll(true);
     this.waitingInstruction = true;
+    playSfx("ui_modal_open");
     this.actionBar.setEnabledMap(false, new Set());
 
     const stepLabel = format(strings.tutorialStepProgress, {
@@ -237,6 +250,7 @@ export class TutorialScene extends Phaser.Scene {
       body: instruction,
       buttonLabel: strings.tutorialOk,
       onDismiss: () => {
+        playSfx("tutorial_slide_next");
         this.waitingInstruction = false;
         this.updateActionButtons(true);
       },
@@ -248,6 +262,7 @@ export class TutorialScene extends Phaser.Scene {
     const strings = t();
     this.modalLayer.removeAll(true);
     this.setGameVisible(false);
+    playSfx("tutorial_complete");
 
     const modal = createHubTutorialModal(this, {
       title,
@@ -268,6 +283,7 @@ export class TutorialScene extends Phaser.Scene {
     this.waitingInstruction = false;
     this.statusText.setText(t().tutorialPracticeTitle).setColor(COLORS.bone);
     await this.adapter.initDuel("tutorial", { config: { maxRounds: PRACTICE_SEGMENTS.length } });
+    playSfx("duel_start");
   }
 
   private syncStepUi(): void {
@@ -308,6 +324,8 @@ export class TutorialScene extends Phaser.Scene {
     if (step.forceDeadeye) this.adapter.patchState({ blindsight: 100, isDeadeye: true });
 
     this.actionBar.setDimmedAll(true);
+    playActionSfx(action);
+    playSfx("tutorial_correct");
     void this.adapter.submitAction(action);
   }
 
@@ -317,13 +335,18 @@ export class TutorialScene extends Phaser.Scene {
     if (event.type === "phaseChange") {
       const phase = this.adapter.getPhase();
       if (phase === DuelPhase.ZEGON_THINKING) {
+        startSfxLoop("zegon_thinking", { volume: 0.28 });
         this.statusText.setText(strings.zegonReading).setColor(COLORS.ember);
         this.waitingAdvance = false;
         this.actionBar.setDimmedAll(false);
       } else if (phase === DuelPhase.AWAITING_PLAYER) {
+        stopSfxLoop("zegon_thinking");
+        playSfx("your_turn");
         this.statusText.setText(strings.yourMove).setColor(COLORS.bone);
         this.syncStepUi();
       } else if (phase === DuelPhase.DEADEYE) {
+        stopSfxLoop("zegon_thinking");
+        playSfx("deadeye_sting");
         this.statusText.setText(strings.deadeye).setColor(COLORS.ember);
         this.cameras.main.flash(200, 255, 77, 46);
       }
@@ -357,6 +380,13 @@ export class TutorialScene extends Phaser.Scene {
 
   private onRoundResolved(outcome: RoundOutcome): void {
     const strings = t();
+    playRoundOutcomeSfx({
+      playerAction: outcome.playerAction,
+      zegonMove: outcome.zegonDecision.zegonMove,
+      playerDamage: outcome.playerDamage,
+      zegonDamage: outcome.zegonDamage,
+      blindsightDelta: outcome.blindsightDelta,
+    });
     if (outcome.deadeyeTriggered) {
       this.statusText.setText(strings.roundSummaryDeadeyeOn).setColor(COLORS.ember);
     } else if (outcome.predictionCorrect) {
@@ -384,13 +414,19 @@ export class TutorialScene extends Phaser.Scene {
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
+      maxHp: 100,
       ammo: this.adapter.getAmmo(),
+      maxAmmo: 6,
       blindsight,
       playerLabel: strings.hudYou,
       zegonLabel: strings.hudZegon,
-      ammoLabel: strings.hudAmmo,
+      weaponLabel: "REVOLVER",
+      hudWeapon: strings.hudWeapon,
+      hudStatus: strings.hudStatus,
       blindsightLabel: `${strings.hudBlindsight}  ${blindsight}%`,
-      zegonDetail: blindsight >= 80 ? strings.deadeyeNear : undefined,
+      blindsightFlavor: strings.blindsightFlavor,
+      nextMoveHint: strings.nextMoveHint,
+      zegonStatus: blindsight >= 80 ? strings.deadeyeNear : undefined,
     });
 
     this.arenaView.update(blindsight, blindsight >= 100);
@@ -398,10 +434,10 @@ export class TutorialScene extends Phaser.Scene {
     const intensity = blindsight / 100;
     this.glitchOverlay.destroy();
     this.glitchOverlay = drawGlitchOverlay(this, intensity, 97);
-    this.scanlines.setAlpha(scanlineAlphaForBlindsight(blindsight));
+    this.glitchPulse += 0.06 + intensity * 0.14;
+    this.scanlines.setAlpha(scanlinePulseAlpha(blindsight, this.glitchPulse));
 
     if (intensity > 0.45) {
-      this.glitchPulse += 0.08 + intensity * 0.12;
       const flicker = 0.92 + Math.sin(this.glitchPulse) * 0.08 * intensity;
       this.glitchOverlay.setAlpha((0.35 + intensity * 0.55) * flicker);
     }
@@ -422,6 +458,7 @@ export class TutorialScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    stopAllSfxLoops();
     this.adapter?.destroy();
     this.combatHud?.destroy();
     this.actionBar?.destroy();

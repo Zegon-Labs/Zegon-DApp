@@ -34,6 +34,7 @@ export class ActionBar {
         () => onAction(action),
         depth,
         onActionHover ? (hovering) => onActionHover(action, hovering) : undefined,
+        action,
       );
       btn.setEnabled(false);
       this.buttons.push(btn);

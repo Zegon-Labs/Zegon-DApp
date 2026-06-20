@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ZegonArchetypeId } from "@zegon/game-core";
 import { useLocale } from "../hooks/useLocale.js";
+import { playSfx } from "../services/sfx.js";
 import { ArchetypeSelector } from "./ArchetypeSelector.js";
 
 interface ArchetypePickerModalProps {
@@ -22,12 +23,24 @@ export function ArchetypePickerModal({ onConfirm, onClose }: ArchetypePickerModa
         <button
           type="button"
           className="btn btn--primary"
-          onClick={() => onConfirm(archetype)}
+          data-skip-ui-click
+          onClick={() => {
+            playSfx("ui_confirm");
+            onConfirm(archetype);
+          }}
         >
           <span className="btn__title">{strings.duel}</span>
           <span className="btn__subtitle">{strings.heroPlaySubtitle}</span>
         </button>
-        <button type="button" className="btn btn--secondary hero__panel-back" onClick={onClose}>
+        <button
+          type="button"
+          className="btn btn--secondary hero__panel-back"
+          data-skip-ui-click
+          onClick={() => {
+            playSfx("ui_modal_close");
+            onClose();
+          }}
+        >
           {strings.back}
         </button>
       </div>

@@ -6,10 +6,10 @@ export function showFloatingDamage(
   x: number,
   y: number,
   amount: number,
-  target: "player" | "zegon",
+  _target: "player" | "zegon",
 ): void {
   const prefix = amount > 0 ? "−" : "+";
-  const color = target === "player" ? COLORS.blood : COLORS.verified;
+  const color = COLORS.blood;
   const text = scene.add
     .text(x, y, `${prefix}${Math.abs(amount)} HP`, {
       fontFamily: FONT,

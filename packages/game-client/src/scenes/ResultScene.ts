@@ -4,37 +4,32 @@ import { format, t } from "../i18n/index.js";
 import { gameBridge } from "../game/bridge.js";
 import { getCachedProfile } from "../services/profile.js";
 import { getWalletAddress } from "../services/wallet.js";
-import { createHubMenuButton, createHubScreenPanel } from "../ui/hub/index.js";
+import {
+  createHubResultPanel,
+  createLandingBackdrop,
+  preloadLandingBackdrop,
+} from "../ui/hub/index.js";
 import { drawScanlines } from "../ui/components.js";
-import { C, COLORS, FONT } from "../ui/theme.js";
+import { C, COLORS } from "../ui/theme.js";
 import { buildChallengeUrlFromResult, generateShareCard } from "../utils/shareCard.js";
-
-interface VerifyRound {
-  roundIndex: number;
-  commitHash: string;
-  commitTxHash?: string;
-  revealTxHash?: string;
-  commitBeforePlayer: boolean;
-  zegonMove?: string;
-}
+import { playDuelEndSfx, playSfx } from "../services/sfx.js";
 
 interface VerifyResponse {
   duelId: string;
   verified: boolean;
   teeVerified?: boolean;
-  brainMode?: string;
-  contractAddress?: string;
-  rounds: VerifyRound[];
-  storageRoot?: string;
-  storageUrl?: string;
-  recordTxHash?: string;
-  explorerUrl?: string;
-  recordTxExplorerUrl?: string;
+  rounds: Array<{ commitBeforePlayer: boolean }>;
 }
 
 export class ResultScene extends Phaser.Scene {
+  private panelHandle: ReturnType<typeof createHubResultPanel> | null = null;
+
   constructor() {
     super("ResultScene");
+  }
+
+  preload(): void {
+    preloadLandingBackdrop(this);
   }
 
   create(data: {
@@ -45,6 +40,9 @@ export class ResultScene extends Phaser.Scene {
     archetype?: string;
     brainMode?: "tee" | "dummy";
   }): void {
+    this.panelHandle?.destroy();
+    this.panelHandle = null;
+
     const { width, height } = this.scale;
     const result = data.result;
     const strings = t();
@@ -53,9 +51,8 @@ export class ResultScene extends Phaser.Scene {
     const mode = data.mode ?? "standard";
 
     this.cameras.main.setBackgroundColor(C.void);
-    drawScanlines(this);
-
-    createHubScreenPanel(this, width / 2, height / 2, 460, 380);
+    createLandingBackdrop(this, 0);
+    drawScanlines(this, 98, 0.05);
 
     const winnerLabel =
       result.winner === "PLAYER"
@@ -64,83 +61,92 @@ export class ResultScene extends Phaser.Scene {
           ? strings.zegonWins
           : strings.draw;
 
-    this.add
-      .text(width / 2, height / 2 - 120, winnerLabel, {
-        fontFamily: FONT,
-        fontSize: "40px",
-        color: result.winner === "PLAYER" ? COLORS.verified : COLORS.ember,
-      })
-      .setOrigin(0.5);
+    const winnerColor =
+      result.winner === "PLAYER" ? COLORS.verified : COLORS.ember;
 
-    this.add.text(width / 2, height / 2 - 50, [
+    playDuelEndSfx(result.winner);
+
+    const statsText = [
       `${strings.rounds}: ${result.roundsPlayed}`,
       `${strings.timesRead}: ${result.timesRead}`,
       `${strings.finalBlindsight}: ${result.finalBlindsight}%`,
       `${strings.score}: ${result.score}`,
-    ].join("\n"), {
-      fontFamily: FONT,
-      fontSize: "20px",
-      color: COLORS.bone,
-      align: "center",
-      lineSpacing: 6,
-    }).setOrigin(0.5);
+    ].join("\n");
 
-    const verifyLabel = this.add.text(width / 2, height / 2 + 20, "", {
-      fontFamily: FONT,
-      fontSize: "14px",
-      color: COLORS.cyan,
-      align: "center",
-      wordWrap: { width: 400 },
-    }).setOrigin(0.5);
+    const brainTag =
+      data.brainMode === "tee" ? "0G TEE" : data.brainMode === "dummy" ? "0G API" : "";
 
-    const dailyLabel = this.add.text(width / 2, height / 2 + 48, "", {
-      fontFamily: FONT,
-      fontSize: "13px",
-      color: COLORS.dust,
-      align: "center",
-      wordWrap: { width: 400 },
-    }).setOrigin(0.5);
+    this.panelHandle = createHubResultPanel(this, width / 2, height / 2, {
+      winnerLabel,
+      winnerColor,
+      statsText,
+      verifyPlaceholder: brainTag || strings.verifyPending,
+      buttons: [
+        {
+          label: strings.verifyOnChain,
+          onClick: () => {
+            if (duelId) {
+              window.open(
+                `/verify.html?duel=${encodeURIComponent(duelId)}`,
+                "zegon-verify",
+              );
+            } else {
+              this.panelHandle?.setVerifyText(strings.verifyOffline);
+            }
+          },
+        },
+        {
+          label: strings.share,
+          onClick: () => {
+            const text = format(strings.shareText, {
+              score: result.score,
+              timesRead: result.timesRead,
+            });
+            void navigator.clipboard?.writeText(text);
+          },
+        },
+        {
+          label: strings.shareCard,
+          onClick: () => {
+            void generateShareCard(result, {
+              archetype: data.archetype,
+              brainMode: data.brainMode,
+            });
+          },
+        },
+        {
+          label: strings.challengeLink,
+          onClick: () => {
+            const seed =
+              mode === "daily"
+                ? createDailyDuel().seed!
+                : `standard-${data.archetype ?? "reader"}`;
+            const url = buildChallengeUrlFromResult(seed, data.archetype);
+            void navigator.clipboard?.writeText(url);
+          },
+        },
+        {
+          label: strings.menu,
+          onClick: () => {
+            this.scene.stop("ResultScene");
+            gameBridge.navigate({ type: "hub" });
+          },
+        },
+      ],
+    });
 
     if (mode === "daily") {
-      void this.submitDailyScore(result, dailyLabel, duelId);
+      void this.submitDailyScore(result, this.panelHandle.dailyLabel, duelId);
     }
-
-    createHubMenuButton(this, width / 2, height / 2 + 90, strings.verifyOnChain, () => {
-      if (duelId) {
-        window.open(`/verify.html?duel=${encodeURIComponent(duelId)}`, "_blank");
-      } else {
-        verifyLabel.setText(strings.verifyOffline);
-      }
-    });
 
     if (duelId) {
-      void this.loadVerifySummary(`${apiBase}/api/duel/verify/${duelId}`, verifyLabel);
+      void this.loadVerifySummary(`${apiBase}/api/duel/verify/${duelId}`);
     }
+  }
 
-    createHubMenuButton(this, width / 2, height / 2 + 140, strings.share, () => {
-      const text = format(strings.shareText, {
-        score: result.score,
-        timesRead: result.timesRead,
-      });
-      void navigator.clipboard?.writeText(text);
-    });
-
-    createHubMenuButton(this, width / 2, height / 2 + 190, strings.shareCard, () => {
-      void generateShareCard(result, {
-        archetype: data.archetype,
-        brainMode: data.brainMode,
-      });
-    });
-
-    createHubMenuButton(this, width / 2, height / 2 + 240, strings.challengeLink, () => {
-      const seed = mode === "daily" ? createDailyDuel().seed! : `standard-${data.archetype ?? "reader"}`;
-      const url = buildChallengeUrlFromResult(seed, data.archetype);
-      void navigator.clipboard?.writeText(url);
-    });
-
-    createHubMenuButton(this, width / 2, height / 2 + 290, strings.menu, () => {
-      gameBridge.navigate({ type: "hub" });
-    });
+  shutdown(): void {
+    this.panelHandle?.destroy();
+    this.panelHandle = null;
   }
 
   private async submitDailyScore(
@@ -151,12 +157,12 @@ export class ResultScene extends Phaser.Scene {
     const strings = t();
     const address = getWalletAddress();
     if (!address) {
-      label.setText(strings.scoreSubmitNoWallet);
+      label.setAlpha(1).setText(strings.scoreSubmitNoWallet);
       return;
     }
 
     if (!getCachedProfile(address)?.nickname) {
-      label.setText(strings.scoreSubmitNoProfile);
+      label.setAlpha(1).setText(strings.scoreSubmitNoProfile);
       return;
     }
 
@@ -175,39 +181,38 @@ export class ResultScene extends Phaser.Scene {
           xpGain: xpForResult(result),
         }),
       });
-      const data = (await res.json()) as { accepted?: boolean; reason?: string };
-      if (res.ok && data.accepted !== false) {
+      const body = (await res.json()) as { accepted?: boolean; reason?: string };
+      label.setAlpha(1);
+      if (res.ok && body.accepted !== false) {
         label.setText(strings.scoreSubmitted).setColor(COLORS.cyan);
-      } else if (data.reason === "PROFILE_REQUIRED") {
+      } else if (body.reason === "PROFILE_REQUIRED") {
         label.setText(strings.scoreSubmitNoProfile);
-      } else if (data.reason === "DAILY_ALREADY_SUBMITTED") {
+      } else if (body.reason === "DAILY_ALREADY_SUBMITTED") {
         label.setText(strings.dailyAlreadySubmitted);
-      } else if (data.reason === "DUEL_NOT_VERIFIED") {
+      } else if (body.reason === "DUEL_NOT_VERIFIED") {
         label.setText(strings.duelNotVerified);
       }
     } catch {
-      label.setText(strings.leaderboardEmpty);
+      label.setAlpha(1).setText(strings.leaderboardEmpty);
     }
   }
 
-  private async loadVerifySummary(
-    url: string,
-    label: Phaser.GameObjects.Text,
-  ): Promise<void> {
+  private async loadVerifySummary(url: string): Promise<void> {
     const strings = t();
     try {
       const res = await fetch(url);
       if (!res.ok) return;
       const data = (await res.json()) as VerifyResponse;
       const proofCount = data.rounds.filter((r) => r.commitBeforePlayer).length;
+      const total = data.rounds.length;
       const status = data.verified ? strings.verifyOk : strings.verifyPending;
-      const tee = data.teeVerified ? `\n0G TEE ✓` : "";
-      label.setText(
-        `${status}${tee}\n${strings.verifyRounds}: ${proofCount}/${data.rounds.length}` +
-        (data.contractAddress ? `\n${data.contractAddress.slice(0, 10)}…` : ""),
+      const tee = data.teeVerified ? " · 0G TEE ✓" : "";
+      if (data.verified) playSfx("verify_success");
+      this.panelHandle?.setVerifyText(
+        `${status}${tee}\n${strings.verifyRounds}: ${proofCount}/${total}`,
       );
     } catch {
-      label.setText(strings.verifyPending);
+      this.panelHandle?.setVerifyText(strings.verifyPending);
     }
   }
 }

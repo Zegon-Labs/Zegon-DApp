@@ -21,6 +21,7 @@ import {
   fetchDailyPool,
 } from "../services/dailyStake.js";
 import { fetchHealth } from "../services/health.js";
+import { playSfx } from "../services/sfx.js";
 import { HeroCharacter } from "./HeroCharacter.js";
 
 interface HeroHubProps {
@@ -75,6 +76,10 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     ? `${strings.tutorial} ${strings.tutorialDoneBadge}`
     : strings.tutorial;
 
+  useEffect(() => {
+    if (showArchetypePicker) playSfx("ui_modal_open");
+  }, [showArchetypePicker]);
+
   async function handleWallet() {
     if (wallet) {
       disconnectWallet();
@@ -110,6 +115,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
       const min = poolInfo.minStake ?? "0.01";
       const tx = await enterDailyPool(poolInfo.poolAddress, poolInfo.seed, min);
       setStaked(true);
+      playSfx("daily_stake");
       notify.success(strings.dailyStaked, tx.slice(0, 10) + "…");
       void fetchDailyPool().then(setPoolInfo);
     } catch {

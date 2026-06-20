@@ -64,11 +64,17 @@ export class ContractService {
     duelId: string,
     roundId: number,
     commitHash: string,
-  ): Promise<TxResult | null> {
-    if (!this.contract) return null;
+  ): Promise<TxResult & { commitTs?: number } | null> {
+    if (!this.contract || !this.provider) return null;
     const duelIdNum = duelIdToBigInt(duelId);
     const tx = await this.contract.commitMove(duelIdNum, roundId, commitHash);
-    return { txHash: tx.hash as string };
+    const receipt = await tx.wait();
+    const onChain = await this.getRoundOnChain(duelId, roundId);
+    return {
+      txHash: tx.hash as string,
+      blockNumber: receipt?.blockNumber,
+      commitTs: onChain?.commitTs,
+    };
   }
 
   async revealMove(

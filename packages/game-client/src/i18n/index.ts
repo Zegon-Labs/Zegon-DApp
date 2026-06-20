@@ -51,6 +51,12 @@ export interface LocaleStrings {
   round: string;
   history: string;
   yourTurnPrompt: string;
+  lockedIn: string;
+  chooseAction: string;
+  blindsightFlavor: string;
+  nextMoveHint: string;
+  hudWeapon: string;
+  hudStatus: string;
   deadeyeNear: string;
   verifyOk: string;
   verifyPending: string;
@@ -245,6 +251,12 @@ const LOCALES: Record<Language, LocaleStrings> = {
     round: "ROUND",
     history: "HISTORY",
     yourTurnPrompt: "ZEGON HAS LOCKED IN. CHOOSE YOUR ACTION.",
+    lockedIn: "ZEGON HAS LOCKED IN",
+    chooseAction: "CHOOSE YOUR ACTION",
+    blindsightFlavor: "THE MORE I READ YOU, THE CLEARER YOU BECOME.",
+    nextMoveHint: "NEXT: ???",
+    hudWeapon: "WEAPON",
+    hudStatus: "STATUS",
     deadeyeNear: "DEADEYE NEAR",
     verifyOk: "ON-CHAIN PROOF VERIFIED",
     verifyPending: "PROOF PENDING",
@@ -453,6 +465,12 @@ const LOCALES: Record<Language, LocaleStrings> = {
     round: "RONDA",
     history: "HISTORIAL",
     yourTurnPrompt: "ZEGON YA BLOQUEÓ. ELEGÍ TU JUGADA.",
+    lockedIn: "ZEGON YA BLOQUEÓ",
+    chooseAction: "ELEGÍ TU JUGADA",
+    blindsightFlavor: "CUANTO MÁS TE LEO, MÁS CLARO TE VEO.",
+    nextMoveHint: "SIGUIENTE: ???",
+    hudWeapon: "ARMA",
+    hudStatus: "ESTADO",
     deadeyeNear: "OJO DE MUERTE CERCA",
     verifyOk: "PRUEBA ON-CHAIN VERIFICADA",
     verifyPending: "PRUEBA PENDIENTE",

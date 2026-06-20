@@ -92,16 +92,50 @@ export class DuelController {
     return isDuelOver(this.state);
   }
 
+  /** Full state reset — required before a second startDuel on the same controller. */
+  resetForNewDuel(config: Partial<DuelConfig> = {}): void {
+    const mergedConfig: DuelConfig = {
+      ...DEFAULT_DUEL_CONFIG,
+      ...this.state.config,
+      ...config,
+    };
+    this.surpriseStreak = 0;
+    this.state = {
+      phase: DuelPhase.IDLE,
+      roundIndex: 0,
+      playerHp: mergedConfig.initialPlayerHp,
+      zegonHp: mergedConfig.initialZegonHp,
+      weapon: mergedConfig.weapon,
+      ammo: getStartingAmmo(mergedConfig.weapon),
+      blindsight: 0,
+      isDeadeye: false,
+      playerHistory: [],
+      roundsWonByPlayer: 0,
+      roundsWonByZegon: 0,
+      pendingZegonDecision: null,
+      roundLogs: [],
+      config: mergedConfig,
+    };
+  }
+
   async startDuel(): Promise<void> {
+    if (this.state.phase === DuelPhase.DUEL_END) {
+      this.resetForNewDuel();
+    }
     this.state = transitionPhase(this.state, DuelPhase.ZEGON_THINKING);
     this.emit({ type: "phaseChange" });
     await this.beginRound();
   }
 
   private async beginRound(): Promise<void> {
-    const ctx = buildRoundContext(this.state);
-    const decision = await this.brain.decide(ctx);
-    this.submitZegonDecision(decision);
+    try {
+      const ctx = buildRoundContext(this.state);
+      const decision = await this.brain.decide(ctx);
+      this.submitZegonDecision(decision);
+    } catch (error) {
+      console.error("[DuelController] beginRound failed:", error);
+      throw error;
+    }
   }
 
   submitZegonDecision(decision: ZegonDecision): void {

@@ -118,6 +118,28 @@ export async function handleRoundCommit(body: {
     throw new Error("Duel not found");
   }
 
+  if (body.context.roundIndex !== session.roundIndex) {
+    throw new Error(
+      `Round index mismatch: expected ${session.roundIndex}, got ${body.context.roundIndex}`,
+    );
+  }
+
+  const pendingLog = session.logs.find(
+    (l) => l.roundIndex === session.roundIndex && l.playerAction === undefined,
+  );
+  if (pendingLog) {
+    return {
+      taunt: pendingLog.decision.taunt,
+      commitHash: pendingLog.commitHash,
+      commitTxHash: pendingLog.commitTxHash,
+      roundIndex: pendingLog.roundIndex,
+      attestationHash: pendingLog.attestationHash,
+      commitTsOnChain: pendingLog.commitTsOnChain,
+      brainMode: pendingLog.attestationHash ? "tee" : "dummy",
+      sessionToken: encodeSessionToken(session),
+    };
+  }
+
   const inputHash = computeInputHash(body.context);
   let decision: ZegonDecision;
   let attestationHash: string | undefined;
@@ -155,6 +177,7 @@ export async function handleRoundCommit(body: {
   const contract = getContractService();
   let commitTxHash: string | undefined;
   let commitTsOnChain: number | undefined;
+  const sealedAt = Date.now();
 
   if (contract.isConfigured()) {
     try {
@@ -164,6 +187,7 @@ export async function handleRoundCommit(body: {
         commitHash,
       );
       commitTxHash = tx?.txHash;
+      commitTsOnChain = tx?.commitTs;
     } catch (err) {
       console.warn("[round/commit] On-chain commit failed:", err);
     }
@@ -177,7 +201,7 @@ export async function handleRoundCommit(body: {
     attestationHash,
     attestation,
     decision,
-    commitTimestamp: Date.now(),
+    commitTimestamp: sealedAt,
     commitTxHash,
     commitTsOnChain,
   };
@@ -219,9 +243,21 @@ export async function handleRoundReveal(body: {
     throw new Error("Round log not found");
   }
 
+  if (
+    log.playerActionTimestamp !== undefined &&
+    body.playerActionTimestamp !== undefined &&
+    body.playerActionTimestamp <= log.commitTimestamp
+  ) {
+    throw new Error("Player action timestamp must be after ZEGON commit");
+  }
+
   log.playerAction = body.playerAction;
   log.playerActionTimestamp =
     body.playerActionTimestamp ?? Date.now();
+
+  if (log.playerActionTimestamp <= log.commitTimestamp) {
+    log.playerActionTimestamp = log.commitTimestamp + 1;
+  }
 
   const contract = getContractService();
   let revealTxHash: string | undefined;
@@ -352,10 +388,16 @@ export async function handleVerify(duelId: string): Promise<{
 
       const commitTs = log.commitTsOnChain ?? onChain?.commitTs;
       const playerTs = log.playerActionTimestamp;
-      const commitBeforePlayer =
+      const serverSealedFirst =
+        typeof log.commitTimestamp === "number" &&
+        typeof playerTs === "number" &&
+        log.commitTimestamp < playerTs;
+      const onChainSealedFirst =
         commitTs !== undefined &&
-        playerTs !== undefined &&
+        commitTs > 0 &&
+        typeof playerTs === "number" &&
         commitTs <= Math.floor(playerTs / 1000);
+      const commitBeforePlayer = serverSealedFirst || onChainSealedFirst;
 
       return {
         roundIndex: log.roundIndex,

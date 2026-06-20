@@ -1,90 +1,147 @@
 import Phaser from "phaser";
-import { COLORS, FONT, FONT_DISPLAY } from "../theme.js";
-import { DUEL_LAYOUT as L } from "../layout.js";
-import { drawHubHpBar } from "./hpBar.js";
+import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
+import { DUEL_LAYOUT as L, zegonStatsPanelX } from "../layout.js";
+import { paintDuelFrameCorners } from "./duelHudDraw.js";
+import {
+  drawBulletIcon,
+  drawHeartIcon,
+  drawSkullIcon,
+} from "./duelHudDraw.js";
 
 export interface FighterHudBlockState {
   name: string;
   hp: number;
   maxHp?: number;
-  /** Extra stats, e.g. "AMMO ×4" or deadeye warning. */
+  maxAmmo?: number;
+  ammo?: number;
+  weaponLabel?: string;
+  statusLabel?: string;
   detail?: string;
 }
 
 export interface FighterHudBlockOptions {
-  edgeX: number;
   align: "left" | "right";
+  variant: "player" | "zegon";
   depth?: number;
 }
 
-/** Mirrored fighter panel — identical layout for player and ZEGON. */
+const HEART_SLOTS = 5;
+
+/** Bottom-corner fighter panel with hub-style box. */
 export class FighterHudBlock {
   readonly container: Phaser.GameObjects.Container;
-  private readonly hpGfx: Phaser.GameObjects.Graphics;
+  private readonly iconGfx: Phaser.GameObjects.Graphics;
   private readonly nameText: Phaser.GameObjects.Text;
-  private readonly statsText: Phaser.GameObjects.Text;
-  private readonly align: "left" | "right";
-  private readonly edgeX: number;
-  private readonly barW = L.stats.hpBarW;
-  private readonly barH = L.stats.hpBarH;
-  private readonly barY = L.stats.hpBarY;
-  private readonly nameY = L.stats.nameY;
-  private readonly statsY = L.stats.statsY;
+  private readonly metaText: Phaser.GameObjects.Text;
+  private readonly panelX: number;
+  private readonly panelY = L.stats.y;
+  private readonly panelW = L.stats.panelW;
+  private readonly panelH = L.stats.panelH;
+  private readonly variant: "player" | "zegon";
+  private readonly iconSize = L.stats.iconSize;
+  private readonly iconGap = L.stats.iconGap;
+  private readonly pad = L.stats.pad;
 
   constructor(scene: Phaser.Scene, options: FighterHudBlockOptions) {
-    this.align = options.align;
-    this.edgeX = options.edgeX;
+    this.variant = options.variant;
     const depth = options.depth ?? 9;
+    const { width } = scene.scale;
+    this.panelX =
+      options.align === "left"
+        ? L.stats.playerX
+        : zegonStatsPanelX(width);
 
     this.container = scene.add.container(0, 0).setDepth(depth);
-    this.hpGfx = scene.add.graphics();
 
-    const nameOrigin = this.align === "left" ? 0 : 1;
-    const nameX = this.edgeX;
+    const panelGfx = scene.add.graphics();
+    panelGfx.fillStyle(C.ash, 0.92);
+    panelGfx.fillRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 3);
+    panelGfx.lineStyle(1, C.blood, 0.8);
+    panelGfx.strokeRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 3);
 
-    this.nameText = scene.add.text(nameX, this.nameY, "", {
+    const cornerGfx = scene.add.graphics();
+    paintDuelFrameCorners(
+      cornerGfx,
+      this.panelX,
+      this.panelY,
+      this.panelW,
+      this.panelH,
+      7,
+    );
+
+    this.iconGfx = scene.add.graphics();
+    const nameOrigin = options.align === "left" ? 0 : 1;
+    const nameX =
+      options.align === "left"
+        ? this.panelX + this.pad
+        : this.panelX + this.panelW - this.pad;
+
+    this.nameText = scene.add.text(nameX, this.panelY + this.pad, "", {
       fontFamily: FONT_DISPLAY,
-      fontSize: "20px",
+      fontSize: "15px",
       color: COLORS.bone,
-      letterSpacing: 1,
+      letterSpacing: 2,
     }).setOrigin(nameOrigin, 0);
 
-    this.statsText = scene.add.text(nameX, this.statsY, "", {
+    this.metaText = scene.add.text(nameX, this.panelY + this.panelH - this.pad - 18, "", {
       fontFamily: FONT,
-      fontSize: "18px",
-      color: COLORS.dust,
+      fontSize: "13px",
+      color: COLORS.ember,
+      letterSpacing: 1,
+      wordWrap: { width: this.panelW - this.pad * 2 },
     }).setOrigin(nameOrigin, 0);
 
-    this.container.add([this.hpGfx, this.nameText, this.statsText]);
+    this.container.add([panelGfx, cornerGfx, this.iconGfx, this.nameText, this.metaText]);
   }
 
-  private barX(): number {
-    return this.align === "left"
-      ? this.edgeX
-      : this.edgeX - this.barW;
+  private hpSlots(hp: number, maxHp: number): number {
+    if (hp <= 0) return 0;
+    return Math.max(1, Math.ceil((hp / maxHp) * HEART_SLOTS));
   }
 
   update(state: FighterHudBlockState): void {
     const maxHp = state.maxHp ?? 100;
-    this.nameText.setText(state.name);
-    this.hpGfx.clear();
-    drawHubHpBar(this.hpGfx, this.barX(), this.barY, this.barW, this.barH, state.hp, maxHp);
+    this.nameText.setText(state.name.toUpperCase());
+    this.iconGfx.clear();
 
-    const hpLine = `${state.hp} HP`;
-    this.statsText.setText(state.detail ? `${hpLine} · ${state.detail}` : hpLine);
+    const rowY = this.panelY + this.pad + 22;
+    const filledHp = this.hpSlots(state.hp, maxHp);
+    const leftEdge = this.panelX + this.pad + this.iconSize / 2;
+    const rightEdge = this.panelX + this.panelW - this.pad - this.iconSize / 2;
+
+    if (this.variant === "player") {
+      for (let i = 0; i < HEART_SLOTS; i++) {
+        const cx = leftEdge + i * (this.iconSize + this.iconGap);
+        drawHeartIcon(this.iconGfx, cx, rowY, this.iconSize, i < filledHp);
+      }
+      const maxAmmo = state.maxAmmo ?? 6;
+      const ammo = state.ammo ?? 0;
+      const ammoY = rowY + this.iconSize + L.stats.rowGap;
+      for (let i = 0; i < maxAmmo; i++) {
+        const cx = leftEdge + i * (this.iconSize + this.iconGap);
+        drawBulletIcon(this.iconGfx, cx, ammoY, this.iconSize - 2, i < ammo);
+      }
+      const weapon = state.weaponLabel ?? "REVOLVER";
+      this.metaText.setText(`${state.detail ?? "WEAPON"} ${weapon}`);
+    } else {
+      for (let i = 0; i < HEART_SLOTS; i++) {
+        const cx = rightEdge - (HEART_SLOTS - 1 - i) * (this.iconSize + this.iconGap);
+        drawSkullIcon(this.iconGfx, cx, rowY, this.iconSize, i < filledHp);
+      }
+      if (state.statusLabel) {
+        this.metaText.setText(`${state.detail ?? "STATUS"} ${state.statusLabel}`);
+      } else {
+        this.metaText.setText("");
+      }
+    }
   }
 
-  /** Center of HP bar — for floating damage anchors. */
   hpBarCenterY(): number {
-    return this.barY + this.barH / 2;
+    return this.panelY + this.pad + 22;
   }
 
   hpBarCenterX(): number {
-    return this.barX() + this.barW / 2;
-  }
-
-  setVisible(visible: boolean): void {
-    this.container.setVisible(visible);
+    return this.panelX + this.panelW / 2;
   }
 
   destroy(): void {

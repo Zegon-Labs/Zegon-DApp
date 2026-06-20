@@ -4,16 +4,15 @@ function isLocalhost(): boolean {
 }
 
 /**
- * Use server API on deployed builds. On localhost, default to local dummy brain
- * unless VITE_LOCAL_API=true (requires `pnpm dev:server` on port 3000).
+ * Use server API when VITE_USE_OG_COMPUTE is enabled.
+ * Vite proxies /api → localhost:3000 during `pnpm dev`.
  */
 export function shouldUseServerApi(): boolean {
   const flag = import.meta.env.VITE_USE_OG_COMPUTE;
   if (flag === "false") return false;
   if (isLocalhost()) {
-    return import.meta.env.VITE_LOCAL_API === "true";
+    return flag === "true" || import.meta.env.VITE_LOCAL_API === "true";
   }
-  if (flag === "true") return true;
   return true;
 }
 

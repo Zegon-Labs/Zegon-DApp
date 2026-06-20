@@ -2,32 +2,69 @@
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
 
-/** Duel layout zones — 1280×720, non-overlapping vertical bands. */
+/** Duel layout — HUD over landing bg + character. */
 export const DUEL_LAYOUT = {
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
 
-  topBar: { y: 21 },
-  history: { x: 30, y: 78, w: 248, h: 168 },
-  blindsight: { labelX: 1248, labelY: 21, barX: 957, barY: 54, barW: 294, barH: 12 },
+  header: { logoY: 6, logoMaxW: 112 },
 
   prompt: { y: 84, w: 660, h: 66 },
   taunt: { y: 162, maxW: 750 },
-  roundResult: { y: 528, w: 780, h: 84, maxH: 138 },
-  /** Compact round feedback — right side, below chrome buttons. */
-  roundToast: { x: 1008, y: 178, w: 248, h: 108 },
 
-  arena: { y: 342 },
-  divider: { y: 498 },
+  topBar: { x: 24, y: 22 },
+  roundPips: { x: 24, y: 46, gap: 7, size: 12 },
 
-  stats: { nameY: 500, hpBarY: 528, statsY: 546, hpBarW: 180, hpBarH: 10 },
-  actions: { y: 639, h: 48, gap: 8 },
-  tooltip: { y: 597 },
-  practicePopup: { w: 630, h: 87, gap: 21 },
+  history: { x: 24, y: 72, w: 210, h: 152 },
 
-  /** In-game chrome — avoids HUD overlap (blindsight top-right). */
-  chrome: { marginX: 24, skipY: 20, settingsY: 54, surrenderY: 82, settingsRightY: 128 },
+  blindsight: {
+    panelW: 220,
+    panelH: 118,
+    panelY: 22,
+    pad: 10,
+    barH: 9,
+    segments: 10,
+  },
+
+  arena: { y: 318, characterMaxH: 480 },
+
+  statusLine: { y: 412 },
+  chooseAction: { y: 442 },
+  actionHint: { y: 488 },
+  actions: { y: 536, h: 46, gap: 10 },
+
+  stats: {
+    panelW: 240,
+    panelH: 112,
+    playerX: 20,
+    y: 586,
+    iconSize: 18,
+    iconGap: 5,
+    rowGap: 8,
+    pad: 12,
+  },
+
+  roundToast: { x: 1256, y: 292, maxW: 260 },
+
+  /** Top-right chrome — stacked hub buttons below blindsight panel. */
+  chrome: {
+    marginX: 24,
+    skipY: 20,
+    panelY: 146,
+    buttonW: 220,
+    buttonH: 40,
+    buttonGap: 8,
+  },
 } as const;
+
+export const RESULT_LAYOUT = {
+  panelCenterY: 360,
+  panelW: 310,
+} as const;
+
+export function resultButtonsStartY(): number {
+  return RESULT_LAYOUT.panelCenterY + 260;
+}
 
 export const TUTORIAL_BUBBLE = {
   lesson: { x: 420, y: 252 },
@@ -37,22 +74,22 @@ export const TUTORIAL_BUBBLE = {
 
 export function practiceStripCenterY(panelH: number): number {
   const L = DUEL_LAYOUT;
-  const belowPrompt = L.prompt.y + L.prompt.h + L.practicePopup.gap;
-  return belowPrompt + panelH / 2;
+  return L.statusLine.y - 40 + panelH / 2;
 }
 
 export function practicePopupCenterY(): number {
   const L = DUEL_LAYOUT;
-  return L.actions.y - L.actions.h / 2 - L.practicePopup.gap - L.practicePopup.h / 2;
+  return L.actions.y - L.actions.h / 2 - 24 - 44;
 }
 
 export function actionButtonWidth(screenWidth: number, count: number, gap: number): number {
-  return Math.min(222, (screenWidth - 54 - gap * (count - 1)) / count);
+  return Math.min(168, (screenWidth - 48 - gap * (count - 1)) / count);
 }
 
 export const TITLE_LAYOUT = {
-  logoY: 87,
-  taglineY: 147,
+  logoY: 72,
+  logoMaxW: 300,
+  taglineY: 168,
   buttonsStartY: 228,
   buttonGap: 69,
   footerY: 648,
@@ -61,4 +98,17 @@ export const TITLE_LAYOUT = {
 
 export function titleButtonY(index: number): number {
   return TITLE_LAYOUT.buttonsStartY + index * TITLE_LAYOUT.buttonGap;
+}
+
+export function blindsightPanelX(screenWidth: number): number {
+  return screenWidth - DUEL_LAYOUT.blindsight.panelW - DUEL_LAYOUT.chrome.marginX;
+}
+
+export function zegonStatsPanelX(screenWidth: number): number {
+  return screenWidth - DUEL_LAYOUT.stats.playerX - DUEL_LAYOUT.stats.panelW;
+}
+
+export function chromeButtonCenterX(screenWidth: number): number {
+  const L = DUEL_LAYOUT;
+  return screenWidth - L.chrome.marginX - L.chrome.buttonW / 2;
 }

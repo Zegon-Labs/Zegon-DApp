@@ -1,10 +1,40 @@
 import Phaser from "phaser";
 import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
 import { DUEL_LAYOUT as L } from "../layout.js";
+import { playActionHover, playUiClick, playUiHover } from "../../services/sfx.js";
 
 export interface HubButtonHandle {
   container: Phaser.GameObjects.Container;
   destroy: () => void;
+}
+
+/** One press → one action; visual squash without stacking tween callbacks. */
+function bindHubButtonPress(
+  scene: Phaser.Scene,
+  bg: Phaser.GameObjects.Rectangle,
+  onClick: () => void,
+  canPress: () => boolean = () => true,
+): void {
+  let locked = false;
+  bg.on("pointerdown", () => {
+    if (locked || !canPress()) return;
+    locked = true;
+    scene.tweens.killTweensOf(bg);
+    playUiClick();
+    onClick();
+    scene.tweens.add({
+      targets: bg,
+      scaleX: 0.96,
+      scaleY: 0.94,
+      duration: 70,
+      yoyo: true,
+      ease: "Quad.Out",
+      onComplete: () => bg.setScale(1),
+    });
+    scene.time.delayedCall(350, () => {
+      locked = false;
+    });
+  });
 }
 
 /** Primary hub-style button with idle pulse and blood/ember hover. */
@@ -42,6 +72,7 @@ export function createHubPrimaryButton(
 
   bg.on("pointerover", () => {
     if (!enabled) return;
+    playUiHover();
     idlePulse.pause();
     bg.setFillStyle(C.blood, 0.65);
     bg.setStrokeStyle(2, C.ember, 1);
@@ -70,18 +101,7 @@ export function createHubPrimaryButton(
     });
   });
 
-  bg.on("pointerdown", () => {
-    if (!enabled) return;
-    scene.tweens.add({
-      targets: bg,
-      scaleX: 0.96,
-      scaleY: 0.94,
-      duration: 70,
-      yoyo: true,
-      ease: "Quad.Out",
-      onComplete: () => onClick(),
-    });
-  });
+  bindHubButtonPress(scene, bg, onClick, () => enabled);
 
   return {
     container,
@@ -114,6 +134,7 @@ export function createHubSecondaryButton(
   bg.setInteractive({ useHandCursor: true });
 
   bg.on("pointerover", () => {
+    playUiHover();
     bg.setStrokeStyle(2, C.blood, 0.85);
     bg.setFillStyle(C.ash, 0.95);
     text.setColor(COLORS.ember);
@@ -124,17 +145,7 @@ export function createHubSecondaryButton(
     text.setColor(COLORS.bone);
     bg.setScale(1);
   });
-  bg.on("pointerdown", () => {
-    scene.tweens.add({
-      targets: bg,
-      scaleX: 0.96,
-      scaleY: 0.94,
-      duration: 70,
-      yoyo: true,
-      ease: "Quad.Out",
-      onComplete: () => onClick(),
-    });
-  });
+  bindHubButtonPress(scene, bg, onClick);
 
   return {
     container,
@@ -158,7 +169,7 @@ export function createHubCornerLink(
   const corner = options?.corner ?? "top-right";
   const y =
     options?.y ??
-    (corner === "top-left" ? L.chrome.skipY : L.chrome.surrenderY);
+    (corner === "top-left" ? L.chrome.skipY : L.chrome.panelY);
   const x = corner === "top-right" ? width - L.chrome.marginX : L.chrome.marginX;
   const originX = corner === "top-right" ? 1 : 0;
 
@@ -173,9 +184,15 @@ export function createHubCornerLink(
     .setOrigin(originX, 0)
     .setDepth(depth)
     .setInteractive({ useHandCursor: true })
-    .on("pointerover", (txt: Phaser.GameObjects.Text) => txt.setColor(COLORS.linkHover))
+    .on("pointerover", (txt: Phaser.GameObjects.Text) => {
+      playUiHover();
+      txt.setColor(COLORS.linkHover);
+    })
     .on("pointerout", (txt: Phaser.GameObjects.Text) => txt.setColor(COLORS.link))
-    .on("pointerdown", onClick);
+    .on("pointerdown", () => {
+      playUiClick();
+      onClick();
+    });
 }
 
 export interface HubActionButtonHandle {
@@ -185,7 +202,9 @@ export interface HubActionButtonHandle {
   resetHover: () => void;
 }
 
-/** Duel action chip — blood hover, matches hub menu buttons. */
+import { drawActionIcon } from "./duelHudDraw.js";
+
+/** Duel action chip — hub-style secondary button with icon + label. */
 export function createHubActionButton(
   scene: Phaser.Scene,
   x: number,
@@ -196,18 +215,23 @@ export function createHubActionButton(
   onClick: () => void,
   depth = 10,
   onHover?: (hovering: boolean) => void,
+  actionId?: string,
 ): HubActionButtonHandle {
-  const bg = scene.add.rectangle(0, 0, w, h, C.smoke, 0.92);
+  const bg = scene.add.rectangle(0, 0, w, h, C.smoke, 0.94);
   bg.setStrokeStyle(1, C.fog, 0.9);
-  const text = scene.add.text(0, 0, label, {
+  const iconGfx = scene.add.graphics();
+  const iconX = -w / 2 + 16;
+  if (actionId) {
+    drawActionIcon(iconGfx, iconX, 0, actionId, C.bone, 12);
+  }
+  const text = scene.add.text(actionId ? -w / 2 + 32 : 0, 0, label.replace(/ /g, "_"), {
     fontFamily: FONT,
-    fontSize: "20px",
+    fontSize: "14px",
     color: COLORS.bone,
-    align: "center",
-    wordWrap: { width: w - 12 },
-  }).setOrigin(0.5);
+    align: "left",
+  }).setOrigin(actionId ? 0 : 0.5, 0.5);
 
-  const container = scene.add.container(x, y, [bg, text]).setDepth(depth);
+  const container = scene.add.container(x, y, [bg, iconGfx, text]).setDepth(depth);
   let enabled = false;
   let hovering = false;
   let dimmed = false;
@@ -215,12 +239,16 @@ export function createHubActionButton(
   const applyStyle = (): void => {
     scene.tweens.killTweensOf(bg);
     if (!enabled) {
-      bg.setStrokeStyle(1, C.fog);
-      bg.setFillStyle(C.ash, 0.5);
+      bg.setStrokeStyle(1, C.fog, 0.5);
+      bg.setFillStyle(C.ash, 0.45);
       text.setColor(COLORS.dust);
-      bg.setAlpha(dimmed ? 0.35 : 0.5);
-      text.setAlpha(dimmed ? 0.35 : 0.5);
+      bg.setAlpha(dimmed ? 0.35 : 0.55);
+      text.setAlpha(dimmed ? 0.35 : 0.55);
       bg.setScale(1);
+      if (actionId) {
+        iconGfx.clear();
+        drawActionIcon(iconGfx, iconX, 0, actionId, C.fog, 12);
+      }
       return;
     }
     bg.setAlpha(dimmed ? 0.35 : 1);
@@ -229,11 +257,18 @@ export function createHubActionButton(
       bg.setStrokeStyle(2, C.blood, 1);
       bg.setFillStyle(C.blood, 0.28);
       text.setColor(COLORS.ember);
+      if (actionId) {
+        iconGfx.clear();
+        drawActionIcon(iconGfx, iconX, 0, actionId, C.ember, 12);
+      }
     } else {
       bg.setStrokeStyle(1, C.fog, 0.9);
-      bg.setFillStyle(C.smoke, 0.92);
+      bg.setFillStyle(C.smoke, 0.94);
       text.setColor(COLORS.bone);
-      bg.setScale(1);
+      if (actionId) {
+        iconGfx.clear();
+        drawActionIcon(iconGfx, iconX, 0, actionId, C.bone, 12);
+      }
     }
   };
 
@@ -243,6 +278,7 @@ export function createHubActionButton(
   bg.on("pointerover", () => {
     if (!enabled || dimmed) return;
     hovering = true;
+    playActionHover();
     onHover?.(true);
     applyStyle();
     scene.tweens.add({ targets: bg, scaleX: 1.04, scaleY: 1.08, duration: 90, ease: "Sine.Out" });
@@ -346,6 +382,7 @@ export function createHubChoiceButton(
   bg.setInteractive({ useHandCursor: true });
 
   bg.on("pointerover", () => {
+    playUiHover();
     bg.setStrokeStyle(2, C.blood, 0.85);
     text.setColor(COLORS.ember);
   });
@@ -353,7 +390,10 @@ export function createHubChoiceButton(
     bg.setStrokeStyle(active ? 2 : 1, active ? C.blood : C.fog, active ? 0.95 : 0.9);
     text.setColor(active ? COLORS.ember : COLORS.bone);
   });
-  bg.on("pointerdown", onClick);
+  bg.on("pointerdown", () => {
+    playUiClick();
+    onClick();
+  });
 
   return {
     container,

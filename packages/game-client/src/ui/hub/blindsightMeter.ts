@@ -1,57 +1,119 @@
 import Phaser from "phaser";
-import { C, COLORS, FONT_DISPLAY } from "../theme.js";
-import { DUEL_LAYOUT as L } from "../layout.js";
+import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
+import { DUEL_LAYOUT as L, blindsightPanelX } from "../layout.js";
+import { drawSegmentedMeter, paintDuelFrameCorners } from "./duelHudDraw.js";
 
-export function drawHubBlindsightMeter(
-  g: Phaser.GameObjects.Graphics,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  value: number,
-): void {
-  const fill = (value / 100) * w;
-  g.clear();
-  g.fillStyle(C.ash, 0.92);
-  g.fillRect(x, y, w, h);
-  g.fillStyle(C.ember, 1);
-  g.fillRect(x, y, fill, h);
-  g.lineStyle(1, C.blood, 0.75);
-  g.strokeRect(x, y, w, h);
-}
-
-/** Top-right blindsight label + meter. */
+/** Top-right blindsight panel — segmented meter, flavor copy, next-move hint. */
 export class BlindsightMeter {
   readonly container: Phaser.GameObjects.Container;
-  private readonly gfx: Phaser.GameObjects.Graphics;
-  private readonly label: Phaser.GameObjects.Text;
+  private readonly panelGfx: Phaser.GameObjects.Graphics;
+  private readonly meterGfx: Phaser.GameObjects.Graphics;
+  private readonly cornerGfx: Phaser.GameObjects.Graphics;
+  private readonly title: Phaser.GameObjects.Text;
+  private readonly percent: Phaser.GameObjects.Text;
+  private readonly flavor: Phaser.GameObjects.Text;
+  private readonly nextHint: Phaser.GameObjects.Text;
+  private readonly panelW = L.blindsight.panelW;
+  private readonly panelH = L.blindsight.panelH;
+  private readonly panelX: number;
+  private readonly panelY = L.blindsight.panelY;
 
   constructor(scene: Phaser.Scene, depth = 9) {
+    const { width } = scene.scale;
+    this.panelX = blindsightPanelX(width);
+
     this.container = scene.add.container(0, 0).setDepth(depth);
-    this.gfx = scene.add.graphics();
-    this.label = scene.add.text(L.blindsight.labelX, L.blindsight.labelY, "", {
+    this.panelGfx = scene.add.graphics();
+    this.cornerGfx = scene.add.graphics();
+    this.meterGfx = scene.add.graphics();
+
+    const pad = L.blindsight.pad;
+    const innerX = this.panelX + pad;
+    const innerW = this.panelW - pad * 2;
+    const barY = this.panelY + pad + 20;
+
+    this.title = scene.add.text(innerX, this.panelY + pad, "BLINDSIGHT", {
       fontFamily: FONT_DISPLAY,
-      fontSize: "20px",
+      fontSize: "14px",
       color: COLORS.ember,
-      letterSpacing: 1,
+      letterSpacing: 2,
+    }).setOrigin(0, 0);
+
+    this.percent = scene.add.text(this.panelX + this.panelW - pad, barY + L.blindsight.barH + 4, "0%", {
+      fontFamily: FONT,
+      fontSize: "16px",
+      color: COLORS.ember,
     }).setOrigin(1, 0);
-    this.container.add([this.gfx, this.label]);
+
+    this.flavor = scene.add.text(innerX, barY + L.blindsight.barH + 22, "", {
+      fontFamily: FONT,
+      fontSize: "13px",
+      color: COLORS.dust,
+      wordWrap: { width: innerW },
+      lineSpacing: 2,
+    }).setOrigin(0, 0);
+
+    this.nextHint = scene.add.text(innerX, this.panelY + this.panelH - pad - 16, "", {
+      fontFamily: FONT,
+      fontSize: "14px",
+      color: COLORS.bone,
+      letterSpacing: 1,
+    }).setOrigin(0, 0);
+
+    this.container.add([
+      this.panelGfx,
+      this.cornerGfx,
+      this.meterGfx,
+      this.title,
+      this.percent,
+      this.flavor,
+      this.nextHint,
+    ]);
+
+    this.redrawPanel();
   }
 
-  update(label: string, value: number): void {
-    this.label.setText(label);
-    drawHubBlindsightMeter(
-      this.gfx,
-      L.blindsight.barX,
-      L.blindsight.barY,
-      L.blindsight.barW,
-      L.blindsight.barH,
-      value,
+  private redrawPanel(): void {
+    this.panelGfx.clear();
+    this.panelGfx.fillStyle(C.ash, 0.92);
+    this.panelGfx.fillRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 3);
+    this.panelGfx.lineStyle(1, C.blood, 0.8);
+    this.panelGfx.strokeRoundedRect(this.panelX, this.panelY, this.panelW, this.panelH, 3);
+    this.cornerGfx.clear();
+    paintDuelFrameCorners(
+      this.cornerGfx,
+      this.panelX,
+      this.panelY,
+      this.panelW,
+      this.panelH,
+      7,
     );
   }
 
-  setVisible(visible: boolean): void {
-    this.container.setVisible(visible);
+  update(
+    label: string,
+    value: number,
+    flavorText: string,
+    nextHint: string,
+  ): void {
+    this.title.setText(label.split("  ")[0] ?? "BLINDSIGHT");
+    this.percent.setText(`${value}%`);
+    this.flavor.setText(flavorText);
+    this.nextHint.setText(nextHint);
+
+    const pad = L.blindsight.pad;
+    const barX = this.panelX + pad;
+    const barY = this.panelY + pad + 20;
+    const barW = this.panelW - pad * 2;
+    drawSegmentedMeter(
+      this.meterGfx,
+      barX,
+      barY,
+      barW,
+      L.blindsight.barH,
+      value,
+      L.blindsight.segments,
+    );
   }
 
   destroy(): void {

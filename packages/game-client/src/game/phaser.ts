@@ -51,6 +51,12 @@ export function startPhaserScene(scene: string, data?: Record<string, unknown>):
     pendingScene = { scene, data };
     return;
   }
+  const active = gameInstance.scene.getScenes(true);
+  for (const s of active) {
+    if (s.scene.key !== scene) {
+      gameInstance.scene.stop(s.scene.key);
+    }
+  }
   gameInstance.scene.start(scene, data);
 }
 

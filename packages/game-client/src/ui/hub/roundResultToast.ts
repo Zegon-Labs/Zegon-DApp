@@ -1,67 +1,111 @@
 import Phaser from "phaser";
 import { DUEL_LAYOUT as L } from "../layout.js";
-import { COLORS, FONT } from "../theme.js";
-import { createHubPanelGraphics } from "./hubPanel.js";
+import { COLORS, FONT_DISPLAY } from "../theme.js";
 
-/** Compact round-result strip on the right side of the arena. */
+const LINE_STEP = 21;
+
+/** Round-result copy — right side, blood red, staggered line reveal. */
 export class RoundResultToast {
   readonly container: Phaser.GameObjects.Container;
-  private readonly body: Phaser.GameObjects.Text;
-  private readonly layout = L.roundToast;
+  private readonly anchorX: number;
+  private readonly anchorY: number;
+  private readonly maxW: number;
+  private readonly lineTexts: Phaser.GameObjects.Text[] = [];
   private hideTimer: Phaser.Time.TimerEvent | null = null;
+  private entryTweens: Phaser.Tweens.Tween[] = [];
 
   constructor(scene: Phaser.Scene, depth = 14) {
-    const { w, h, x, y } = this.layout;
+    const { x, y, maxW } = L.roundToast;
+    this.anchorX = x;
+    this.anchorY = y;
+    this.maxW = maxW;
+
     this.container = scene.add
-      .container(x + w / 2, y + h / 2)
+      .container(this.anchorX, this.anchorY)
       .setDepth(depth)
       .setVisible(false);
-
-    this.container.add(createHubPanelGraphics(scene, w, h));
-
-    this.body = scene.add.text(-w / 2 + 12, -h / 2 + 10, "", {
-      fontFamily: FONT,
-      fontSize: "16px",
-      color: COLORS.bone,
-      lineSpacing: 4,
-      wordWrap: { width: w - 24 },
-    }).setOrigin(0, 0);
-    this.container.add(this.body);
   }
 
-  show(text: string, color: string, durationMs = 2200): void {
+  show(text: string, _color?: string, durationMs = 2200): void {
     this.hideTimer?.remove(false);
-    this.body.setText(text).setColor(color);
-    this.container.setVisible(true);
-    this.container.setAlpha(0);
-    this.container.setX(this.layout.x + this.layout.w / 2 + 24);
-    this.container.scene.tweens.add({
-      targets: this.container,
-      alpha: 1,
-      x: this.layout.x + this.layout.w / 2,
-      duration: 200,
-      ease: "Sine.Out",
+    this.killEntryTweens();
+    this.clearLines();
+
+    const lines = text.split("\n").filter((line) => line.length > 0);
+    const scene = this.container.scene;
+
+    lines.forEach((line, index) => {
+      const lineText = scene.add
+        .text(0, index * LINE_STEP, line, {
+          fontFamily: FONT_DISPLAY,
+          fontSize: "16px",
+          color: COLORS.blood,
+          align: "right",
+          letterSpacing: 1.2,
+          wordWrap: { width: this.maxW },
+        })
+        .setOrigin(1, 0)
+        .setAlpha(0)
+        .setX(22);
+
+      this.container.add(lineText);
+      this.lineTexts.push(lineText);
+
+      const tween = scene.tweens.add({
+        targets: lineText,
+        alpha: 1,
+        x: 0,
+        duration: 320,
+        delay: 60 + index * 70,
+        ease: "Back.easeOut",
+      });
+      this.entryTweens.push(tween);
     });
 
-    this.hideTimer = this.container.scene.time.delayedCall(durationMs, () => this.hide());
+    this.container.setVisible(true).setAlpha(1).setX(this.anchorX).setY(this.anchorY);
+
+    this.hideTimer = scene.time.delayedCall(durationMs, () => this.hide());
   }
 
   hide(): void {
     this.hideTimer?.remove(false);
     this.hideTimer = null;
     if (!this.container.visible) return;
-    this.container.scene.tweens.add({
+
+    this.killEntryTweens();
+    const scene = this.container.scene;
+    scene.tweens.add({
       targets: this.container,
       alpha: 0,
-      x: this.layout.x + this.layout.w / 2 + 16,
-      duration: 180,
+      x: this.anchorX + 16,
+      y: this.anchorY + 6,
+      duration: 220,
       ease: "Sine.In",
-      onComplete: () => this.container.setVisible(false),
+      onComplete: () => {
+        this.clearLines();
+        this.container.setVisible(false).setAlpha(1).setX(this.anchorX).setY(this.anchorY);
+      },
     });
   }
 
   destroy(): void {
     this.hideTimer?.remove(false);
+    this.killEntryTweens();
+    this.clearLines();
     this.container.destroy(true);
+  }
+
+  private clearLines(): void {
+    for (const line of this.lineTexts) {
+      line.destroy();
+    }
+    this.lineTexts.length = 0;
+  }
+
+  private killEntryTweens(): void {
+    for (const tween of this.entryTweens) {
+      tween.stop();
+    }
+    this.entryTweens.length = 0;
   }
 }

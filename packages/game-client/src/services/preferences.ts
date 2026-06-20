@@ -59,4 +59,5 @@ export function applyPreferences(prefs: GamePreferences): void {
     document.documentElement.classList.toggle("zegon-reduced-motion", prefs.reducedMotion);
   }
   void import("./music.js").then(({ applyMusicVolume }) => applyMusicVolume(prefs));
+  void import("./sfx.js").then(({ applySfxVolume }) => applySfxVolume());
 }

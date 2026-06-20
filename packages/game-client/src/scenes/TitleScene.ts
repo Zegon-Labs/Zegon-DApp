@@ -9,10 +9,7 @@ import {
   truncateAddress,
 } from "../services/wallet.js";
 import { isTutorialDone } from "../tutorial/steps.js";
-import {
-  createHubAccentMenuButton,
-  createHubMenuButton,
-} from "../ui/hub/index.js";
+import { createHubAccentMenuButton, createHubMenuButton, addHubLogo, preloadHubLogo } from "../ui/hub/index.js";
 import { createSmallButton, drawScanlines } from "../ui/components.js";
 import { titleButtonY, TITLE_LAYOUT } from "../ui/layout.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
@@ -26,6 +23,10 @@ export class TitleScene extends Phaser.Scene {
     super("TitleScene");
   }
 
+  preload(): void {
+    preloadHubLogo(this);
+  }
+
   create(): void {
     const { width } = this.scale;
     const strings = t();
@@ -33,11 +34,7 @@ export class TitleScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(C.void);
     drawScanlines(this);
 
-    this.add.text(width / 2, TITLE_LAYOUT.logoY, "ZEGON", {
-      fontFamily: FONT,
-      fontSize: "60px",
-      color: COLORS.bone,
-    }).setOrigin(0.5);
+    addHubLogo(this, width / 2, TITLE_LAYOUT.logoY, TITLE_LAYOUT.logoMaxW);
 
     this.add.text(width / 2, TITLE_LAYOUT.taglineY, strings.tagline, {
       fontFamily: FONT,
