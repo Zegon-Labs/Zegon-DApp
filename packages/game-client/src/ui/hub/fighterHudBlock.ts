@@ -28,6 +28,8 @@ export class FighterHudBlock {
   private readonly barW = L.stats.hpBarW;
   private readonly barH = L.stats.hpBarH;
   private readonly barY = L.stats.hpBarY;
+  private readonly nameY = L.stats.nameY;
+  private readonly statsY = L.stats.statsY;
 
   constructor(scene: Phaser.Scene, options: FighterHudBlockOptions) {
     this.align = options.align;
@@ -40,14 +42,14 @@ export class FighterHudBlock {
     const nameOrigin = this.align === "left" ? 0 : 1;
     const nameX = this.edgeX;
 
-    this.nameText = scene.add.text(nameX, L.stats.y - 28, "", {
+    this.nameText = scene.add.text(nameX, this.nameY, "", {
       fontFamily: FONT_DISPLAY,
       fontSize: "20px",
       color: COLORS.bone,
       letterSpacing: 1,
     }).setOrigin(nameOrigin, 0);
 
-    this.statsText = scene.add.text(nameX, this.barY + this.barH + 6, "", {
+    this.statsText = scene.add.text(nameX, this.statsY, "", {
       fontFamily: FONT,
       fontSize: "18px",
       color: COLORS.dust,

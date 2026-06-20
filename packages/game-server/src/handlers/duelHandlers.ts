@@ -122,20 +122,32 @@ export async function handleRoundCommit(body: {
   let decision: ZegonDecision;
   let attestationHash: string | undefined;
   let attestation: unknown;
+  let brainMode: "tee" | "dummy" = "dummy";
 
   const useOG = process.env.USE_OG_COMPUTE === "true";
 
   if (useOG) {
-    const og = getOGComputeService();
-    const result = await og.infer(body.context);
-    decision = result.decision;
-    attestationHash = result.attestationHash;
-    attestation = result.attestation;
+    try {
+      const og = getOGComputeService();
+      const result = await og.infer(body.context);
+      decision = result.decision;
+      attestationHash = result.attestationHash;
+      attestation = result.attestation;
+      brainMode = "tee";
+    } catch (err) {
+      console.warn("[round/commit] OG compute failed, using dummy brain:", err);
+      decision = await new DummyZegonBrain(
+        session.config.seed,
+        body.locale ?? "en",
+      ).decide(body.context);
+      brainMode = "dummy";
+    }
   } else {
     decision = await new DummyZegonBrain(
       session.config.seed,
       body.locale ?? "en",
     ).decide(body.context);
+    brainMode = "dummy";
   }
 
   const { commitHash, salt } = computeCommitHash(decision.zegonMove);
@@ -145,17 +157,16 @@ export async function handleRoundCommit(body: {
   let commitTsOnChain: number | undefined;
 
   if (contract.isConfigured()) {
-    const tx = await contract.commitMove(
-      body.duelId,
-      session.roundIndex,
-      commitHash,
-    );
-    commitTxHash = tx?.txHash;
-    const onChain = await contract.getRoundOnChain(
-      body.duelId,
-      session.roundIndex,
-    );
-    commitTsOnChain = onChain?.commitTs;
+    try {
+      const tx = await contract.commitMove(
+        body.duelId,
+        session.roundIndex,
+        commitHash,
+      );
+      commitTxHash = tx?.txHash;
+    } catch (err) {
+      console.warn("[round/commit] On-chain commit failed:", err);
+    }
   }
 
   const log: RoundLog = {
@@ -181,7 +192,7 @@ export async function handleRoundCommit(body: {
     roundIndex: session.roundIndex,
     attestationHash,
     commitTsOnChain,
-    brainMode: useOG ? "tee" : "dummy",
+    brainMode,
     sessionToken: encodeSessionToken(session),
   };
 }
@@ -216,14 +227,18 @@ export async function handleRoundReveal(body: {
   let revealTxHash: string | undefined;
 
   if (contract.isConfigured()) {
-    const tx = await contract.revealMove(
-      body.duelId,
-      body.roundIndex,
-      log.decision.zegonMove,
-      log.salt,
-    );
-    revealTxHash = tx?.txHash;
-    log.revealTxHash = revealTxHash;
+    try {
+      const tx = await contract.revealMove(
+        body.duelId,
+        body.roundIndex,
+        log.decision.zegonMove,
+        log.salt,
+      );
+      revealTxHash = tx?.txHash;
+      log.revealTxHash = revealTxHash;
+    } catch (err) {
+      console.warn("[round/reveal] On-chain reveal failed:", err);
+    }
   }
 
   session.roundIndex += 1;

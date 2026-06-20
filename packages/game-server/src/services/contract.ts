@@ -68,11 +68,7 @@ export class ContractService {
     if (!this.contract) return null;
     const duelIdNum = duelIdToBigInt(duelId);
     const tx = await this.contract.commitMove(duelIdNum, roundId, commitHash);
-    const receipt = await tx.wait();
-    return {
-      txHash: receipt.hash as string,
-      blockNumber: receipt.blockNumber,
-    };
+    return { txHash: tx.hash as string };
   }
 
   async revealMove(
@@ -91,11 +87,7 @@ export class ContractService {
       moveNum,
       saltBytes,
     );
-    const receipt = await tx.wait();
-    return {
-      txHash: receipt.hash as string,
-      blockNumber: receipt.blockNumber,
-    };
+    return { txHash: tx.hash as string };
   }
 
   async recordDuel(
@@ -109,11 +101,7 @@ export class ContractService {
       ? attestationHash
       : `0x${attestationHash.padStart(64, "0").slice(0, 64)}`;
     const tx = await this.contract.recordDuel(duelIdNum, hash, result);
-    const receipt = await tx.wait();
-    return {
-      txHash: receipt.hash as string,
-      blockNumber: receipt.blockNumber,
-    };
+    return { txHash: tx.hash as string };
   }
 
   async getRoundOnChain(

@@ -20,7 +20,7 @@ export const DUEL_LAYOUT = {
   arena: { y: 342 },
   divider: { y: 498 },
 
-  stats: { y: 546, hpBarY: 522, hpBarW: 180, hpBarH: 9 },
+  stats: { nameY: 500, hpBarY: 528, statsY: 546, hpBarW: 180, hpBarH: 10 },
   actions: { y: 639, h: 48, gap: 8 },
   tooltip: { y: 597 },
   practicePopup: { w: 630, h: 87, gap: 21 },

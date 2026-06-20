@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { gameBridge } from "../game/bridge.js";
 import { useLocale } from "../hooks/useLocale.js";
 import { notify } from "../lib/toast.js";
@@ -21,6 +21,7 @@ import {
   fetchDailyPool,
 } from "../services/dailyStake.js";
 import { fetchHealth } from "../services/health.js";
+import { HERO_SMOKE_PARTICLES } from "./heroSmokeParticles.js";
 
 interface HeroHubProps {
   onNeedsProfile?: (address: string) => void;
@@ -135,12 +136,37 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
         <div className="hero__bg">
           <img src="/landing/bg.png" alt="" className="hero__bg-img" />
         </div>
+        <div className="hero__scene-fog" aria-hidden="true" />
         <div className="hero__character-wrap">
+          <div className="hero__smoke-field" aria-hidden="true">
+            {HERO_SMOKE_PARTICLES.map((p, i) => (
+              <span
+                key={i}
+                className="smoke-particle"
+                style={
+                  {
+                    "--x": p.x,
+                    "--y": p.y,
+                    "--size": p.size,
+                    "--duration": p.duration,
+                    "--delay": p.delay,
+                    "--drift-x": p.driftX,
+                    "--drift-y": p.driftY,
+                    "--peak-opacity": String(p.peakOpacity),
+                  } as CSSProperties
+                }
+              />
+            ))}
+            <div className="smoke-layer smoke-layer--1" />
+            <div className="smoke-layer smoke-layer--2" />
+            <div className="smoke-layer smoke-layer--3" />
+            <div className="smoke-layer smoke-layer--4" />
+          </div>
           <div className="hero__character">
-            <div className="smoke-layer smoke-layer--1" aria-hidden="true" />
-            <div className="smoke-layer smoke-layer--2" aria-hidden="true" />
-            <div className="smoke-layer smoke-layer--3" aria-hidden="true" />
-            <img src="/landing/character.png" alt="" className="hero__character-img" />
+            <div className="hero__character-figure">
+              <img src="/landing/character.png" alt="" className="hero__character-img" />
+              <div className="hero__character-ground" aria-hidden="true" />
+            </div>
           </div>
         </div>
         <div className="hero__vignette" />
@@ -244,9 +270,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
 
         <div className="hero__footer-features">
           <div className="footer-feature footer-feature--compute">
-            <span className="footer-feature__glow" aria-hidden="true" />
-            <span className="footer-feature__icon-wrap">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <span className="footer-feature__icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
                 <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" strokeWidth="1.5" />
               </svg>
@@ -255,9 +280,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             <p className="footer-feature__desc">{strings.footerComputeDesc}</p>
           </div>
           <div className="footer-feature footer-feature--chain">
-            <span className="footer-feature__glow" aria-hidden="true" />
-            <span className="footer-feature__icon-wrap">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <span className="footer-feature__icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 3 4 7v6c0 4.5 3.4 7.7 8 9 4.6-1.3 8-4.5 8-9V7l-8-4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
               </svg>
             </span>
@@ -265,9 +289,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             <p className="footer-feature__desc">{strings.footerChainDesc}</p>
           </div>
           <div className="footer-feature footer-feature--storage">
-            <span className="footer-feature__glow" aria-hidden="true" />
-            <span className="footer-feature__icon-wrap">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <span className="footer-feature__icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <ellipse cx="12" cy="5.5" rx="7.5" ry="2.5" stroke="currentColor" strokeWidth="1.5" />
                 <path d="M4.5 5.5V12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V5.5" stroke="currentColor" strokeWidth="1.5" />
                 <path d="M4.5 12v6.5c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V12" stroke="currentColor" strokeWidth="1.5" />
