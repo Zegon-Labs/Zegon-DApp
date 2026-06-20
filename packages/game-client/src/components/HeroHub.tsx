@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { gameBridge } from "../game/bridge.js";
 import { useLocale } from "../hooks/useLocale.js";
 import { notify } from "../lib/toast.js";
@@ -21,7 +21,7 @@ import {
   fetchDailyPool,
 } from "../services/dailyStake.js";
 import { fetchHealth } from "../services/health.js";
-import { HERO_SMOKE_PARTICLES } from "./heroSmokeParticles.js";
+import { HeroCharacter } from "./HeroCharacter.js";
 
 interface HeroHubProps {
   onNeedsProfile?: (address: string) => void;
@@ -137,38 +137,6 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           <img src="/landing/bg.png" alt="" className="hero__bg-img" />
         </div>
         <div className="hero__scene-fog" aria-hidden="true" />
-        <div className="hero__character-wrap">
-          <div className="hero__smoke-field" aria-hidden="true">
-            {HERO_SMOKE_PARTICLES.map((p, i) => (
-              <span
-                key={i}
-                className="smoke-particle"
-                style={
-                  {
-                    "--x": p.x,
-                    "--y": p.y,
-                    "--size": p.size,
-                    "--duration": p.duration,
-                    "--delay": p.delay,
-                    "--drift-x": p.driftX,
-                    "--drift-y": p.driftY,
-                    "--peak-opacity": String(p.peakOpacity),
-                  } as CSSProperties
-                }
-              />
-            ))}
-            <div className="smoke-layer smoke-layer--1" />
-            <div className="smoke-layer smoke-layer--2" />
-            <div className="smoke-layer smoke-layer--3" />
-            <div className="smoke-layer smoke-layer--4" />
-          </div>
-          <div className="hero__character">
-            <div className="hero__character-figure">
-              <img src="/landing/character.png" alt="" className="hero__character-img" />
-              <div className="hero__character-ground" aria-hidden="true" />
-            </div>
-          </div>
-        </div>
         <div className="hero__vignette" />
         <div className="hero__floor-fade" aria-hidden="true" />
       </div>
@@ -256,6 +224,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
         </div>
         </section>
       </div>
+
+      <HeroCharacter />
 
       <footer className="hero__footer">
         <div className="hero__footer-built">
