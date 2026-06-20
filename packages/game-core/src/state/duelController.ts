@@ -9,7 +9,9 @@ import {
   determineRoundWinner,
   resolveRound,
 } from "../combat/resolveRound.js";
+import { getGamblerWeapon } from "../modes/zegonArchetypes.js";
 import { getStartingAmmo } from "../weapons/registry.js";
+import { WeaponId } from "../types/index.js";
 import {
   buildRoundContext,
   determineDuelWinner,
@@ -33,6 +35,36 @@ import {
   ZegonDecision,
 } from "../types/index.js";
 
+function resolveWeaponForRound(
+  config: DuelConfig,
+  roundIndex: number,
+): WeaponId {
+  if (config.archetype === "gambler" && config.seed) {
+    return getGamblerWeapon(config.seed, roundIndex);
+  }
+  return config.weapon;
+}
+
+function buildInitialState(config: DuelConfig): DuelState {
+  const weapon = resolveWeaponForRound(config, 0);
+  return {
+    phase: DuelPhase.IDLE,
+    roundIndex: 0,
+    playerHp: config.initialPlayerHp,
+    zegonHp: config.initialZegonHp,
+    weapon,
+    ammo: getStartingAmmo(weapon),
+    blindsight: 0,
+    isDeadeye: false,
+    playerHistory: [],
+    roundsWonByPlayer: 0,
+    roundsWonByZegon: 0,
+    pendingZegonDecision: null,
+    roundLogs: [],
+    config,
+  };
+}
+
 export class DuelController {
   private state: DuelState;
   private listeners: DuelEventListener[] = [];
@@ -48,22 +80,7 @@ export class DuelController {
       ...config,
     };
 
-    this.state = {
-      phase: DuelPhase.IDLE,
-      roundIndex: 0,
-      playerHp: mergedConfig.initialPlayerHp,
-      zegonHp: mergedConfig.initialZegonHp,
-      weapon: mergedConfig.weapon,
-      ammo: getStartingAmmo(mergedConfig.weapon),
-      blindsight: 0,
-      isDeadeye: false,
-      playerHistory: [],
-      roundsWonByPlayer: 0,
-      roundsWonByZegon: 0,
-      pendingZegonDecision: null,
-      roundLogs: [],
-      config: mergedConfig,
-    };
+    this.state = buildInitialState(mergedConfig);
   }
 
   on(listener: DuelEventListener): () => void {
@@ -94,28 +111,20 @@ export class DuelController {
 
   /** Full state reset — required before a second startDuel on the same controller. */
   resetForNewDuel(config: Partial<DuelConfig> = {}): void {
+    const freshArchetype = config.archetype != null || config.mode === "daily";
     const mergedConfig: DuelConfig = {
       ...DEFAULT_DUEL_CONFIG,
-      ...this.state.config,
+      ...(freshArchetype ? {} : this.state.config),
       ...config,
+      modifiers:
+        config.modifiers != null
+          ? { ...config.modifiers }
+          : freshArchetype
+            ? undefined
+            : this.state.config.modifiers,
     };
     this.surpriseStreak = 0;
-    this.state = {
-      phase: DuelPhase.IDLE,
-      roundIndex: 0,
-      playerHp: mergedConfig.initialPlayerHp,
-      zegonHp: mergedConfig.initialZegonHp,
-      weapon: mergedConfig.weapon,
-      ammo: getStartingAmmo(mergedConfig.weapon),
-      blindsight: 0,
-      isDeadeye: false,
-      playerHistory: [],
-      roundsWonByPlayer: 0,
-      roundsWonByZegon: 0,
-      pendingZegonDecision: null,
-      roundLogs: [],
-      config: mergedConfig,
-    };
+    this.state = buildInitialState(mergedConfig);
   }
 
   async startDuel(): Promise<void> {
@@ -243,9 +252,14 @@ export class DuelController {
       return;
     }
 
+    const nextRoundIndex = this.state.roundIndex + 1;
+    const nextWeapon = resolveWeaponForRound(this.state.config, nextRoundIndex);
     this.state = {
       ...this.state,
-      roundIndex: this.state.roundIndex + 1,
+      roundIndex: nextRoundIndex,
+      ...(nextWeapon !== this.state.weapon
+        ? { weapon: nextWeapon, ammo: getStartingAmmo(nextWeapon) }
+        : {}),
     };
 
     if (this.state.isDeadeye) {

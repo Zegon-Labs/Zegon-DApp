@@ -10,6 +10,7 @@ import type { DuelEvent, RoundOutcome, ZegonArchetypeId } from "@zegon/game-core
 import {
   ActionValidationError,
   ALL_PLAYER_ACTIONS,
+  getEffectiveDeadeyeThreshold,
   getWeapon,
 } from "@zegon/game-core";
 import {
@@ -47,6 +48,14 @@ import {
   stopAllSfxLoops,
   stopSfxLoop,
 } from "../services/sfx.js";
+import {
+  playRoundOutcomeVoice,
+  playTauntVoice,
+  playThinkingVoice,
+  playVoice,
+  resetVoiceState,
+  stopAllVoice,
+} from "../services/voice.js";
 
 function actionLabel(action: PlayerAction | string): string {
   const strings = t();
@@ -250,7 +259,9 @@ export class DuelScene extends Phaser.Scene {
         archetypeId: this.mode === "standard" ? this.archetypeId : undefined,
       });
       if (token !== this.bootToken) return;
+      resetVoiceState();
       playSfx("duel_start");
+      playVoice("step_into_dust", { delayMs: 420 });
       this.updateHud();
       this.updateActionButtons();
     } catch (err) {
@@ -325,6 +336,11 @@ export class DuelScene extends Phaser.Scene {
       zegonDamage: outcome.zegonDamage,
       blindsightDelta: outcome.blindsightDelta,
     });
+    playRoundOutcomeVoice({
+      playerDamage: outcome.playerDamage,
+      zegonDamage: outcome.zegonDamage,
+      predictionCorrect: outcome.predictionCorrect,
+    });
     if (outcome.blindsightDelta > 0) {
       this.triggerBlindsightSurge(outcome.blindsightDelta);
     }
@@ -386,6 +402,7 @@ export class DuelScene extends Phaser.Scene {
       if (phase === DuelPhase.ZEGON_THINKING) {
         this.setZegonReadingActive(true);
         startSfxLoop("zegon_thinking", { volume: 0.32 });
+        playThinkingVoice();
         this.chooseActionText.setAlpha(0.35);
         this.actionHintText.setAlpha(0);
         if (!this.showingRoundResult) {
@@ -395,6 +412,10 @@ export class DuelScene extends Phaser.Scene {
         stopSfxLoop("zegon_thinking");
         this.setZegonReadingActive(false);
         playSfx("your_turn");
+        const taunt = this.adapter.getPendingTaunt();
+        if (!playTauntVoice(taunt)) {
+          playVoice("your_turn_outlaw", { delayMs: 280 });
+        }
         this.statusLineText.setText(strings.lockedIn).setColor(COLORS.dust);
         this.chooseActionText.setAlpha(1);
         this.actionHintText.setAlpha(0.75);
@@ -402,6 +423,7 @@ export class DuelScene extends Phaser.Scene {
         stopSfxLoop("zegon_thinking");
         this.setZegonReadingActive(false);
         playSfx("deadeye_sting");
+        playVoice("deadeye", { delayMs: 220 });
         this.statusLineText.setText(strings.deadeye).setColor(COLORS.ember);
         this.cameras.main.flash(280, 255, 77, 46);
         this.cameras.main.shake(200, 0.008);
@@ -533,7 +555,10 @@ export class DuelScene extends Phaser.Scene {
 
   private updateArena(): void {
     const blindsight = this.adapter.getBlindsight();
-    this.arenaView.update(blindsight, blindsight >= 80);
+    const deadeyeThreshold = getEffectiveDeadeyeThreshold(
+      this.adapter.getState().config.modifiers,
+    );
+    this.arenaView.update(blindsight, blindsight >= deadeyeThreshold - 5);
     this.syncGlitchOverlay(blindsight / 100);
   }
 
@@ -567,10 +592,14 @@ export class DuelScene extends Phaser.Scene {
           );
     this.historyLog.setLines(lines);
 
+    const deadeyeThreshold = getEffectiveDeadeyeThreshold(state.config.modifiers);
+    const deadeyeNearThreshold = Math.max(70, deadeyeThreshold - 5);
+
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
-      maxHp: state.config.initialPlayerHp,
+      playerMaxHp: state.config.initialPlayerHp,
+      zegonMaxHp: state.config.initialZegonHp,
       ammo: this.adapter.getAmmo(),
       maxAmmo,
       blindsight,
@@ -582,7 +611,7 @@ export class DuelScene extends Phaser.Scene {
       blindsightLabel: `${strings.hudBlindsight}  ${blindsight}%`,
       blindsightFlavor: taunt ? `"${taunt}"` : strings.blindsightFlavor,
       nextMoveHint: `${strings.nextMoveHint} · ${brainTag}`,
-      zegonStatus: blindsight >= 80 ? strings.deadeyeNear : undefined,
+      zegonStatus: blindsight >= deadeyeNearThreshold ? strings.deadeyeNear : undefined,
     });
   }
 
@@ -620,6 +649,7 @@ export class DuelScene extends Phaser.Scene {
   shutdown(): void {
     this.bootToken++;
     this.setZegonReadingActive(false);
+    stopAllVoice();
     stopAllSfxLoops();
     this.glitchAmbientOn = false;
     this.time.removeAllEvents();

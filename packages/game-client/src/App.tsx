@@ -62,11 +62,14 @@ export default function App() {
         playUiClick();
       }
     };
+    const hoverSelector = ".btn, .archetype-card, .hero__footer-built, .footer-feature";
     const onOver = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (target.closest(".btn, .archetype-card")) {
-        playUiHover();
-      }
+      const hoverEl = target.closest(hoverSelector);
+      if (!hoverEl) return;
+      const related = event.relatedTarget;
+      if (related instanceof Node && hoverEl.contains(related)) return;
+      playUiHover();
     };
     document.addEventListener("click", onClick);
     document.addEventListener("mouseover", onOver);

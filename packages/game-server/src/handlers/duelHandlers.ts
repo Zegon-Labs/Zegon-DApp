@@ -6,6 +6,7 @@ import {
   ZegonDecision,
   buildChallengeUrl,
   createDailyDuel,
+  DEFAULT_DUEL_CONFIG,
 } from "@zegon/game-core";
 import { computeCommitHash, computeInputHash } from "../services/commit.js";
 import { EXPLORER_BASE, getContractService } from "../services/contract.js";
@@ -83,13 +84,17 @@ export async function handleStartDuel(body: {
   config?: Partial<DuelConfig>;
 }): Promise<{ duelId: string; sessionToken: string }> {
   const duelId = generateDuelId();
+  const mode = body.config?.mode ?? "standard";
   const session: DuelSession = {
     id: duelId,
-    config: {
-      ...createDailyDuel(),
-      ...body.config,
-      mode: body.config?.mode ?? "standard",
-    },
+    config:
+      mode === "daily"
+        ? { ...createDailyDuel(), ...body.config, mode: "daily" }
+        : {
+            ...DEFAULT_DUEL_CONFIG,
+            ...body.config,
+            mode: "standard",
+          },
     roundIndex: 0,
     logs: [],
     createdAt: Date.now(),

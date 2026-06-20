@@ -8,7 +8,7 @@ Turn-based duel vs ZEGON, a **blindfolded** AI gunslinger (sealed inference on 0
 
 | Component | SDK / network | Role in ZEGON |
 |-----------|---------------|---------------|
-| **0G Compute** | `@0glabs/0g-serving-broker` | ZEGON prediction + TEE attestation |
+| **0G Compute** | `@0gfoundation/0g-compute-ts-sdk` | ZEGON prediction + TEE attestation |
 | **0G Chain (Galileo)** | `ZegonDuel.sol`, chainId `16602` | `commitMove` → player input → `revealMove` → `recordDuel` |
 | **0G Storage** | `@0glabs/0g-ts-sdk` | Duel log + attestations (blob) |
 

@@ -194,6 +194,9 @@ body:has(.hero) {
   justify-content: center;
   z-index: 3;
   pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   /* Silueta alineada con la luna del fondo */
   margin-top: clamp(12px, 2vh, 28px);
 }
@@ -343,6 +346,10 @@ body:has(.hero) {
   object-fit: contain;
   object-position: center center;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  user-drag: none;
   animation: character-breathe 7s ease-in-out infinite;
   opacity: 1;
   filter: brightness(1.04) contrast(1.08) saturate(1.02);
@@ -645,6 +652,9 @@ body:has(.hero) {
   width: 100%;
   cursor: default;
   margin: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .hero__menu .hero__logo-img {
@@ -663,10 +673,23 @@ body:has(.hero) {
 }
 
 .hero__menu .hero__tagline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
   margin: 0;
   font-size: var(--menu-fs-md);
   line-height: 1.25;
   letter-spacing: 0.1em;
+}
+
+.hero__tagline-line {
+  display: block;
+  animation: tagline-breathe 4.8s ease-in-out infinite;
+}
+
+.hero__tagline-line--b {
+  animation-delay: -2.4s;
 }
 
 .hero__menu .hero__brain-badge {
@@ -819,6 +842,9 @@ body:has(.hero) {
 .hero__logo {
   margin: 0;
   width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .hero__logo-img {
@@ -827,6 +853,11 @@ body:has(.hero) {
   height: auto;
   display: block;
   margin: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
   filter: drop-shadow(0 0 6px rgba(255, 77, 46, 0.2));
   animation: logo-pulse 3.2s ease-in-out infinite;
   transform: scale(1);
@@ -851,7 +882,26 @@ body:has(.hero) {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ember);
-  text-shadow: 0 0 18px rgba(255,77,46,0.35);
+  text-shadow: 0 0 18px rgba(255, 77, 46, 0.35);
+}
+
+@keyframes tagline-breathe {
+  0%,
+  100% {
+    opacity: 0.72;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 10px rgba(255, 77, 46, 0.22);
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    letter-spacing: 0.16em;
+    text-shadow:
+      0 0 20px rgba(255, 77, 46, 0.55),
+      0 0 36px rgba(255, 77, 46, 0.18);
+    transform: scale(1.018);
+  }
 }
 
 /* =========================================================
@@ -1283,6 +1333,7 @@ body:has(.hero) {
   .hero__character-seam-bloom,
   .hero__character-figure::before,
   .hero__logo-img,
+  .hero__tagline-line,
   .hero__scene-fog,
   .hero__smoke-field,
   .hero__smoke-field::before,
@@ -1326,6 +1377,7 @@ body:has(.hero) {
 html.zegon-reduced-motion .verify-card,
 html.zegon-reduced-motion .verify-card__glow,
 html.zegon-reduced-motion .verify-card__icon,
+html.zegon-reduced-motion .hero__tagline-line,
 html.zegon-reduced-motion .hero__footer-built,
 html.zegon-reduced-motion .hero__footer-label,
 html.zegon-reduced-motion .hero__footer-og-glow,

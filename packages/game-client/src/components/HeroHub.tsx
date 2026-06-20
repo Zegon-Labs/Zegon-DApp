@@ -153,10 +153,25 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
 
         <section className="hero__menu" aria-label="Menú principal">
           <div className="hero__menu-head">
-            <h1 className="hero__logo">
-              <img src="/landing/logo.png" alt="ZEGON" className="hero__logo-img" />
+            <h1 className="hero__logo" onDragStart={(e) => e.preventDefault()}>
+              <img
+                src="/landing/logo.png"
+                alt="ZEGON"
+                className="hero__logo-img"
+                draggable={false}
+              />
             </h1>
-            <p className="hero__tagline">{strings.heroTagline}</p>
+            <p className="hero__tagline" aria-label={strings.heroTagline}>
+              {strings.heroTagline.split(". ").map((part, index, parts) => (
+                <span
+                  key={index}
+                  className={`hero__tagline-line hero__tagline-line--${index % 2 === 0 ? "a" : "b"}`}
+                >
+                  {part}
+                  {index < parts.length - 1 ? "." : ""}
+                </span>
+              ))}
+            </p>
             <p className="hero__brain-badge">{brainLabel}</p>
           </div>
 

@@ -132,6 +132,7 @@ class ApiZegonBrain implements IZegonBrain {
 
 export class GameCoreAdapter {
   readonly controller: DuelController;
+  private readonly brain: IZegonBrain;
   private readonly brainMode: BrainMode;
   private readonly offline: boolean;
   private readonly apiBaseUrl: string;
@@ -184,6 +185,7 @@ export class GameCoreAdapter {
       brain = new DummyZegonBrain(seed, getLanguage());
     }
 
+    this.brain = brain;
     this.controller = new DuelController(brain, config);
 
     if (options.onEvent) {
@@ -206,16 +208,19 @@ export class GameCoreAdapter {
       mergedConfig = { ...mergedConfig, ...createDailyDuel() };
     }
 
-    if (mode === "standard" && options?.archetypeId) {
+    if (mode === "standard") {
       mergedConfig = {
         ...mergedConfig,
         ...createStandardDuelWithArchetype(
-          options.archetypeId as ZegonArchetypeId,
+          (options?.archetypeId ?? "reader") as ZegonArchetypeId,
         ),
       };
     }
 
     this.controller.resetForNewDuel(mergedConfig);
+    if (this.brain instanceof DummyZegonBrain) {
+      this.brain.setSeed(this.controller.getState().config.seed);
+    }
     this._duelId = null;
     this._sessionToken = null;
     this._lastAttestationHash = null;

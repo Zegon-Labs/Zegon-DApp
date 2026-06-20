@@ -115,7 +115,7 @@ export class OGComputeService {
 
     try {
       const { createZGComputeNetworkBroker } = await import(
-        "@0glabs/0g-serving-broker"
+        "@0gfoundation/0g-compute-ts-sdk"
       );
       const { ethers } = await import("ethers");
 
@@ -134,6 +134,13 @@ export class OGComputeService {
 
       const modelFilter = process.env.OG_MODEL ?? "glm-5-fp8";
       const providerAddress = await resolveProviderAddress(broker, modelFilter);
+
+      try {
+        await broker.inference.acknowledgeProviderSigner(providerAddress);
+      } catch {
+        // Provider may already be acknowledged
+      }
+
       const metadata = await broker.inference.getServiceMetadata(providerAddress);
       const requestBody = JSON.stringify({
         model: metadata.model,
@@ -159,8 +166,7 @@ export class OGComputeService {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Address: headers.Address,
-            "VLLM-Proxy": headers["VLLM-Proxy"],
+            ...(headers as unknown as Record<string, string>),
           },
           body: requestBody,
           signal: controller.signal,

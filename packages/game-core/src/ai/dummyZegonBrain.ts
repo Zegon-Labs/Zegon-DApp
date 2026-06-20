@@ -140,12 +140,16 @@ function tauntForConfidence(
 }
 
 export class DummyZegonBrain implements IZegonBrain {
-  private readonly rng: () => number;
+  private rng: () => number;
   private readonly locale: BrainLocale;
 
   constructor(seed?: string, locale: BrainLocale = "en") {
     this.rng = createRng(seed);
     this.locale = locale;
+  }
+
+  setSeed(seed?: string): void {
+    this.rng = createRng(seed);
   }
 
   async decide(ctx: RoundContext): Promise<ZegonDecision> {
@@ -162,11 +166,11 @@ export class DummyZegonBrain implements IZegonBrain {
       confidence = confidenceFromFrequency(pattern.frequency);
     }
 
-    const zegonMove = counterMove(
-      predicted,
-      this.rng,
-      ctx.modifiers?.zegonDodgeBias ?? 0,
-    );
+    const dodgeBias = ctx.modifiers?.zegonDodgeBias ?? 0;
+    let zegonMove = counterMove(predicted, this.rng, dodgeBias);
+    if (ctx.archetype === "gambler" && this.rng() < 0.38) {
+      zegonMove = pickRandom(ALL_ZEGON_ACTIONS, this.rng);
+    }
     const taunt = tauntForConfidence(confidence, this.rng, this.locale);
 
     return {

@@ -414,7 +414,8 @@ export class TutorialScene extends Phaser.Scene {
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
-      maxHp: 100,
+      playerMaxHp: 100,
+      zegonMaxHp: 100,
       ammo: this.adapter.getAmmo(),
       maxAmmo: 6,
       blindsight,

@@ -3,7 +3,10 @@ import { HERO_SMOKE_PARTICLES } from "./heroSmokeParticles.js";
 
 export function HeroCharacter() {
   return (
-    <div className="hero__character-wrap">
+    <div
+      className="hero__character-wrap"
+      onDragStart={(e) => e.preventDefault()}
+    >
       <div className="hero__smoke-field">
         {HERO_SMOKE_PARTICLES.map((p, i) => (
           <span
@@ -30,7 +33,12 @@ export function HeroCharacter() {
       </div>
       <div className="hero__character">
         <div className="hero__character-figure">
-          <img src="/landing/character.png" alt="" className="hero__character-img" />
+          <img
+            src="/landing/character.png"
+            alt=""
+            className="hero__character-img"
+            draggable={false}
+          />
           <button
             type="button"
             className="hero__character-seam"

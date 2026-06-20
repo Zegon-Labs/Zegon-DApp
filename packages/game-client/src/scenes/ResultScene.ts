@@ -13,6 +13,8 @@ import { drawScanlines } from "../ui/components.js";
 import { C, COLORS } from "../ui/theme.js";
 import { buildChallengeUrlFromResult, generateShareCard } from "../utils/shareCard.js";
 import { playDuelEndSfx, playSfx } from "../services/sfx.js";
+import { playDuelEndVoice, stopAllVoice } from "../services/voice.js";
+import { openVerifyDuelWindow } from "../utils/verifyWindow.js";
 
 interface VerifyResponse {
   duelId: string;
@@ -65,6 +67,7 @@ export class ResultScene extends Phaser.Scene {
       result.winner === "PLAYER" ? COLORS.verified : COLORS.ember;
 
     playDuelEndSfx(result.winner);
+    playDuelEndVoice(result.winner);
 
     const statsText = [
       `${strings.rounds}: ${result.roundsPlayed}`,
@@ -86,10 +89,7 @@ export class ResultScene extends Phaser.Scene {
           label: strings.verifyOnChain,
           onClick: () => {
             if (duelId) {
-              window.open(
-                `/verify.html?duel=${encodeURIComponent(duelId)}`,
-                "zegon-verify",
-              );
+              openVerifyDuelWindow(duelId);
             } else {
               this.panelHandle?.setVerifyText(strings.verifyOffline);
             }
@@ -145,6 +145,7 @@ export class ResultScene extends Phaser.Scene {
   }
 
   shutdown(): void {
+    stopAllVoice();
     this.panelHandle?.destroy();
     this.panelHandle = null;
   }

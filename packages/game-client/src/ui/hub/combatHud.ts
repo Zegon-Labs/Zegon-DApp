@@ -5,7 +5,8 @@ import { FighterHudBlock } from "./fighterHudBlock.js";
 export interface CombatHudState {
   playerHp: number;
   zegonHp: number;
-  maxHp: number;
+  playerMaxHp: number;
+  zegonMaxHp: number;
   ammo: number;
   maxAmmo: number;
   blindsight: number;
@@ -51,7 +52,7 @@ export class CombatHud {
     this.playerBlock.update({
       name: state.playerLabel,
       hp: state.playerHp,
-      maxHp: state.maxHp,
+      maxHp: state.playerMaxHp,
       ammo: state.ammo,
       maxAmmo: state.maxAmmo,
       weaponLabel: state.weaponLabel,
@@ -60,7 +61,7 @@ export class CombatHud {
     this.zegonBlock.update({
       name: state.zegonLabel,
       hp: state.zegonHp,
-      maxHp: state.maxHp,
+      maxHp: state.zegonMaxHp,
       statusLabel: state.zegonStatus,
       detail: state.hudStatus,
     });

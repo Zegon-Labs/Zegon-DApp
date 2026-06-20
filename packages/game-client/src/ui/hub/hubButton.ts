@@ -14,9 +14,10 @@ function bindHubButtonPress(
   bg: Phaser.GameObjects.Rectangle,
   onClick: () => void,
   canPress: () => boolean = () => true,
+  cooldownMs = 350,
 ): void {
   let locked = false;
-  bg.on("pointerdown", () => {
+  bg.on("pointerup", () => {
     if (locked || !canPress()) return;
     locked = true;
     scene.tweens.killTweensOf(bg);
@@ -31,7 +32,7 @@ function bindHubButtonPress(
       ease: "Quad.Out",
       onComplete: () => bg.setScale(1),
     });
-    scene.time.delayedCall(350, () => {
+    scene.time.delayedCall(cooldownMs, () => {
       locked = false;
     });
   });

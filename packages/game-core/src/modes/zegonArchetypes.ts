@@ -16,7 +16,7 @@ export interface ZegonArchetype {
   tradeoffEn: string;
   tradeoffEs: string;
   modifiers: DuelModifiers;
-  initialZegonHpDelta?: number;
+  initialPlayerHpDelta?: number;
 }
 
 const ARCHETYPES: Record<ZegonArchetypeId, ZegonArchetype> = {
@@ -32,7 +32,7 @@ const ARCHETYPES: Record<ZegonArchetypeId, ZegonArchetype> = {
     tradeoffEn: "Starts with −10 HP",
     tradeoffEs: "Empieza con −10 PS",
     modifiers: { blindsightOnCorrect: 18 },
-    initialZegonHpDelta: -10,
+    initialPlayerHpDelta: -10,
   },
   phantom: {
     id: "phantom",
@@ -59,7 +59,7 @@ const ARCHETYPES: Record<ZegonArchetypeId, ZegonArchetype> = {
     tradeoffEn: "Starts with +10 HP",
     tradeoffEs: "Empieza con +10 PS",
     modifiers: { deadeyeThreshold: 85 },
-    initialZegonHpDelta: 10,
+    initialPlayerHpDelta: 10,
   },
   gambler: {
     id: "gambler",
@@ -110,13 +110,13 @@ export function applyArchetypeToConfig(
   archetypeId: ZegonArchetypeId,
 ): DuelConfig {
   const arch = getArchetype(archetypeId);
-  const hpDelta = arch.initialZegonHpDelta ?? 0;
+  const playerHpDelta = arch.initialPlayerHpDelta ?? 0;
   return {
     ...config,
     seed: config.seed ? `${config.seed}-${arch.seedSuffix}` : arch.seedSuffix,
     archetype: archetypeId,
     modifiers: { ...arch.modifiers },
-    initialZegonHp: Math.max(50, config.initialZegonHp + hpDelta),
+    initialPlayerHp: Math.max(50, config.initialPlayerHp + playerHpDelta),
   };
 }
 
