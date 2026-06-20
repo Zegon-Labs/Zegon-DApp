@@ -1,7 +1,8 @@
 export enum PlayerAction {
   FIRE_HIGH = "FIRE_HIGH",
   FIRE_LOW = "FIRE_LOW",
-  DODGE = "DODGE",
+  DODGE_HIGH = "DODGE_HIGH",
+  DODGE_LOW = "DODGE_LOW",
   FEINT = "FEINT",
   RELOAD = "RELOAD",
 }
@@ -9,7 +10,8 @@ export enum PlayerAction {
 export enum ZegonAction {
   FIRE_HIGH = "FIRE_HIGH",
   FIRE_LOW = "FIRE_LOW",
-  DODGE = "DODGE",
+  DODGE_HIGH = "DODGE_HIGH",
+  DODGE_LOW = "DODGE_LOW",
   FEINT = "FEINT",
   RELOAD = "RELOAD",
 }
@@ -167,7 +169,8 @@ export function isFireAction(action: PlayerAction | ZegonAction): boolean {
 export const ALL_PLAYER_ACTIONS: readonly PlayerAction[] = [
   PlayerAction.FIRE_HIGH,
   PlayerAction.FIRE_LOW,
-  PlayerAction.DODGE,
+  PlayerAction.DODGE_HIGH,
+  PlayerAction.DODGE_LOW,
   PlayerAction.FEINT,
   PlayerAction.RELOAD,
 ];
@@ -175,7 +178,8 @@ export const ALL_PLAYER_ACTIONS: readonly PlayerAction[] = [
 export const ALL_ZEGON_ACTIONS: readonly ZegonAction[] = [
   ZegonAction.FIRE_HIGH,
   ZegonAction.FIRE_LOW,
-  ZegonAction.DODGE,
+  ZegonAction.DODGE_HIGH,
+  ZegonAction.DODGE_LOW,
   ZegonAction.FEINT,
   ZegonAction.RELOAD,
 ];

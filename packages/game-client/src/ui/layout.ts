@@ -37,7 +37,7 @@ export const DUEL_LAYOUT = {
     panelW: 240,
     panelH: 112,
     playerX: 20,
-    y: 586,
+    y: 618,
     iconSize: 18,
     iconGap: 5,
     rowGap: 8,
@@ -83,7 +83,7 @@ export function practicePopupCenterY(): number {
 }
 
 export function actionButtonWidth(screenWidth: number, count: number, gap: number): number {
-  return Math.min(168, (screenWidth - 48 - gap * (count - 1)) / count);
+  return Math.min(155, (screenWidth - 48 - gap * (count - 1)) / count);
 }
 
 export const TITLE_LAYOUT = {

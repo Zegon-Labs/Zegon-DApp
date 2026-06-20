@@ -1,4 +1,5 @@
 import type { RoundOutcome } from "@zegon/game-core";
+import { isFireAction, PlayerAction } from "@zegon/game-core";
 import type { LocaleStrings } from "../i18n/index.js";
 import { COLORS } from "./theme.js";
 
@@ -29,6 +30,13 @@ function displayDuration(lineCount: number): number {
   return revealEnd + READ_AFTER_REVEAL_MS;
 }
 
+function isMirrorFire(playerAction: string, zegonMove: string): boolean {
+  return (
+    (playerAction === PlayerAction.FIRE_HIGH && zegonMove === "FIRE_HIGH") ||
+    (playerAction === PlayerAction.FIRE_LOW && zegonMove === "FIRE_LOW")
+  );
+}
+
 export function buildRoundSummary(
   outcome: RoundOutcome,
   strings: LocaleStrings,
@@ -42,6 +50,11 @@ export function buildRoundSummary(
     },
   ];
 
+  const mirror = isMirrorFire(
+    outcome.playerAction,
+    outcome.zegonDecision.zegonMove,
+  );
+
   if (outcome.predictionCorrect) {
     lines.push({
       text: `${strings.roundSummaryRead} · ${strings.zegonReadYou}`,
@@ -54,20 +67,37 @@ export function buildRoundSummary(
     });
   }
 
-  const bsDelta =
-    outcome.blindsightDelta >= 0
-      ? `+${outcome.blindsightDelta}`
-      : String(outcome.blindsightDelta);
-  lines.push({
-    text: `${strings.hudBlindsight} ${bsDelta}`,
-    role: "delta",
-  });
+  if (outcome.blindsightDelta === 0 && outcome.blindsightAfter === 0) {
+    lines.push({
+      text: strings.roundSummaryBlindsightFloor,
+      role: "note",
+    });
+  } else {
+    const bsDelta =
+      outcome.blindsightDelta >= 0
+        ? `+${outcome.blindsightDelta}`
+        : String(outcome.blindsightDelta);
+    lines.push({
+      text: `${strings.hudBlindsight} ${bsDelta}`,
+      role: "delta",
+    });
+  }
 
   if (outcome.playerDamage > 0) {
     lines.push({
       text: `${strings.roundSummaryYouHit} −${outcome.playerDamage} ${strings.hudHp}`,
       role: "damage",
     });
+    if (
+      mirror &&
+      isFireAction(outcome.playerAction) &&
+      outcome.predictionCorrect
+    ) {
+      lines.push({
+        text: strings.roundSummaryMirrorReadHit,
+        role: "note",
+      });
+    }
   }
   if (outcome.zegonDamage > 0) {
     lines.push({
@@ -75,7 +105,17 @@ export function buildRoundSummary(
       role: "damage",
     });
   }
-  if (outcome.playerDamage === 0 && outcome.zegonDamage === 0) {
+  if (
+    outcome.playerDamage === 0 &&
+    outcome.zegonDamage === 0 &&
+    mirror &&
+    isFireAction(outcome.playerAction)
+  ) {
+    lines.push({
+      text: strings.roundSummaryMirrorStandoff,
+      role: "note",
+    });
+  } else if (outcome.playerDamage === 0 && outcome.zegonDamage === 0) {
     lines.push({
       text: strings.roundSummaryNoDamage,
       role: "note",

@@ -24,12 +24,14 @@ export interface LocaleStrings {
   hudBlindsight: string;
   actionFireHigh: string;
   actionFireLow: string;
-  actionDodge: string;
+  actionDodgeHigh: string;
+  actionDodgeLow: string;
   actionFeint: string;
   actionReload: string;
   actionDescFireHigh: string;
   actionDescFireLow: string;
-  actionDescDodge: string;
+  actionDescDodgeHigh: string;
+  actionDescDodgeLow: string;
   actionDescFeint: string;
   actionDescReload: string;
   zegonPlayed: string;
@@ -70,6 +72,9 @@ export interface LocaleStrings {
   roundSummaryNoDamage: string;
   roundSummaryDeadeyeOn: string;
   roundSummaryDeadeyeUsed: string;
+  roundSummaryMirrorStandoff: string;
+  roundSummaryMirrorReadHit: string;
+  roundSummaryBlindsightFloor: string;
   errorNoAmmo: string;
   tutorial: string;
   tutorialTitle: string;
@@ -83,6 +88,8 @@ export interface LocaleStrings {
   tutorialDeadeyeBody: string;
   tutorialActionsTitle: string;
   tutorialActionsBody: string;
+  tutorialPredictionTitle: string;
+  tutorialPredictionBody: string;
   tutorialAmmoTitle: string;
   tutorialAmmoBody: string;
   tutorialPracticeTitle: string;
@@ -92,6 +99,9 @@ export interface LocaleStrings {
   tutorialStepFire: string;
   tutorialStepDodge: string;
   tutorialStepRead: string;
+  tutorialStepMirrorStandoff: string;
+  tutorialFeedbackMirrorRead: string;
+  tutorialFeedbackMirrorStandoff: string;
   tutorialStepFeint: string;
   tutorialStepReload: string;
   tutorialStepDamage: string;
@@ -139,6 +149,8 @@ export interface LocaleStrings {
   dailyPoolNotConfigured: string;
   dailyPlay: string;
   achievementsTitle: string;
+  achievementsMenu: string;
+  achievementsSubtitle: string;
   claimReward: string;
   shareCard: string;
   challengeLink: string;
@@ -223,12 +235,14 @@ const LOCALES: Record<Language, LocaleStrings> = {
     hudBlindsight: "BLINDSIGHT",
     actionFireHigh: "FIRE HIGH",
     actionFireLow: "FIRE LOW",
-    actionDodge: "DODGE",
+    actionDodgeHigh: "DODGE HIGH",
+    actionDodgeLow: "DODGE LOW",
     actionFeint: "FEINT",
     actionReload: "RELOAD",
     actionDescFireHigh: "Shoot high. Beats low dodge and feint.",
     actionDescFireLow: "Shoot low. Beats high dodge and reload.",
-    actionDescDodge: "Dodge · avoid ZEGON's shot this round.",
+    actionDescDodgeHigh: "Dodge high · avoids low shots.",
+    actionDescDodgeLow: "Dodge low · avoids high shots.",
     actionDescFeint: "Feint · breaks pattern. Only safe if ZEGON mispredicted.",
     actionDescReload: "Reload · restore ammo (vulnerable).",
     zegonPlayed: "ZEGON played",
@@ -270,6 +284,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryNoDamage: "No damage this round",
     roundSummaryDeadeyeOn: "DEADEYE activated · next shot is lethal",
     roundSummaryDeadeyeUsed: "DEADEYE spent",
+    roundSummaryMirrorStandoff: "Same shot — standoff, no damage",
+    roundSummaryMirrorReadHit:
+      "Mirror shot · ZEGON read you, so its bullet still lands",
+    roundSummaryBlindsightFloor: "Blindsight already at zero",
     errorNoAmmo: "No ammo · reload first.",
     tutorial: "TUTORIAL",
     tutorialTitle: "Welcome to the duel",
@@ -285,24 +303,33 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialDeadeyeTitle: "DEADEYE",
     tutorialDeadeyeBody:
       "At 100% Blindsight, ZEGON enters DEADEYE.\n\nIts next shot becomes lethal · almost impossible to dodge unless you broke the read.\n\nWatch for the ember flash and \"DEADEYE!\" warning. Break patterns before it peaks.",
-    tutorialActionsTitle: "Five actions",
+    tutorialActionsTitle: "Six actions",
     tutorialActionsBody:
-      "FIRE HIGH / FIRE LOW · deal damage if ZEGON mispredicted.\n\nDODGE · avoids ZEGON's shot (unless DEADEYE).\n\nFEINT · fake move; breaks rhythm. NOT a dodge · if ZEGON predicted your feint and fires, you take damage.\n\nRELOAD · restores ammo but you're vulnerable.",
+      "FIRE HIGH / FIRE LOW · deal damage if ZEGON mispredicted (and heights don't clash).\n\nDODGE HIGH · avoids low shots.\nDODGE LOW · avoids high shots.\n\nFEINT · fake move; breaks rhythm. NOT a dodge · if ZEGON predicted your feint and fires, you take damage.\n\nRELOAD · restores ammo but you're vulnerable.",
+    tutorialPredictionTitle: "Prediction vs mirror shots",
+    tutorialPredictionBody:
+      "Each round ZEGON picks two things before you act:\n\n1) Prediction · what it thinks you will do (history only — never your current button)\n2) Its move · what it actually does\n\nMirror shot · you both fire the same height (high-high or low-low):\n• You never damage ZEGON on a mirror — bullets cross, standoff on its HP\n• You only take damage if it predicted your exact action and fired that height\n• Same height but wrong prediction · full standoff, no damage, Blindsight drops\n\nDifferent heights use normal hit / dodge rules.",
     tutorialAmmoTitle: "Ammo",
     tutorialAmmoBody:
       "The revolver holds 6 rounds (shown as AMMO ×N under your HP).\n\nEach shot spends 1 bullet. At 0 ammo you cannot fire · you must RELOAD.\n\nReloading while ZEGON shoots = you get hit.",
     tutorialPracticeTitle: "Practice round",
     tutorialPracticeBody:
-      "Now try 5 guided moves against a scripted ZEGON.\n\nFollow the hint bar above the buttons. Only the correct action will be enabled each step.",
+      "Now try guided moves against a scripted ZEGON — including mirror shots.\n\nFollow the hint bar above the buttons. Only the correct action will be enabled each step.",
     tutorialVerifyTitle: "VERIFY · provably fair",
     tutorialVerifyBody:
       "After a real duel you can VERIFY on-chain: ZEGON committed its move before you acted, using only your history · never your current shot.\n\nThat's the 0G sealed AI proof. Optional, but the core of ZEGON.",
     tutorialStepFire:
       "ZEGON mispredicted. Shoot · FIRE HIGH or FIRE LOW. If you hit, ZEGON loses HP.",
     tutorialStepDodge:
-      "ZEGON is firing high. DODGE · you take no damage this round.",
+      "ZEGON fires high. Use DODGE LOW · duck under the shot.",
     tutorialStepRead:
-      "ZEGON predicted FIRE LOW. Use FIRE LOW anyway · watch Blindsight jump +15 (it read you).",
+      "Mirror · both FIRE HIGH. ZEGON predicted FIRE HIGH (it read you). Shoot high anyway · you take damage, it doesn't — that's the read landing.",
+    tutorialStepMirrorStandoff:
+      "Mirror again · both FIRE HIGH, but ZEGON predicted RELOAD (wrong). Same shot height, no read · standoff, zero damage.",
+    tutorialFeedbackMirrorRead:
+      "Mirror + read · ZEGON predicted your exact shot, so its bullet hits you",
+    tutorialFeedbackMirrorStandoff:
+      "Mirror + mispredict · same height, but it didn't read you — standoff",
     tutorialStepFeint:
       "ZEGON expects another shot. FEINT · break your pattern; Blindsight drops if it mispredicted.",
     tutorialStepReload:
@@ -310,10 +337,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialStepDamage:
       "RELOAD again · ZEGON will shoot. Watch your HP drop (−damage).",
     tutorialStepDeadeye:
-      "DEADEYE active! ZEGON fires · DODGE if you can (almost lethal).",
+      "DEADEYE active! ZEGON fires high · DODGE LOW if you can (almost lethal if he read you).",
     tutorialComplete: "Tutorial complete",
     tutorialCompleteBody:
-      "You learned HP, Blindsight, DEADEYE, all five actions, and ammo.\n\nYou're ready for a real duel.",
+      "You learned HP, Blindsight, DEADEYE, predictions, mirror shots, all six actions, and ammo.\n\nYou're ready for a real duel.",
     tutorialCompleteBadge: "Completed",
     tutorialWrong: "Not that one · follow the hint.",
     tutorialGood: "Nice.",
@@ -370,6 +397,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     dailyPoolNotConfigured: "Daily pool not configured yet",
     dailyPlay: "Play daily duel",
     achievementsTitle: "Achievements",
+    achievementsMenu: "ACHIEVEMENTS",
+    achievementsSubtitle: "Unlock badges by playing duels, daily mode, and on-chain verification.",
     claimReward: "Claim OG reward",
     shareCard: "Download share card",
     challengeLink: "Copy challenge link",
@@ -437,12 +466,14 @@ const LOCALES: Record<Language, LocaleStrings> = {
     hudBlindsight: "CIEGO-VISTA",
     actionFireHigh: "DISPARO ALTO",
     actionFireLow: "DISPARO BAJO",
-    actionDodge: "ESQUIVAR",
+    actionDodgeHigh: "ESQUIVA ALTA",
+    actionDodgeLow: "ESQUIVA BAJA",
     actionFeint: "FINTA",
     actionReload: "RECARGAR",
     actionDescFireHigh: "Disparo alto. Gana contra esquiva baja y finta.",
     actionDescFireLow: "Disparo bajo. Gana contra esquiva alta y recarga.",
-    actionDescDodge: "Esquivar · evitás el disparo de ZEGON esta ronda.",
+    actionDescDodgeHigh: "Esquiva alta · evita disparos bajos.",
+    actionDescDodgeLow: "Esquiva baja · evita disparos altos.",
     actionDescFeint: "Finta · rompe patrón. Solo te protege si ZEGON predijo mal.",
     actionDescReload: "Recargar · recuperás munición (quedás expuesto).",
     zegonPlayed: "ZEGON jugó",
@@ -484,6 +515,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryNoDamage: "Sin daño esta ronda",
     roundSummaryDeadeyeOn: "¡DEADEYE activado · próximo disparo letal!",
     roundSummaryDeadeyeUsed: "DEADEYE consumido",
+    roundSummaryMirrorStandoff: "Mismo disparo — tablas, sin daño",
+    roundSummaryMirrorReadHit:
+      "Disparo espejo · ZEGON te leyó, su bala igual te alcanza",
+    roundSummaryBlindsightFloor: "Ceguera-vista ya en cero",
     errorNoAmmo: "Sin munición · recargá primero.",
     tutorial: "TUTORIAL",
     tutorialTitle: "Bienvenido al duelo",
@@ -499,24 +534,33 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialDeadeyeTitle: "DEADEYE (Ojo de muerte)",
     tutorialDeadeyeBody:
       "Al 100% de ciego-vista, ZEGON entra en DEADEYE.\n\nSu próximo disparo es letal · casi imposible de esquivar si te leyó.\n\nMirá el flash ember y el aviso \"¡OJO DE MUERTE!\". Rompé patrones antes de que llegue al máximo.",
-    tutorialActionsTitle: "Cinco acciones",
+    tutorialActionsTitle: "Seis acciones",
     tutorialActionsBody:
-      "DISPARO ALTO / BAJO · dañan si ZEGON predijo mal.\n\nESQUIVAR · evita el tiro (salvo DEADEYE).\n\nFINTA · movimiento falso; rompe ritmo. NO es esquiva · si ZEGON predijo la finta y dispara, recibís daño.\n\nRECARGAR · recupera munición pero quedás expuesto.",
+      "DISPARO ALTO / BAJO · dañan si ZEGON predijo mal (y las alturas no chocan).\n\nESQUIVA ALTA · evita tiros bajos.\nESQUIVA BAJA · evita tiros altos.\n\nFINTA · movimiento falso; rompe ritmo. NO es esquiva · si ZEGON predijo la finta y dispara, recibís daño.\n\nRECARGAR · recupera munición pero quedás expuesto.",
+    tutorialPredictionTitle: "Predicción vs disparo espejo",
+    tutorialPredictionBody:
+      "Cada ronda ZEGON elige dos cosas antes de que actúes:\n\n1) Predicción · qué cree que vas a hacer (solo tu historial — nunca tu botón actual)\n2) Su jugada · lo que realmente hace\n\nDisparo espejo · los dos disparáis a la misma altura (alto-alto o bajo-bajo):\n• Nunca le quitás PS a ZEGON en un espejo — las balas se cruzan / tablas hacia él\n• Solo te lastima si predijo tu acción exacta y disparó a esa altura\n• Misma altura pero predicción errada · tablas totales, sin daño, baja el ciego-vista\n\nAlturas distintas siguen las reglas normales de impacto y esquiva.",
     tutorialAmmoTitle: "Munición",
     tutorialAmmoBody:
       "El revólver tiene 6 balas (MUNICIÓN ×N bajo tus PS).\n\nCada disparo gasta 1. Con 0 balas no podés disparar · hay que RECARGAR.\n\nRecargar mientras ZEGON dispara = te pegan.",
     tutorialPracticeTitle: "Ronda de práctica",
     tutorialPracticeBody:
-      "Ahora probá 5 jugadas guiadas contra un ZEGON scripteado.\n\nSeguí la barra de pistas sobre los botones. Solo la acción correcta estará habilitada.",
+      "Ahora probá jugadas guiadas contra un ZEGON scripteado — incluidos disparos espejo.\n\nSeguí la barra de pistas sobre los botones. Solo la acción correcta estará habilitada.",
     tutorialVerifyTitle: "VERIFY · juego limpio",
     tutorialVerifyBody:
       "Tras un duelo real podés VERIFY on-chain: ZEGON comprometió su jugada antes de que actúes, usando solo tu historial · nunca tu disparo actual.\n\nEsa es la prueba de IA sellada de 0G. Opcional, pero el corazón de ZEGON.",
     tutorialStepFire:
       "ZEGON predijo mal. Dispará · DISPARO ALTO o BAJO. Si acertás, ZEGON pierde PS.",
     tutorialStepDodge:
-      "ZEGON dispara alto. ESQUIVÁ · no recibís daño esta ronda.",
+      "ZEGON dispara alto. Usá ESQUIVA BAJA · te agachás bajo el tiro.",
     tutorialStepRead:
-      "ZEGON predijo DISPARO BAJO. Usá DISPARO BAJO igual · mirá cómo sube +15 el ciego-vista (te leyó).",
+      "Espejo · los dos DISPARO ALTO. ZEGON predijo DISPARO ALTO (te leyó). Dispará alto igual · vos recibís daño, él no — así cae la predicción.",
+    tutorialStepMirrorStandoff:
+      "Otro espejo · los dos DISPARO ALTO, pero ZEGON predijo RECARGAR (mal). Misma altura, sin lectura · tablas, cero daño.",
+    tutorialFeedbackMirrorRead:
+      "Espejo + lectura · ZEGON adivinó tu disparo exacto, su bala te pega",
+    tutorialFeedbackMirrorStandoff:
+      "Espejo + error · misma altura, pero no te leyó — tablas",
     tutorialStepFeint:
       "ZEGON espera otro disparo. FINTA · rompé el patrón; baja el ciego-vista si predijo mal.",
     tutorialStepReload:
@@ -524,10 +568,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialStepDamage:
       "RECARGÁ otra vez · ZEGON dispara. Mirá bajar tus PS (−daño).",
     tutorialStepDeadeye:
-      "¡DEADEYE activo! ZEGON dispara · ESQUIVÁ si podés (casi letal).",
+      "¡DEADEYE activo! ZEGON dispara alto · ESQUIVA BAJA si podés (casi letal si te leyó).",
     tutorialComplete: "Tutorial completado",
     tutorialCompleteBody:
-      "Aprendiste PS, ciego-vista, DEADEYE, las cinco acciones y la munición.\n\nEstás listo para un duelo real.",
+      "Aprendiste PS, ciego-vista, DEADEYE, predicciones, disparos espejo, las seis acciones y la munición.\n\nEstás listo para un duelo real.",
     tutorialCompleteBadge: "Completado",
     tutorialWrong: "Esa no · seguí la pista.",
     tutorialGood: "Bien.",
@@ -584,6 +628,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     dailyPoolNotConfigured: "Pool diario aún no configurado",
     dailyPlay: "Jugar duelo diario",
     achievementsTitle: "Logros",
+    achievementsMenu: "LOGROS",
+    achievementsSubtitle: "Desbloqueá insignias jugando duelos, el modo diario y verificación on-chain.",
     claimReward: "Reclamar premio OG",
     shareCard: "Descargar tarjeta",
     challengeLink: "Copiar link de desafío",

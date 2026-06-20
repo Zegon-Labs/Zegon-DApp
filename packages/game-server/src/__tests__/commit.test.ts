@@ -7,7 +7,7 @@ import { zegonActionToUint8 } from "../services/moveMapping.js";
 
 describe("commit hash alignment with Solidity", () => {
   it("produces valid bytes32 commit hashes", () => {
-    const { commitHash } = computeCommitHash(ZegonAction.DODGE);
+    const { commitHash } = computeCommitHash(ZegonAction.DODGE_LOW);
     expect(commitHash).toMatch(/^0x[a-f0-9]{64}$/);
   });
 
@@ -18,7 +18,7 @@ describe("commit hash alignment with Solidity", () => {
   });
 
   it("verifyCommit rejects wrong salt", () => {
-    const move = ZegonAction.DODGE;
+    const move = ZegonAction.DODGE_HIGH;
     const { commitHash } = computeCommitHash(move);
     expect(
       verifyCommit(move, randomBytes(32).toString("hex"), commitHash),

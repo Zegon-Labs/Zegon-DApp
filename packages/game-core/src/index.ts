@@ -3,6 +3,7 @@ export * from "./constants/index.js";
 export * from "./weapons/registry.js";
 export * from "./blindsight/blindsight.js";
 export * from "./validation/actionValidator.js";
+export * from "./combat/dodge.js";
 export * from "./combat/resolveRound.js";
 export * from "./state/duelStateMachine.js";
 export * from "./state/duelController.js";

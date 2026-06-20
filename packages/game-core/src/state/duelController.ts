@@ -241,11 +241,14 @@ export class DuelController {
   }
 
   private advanceAfterRound(): void {
-    if (
-      this.state.playerHp <= 0 ||
-      this.state.zegonHp <= 0 ||
-      this.state.roundIndex + 1 >= this.state.config.maxRounds
-    ) {
+    if (this.state.playerHp <= 0 || this.state.zegonHp <= 0) {
+      this.state = transitionPhase(this.state, DuelPhase.DUEL_END);
+      this.emit({ type: "phaseChange" });
+      this.emit({ type: "duelEnd", result: this.getResult() });
+      return;
+    }
+
+    if (this.state.roundIndex + 1 >= this.state.config.maxRounds) {
       this.state = transitionPhase(this.state, DuelPhase.DUEL_END);
       this.emit({ type: "phaseChange" });
       this.emit({ type: "duelEnd", result: this.getResult() });

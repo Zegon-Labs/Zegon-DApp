@@ -62,7 +62,8 @@ function actionLabel(action: PlayerAction | string): string {
   const map: Record<string, string> = {
     [PlayerAction.FIRE_HIGH]: strings.actionFireHigh,
     [PlayerAction.FIRE_LOW]: strings.actionFireLow,
-    [PlayerAction.DODGE]: strings.actionDodge,
+    [PlayerAction.DODGE_HIGH]: strings.actionDodgeHigh,
+    [PlayerAction.DODGE_LOW]: strings.actionDodgeLow,
     [PlayerAction.FEINT]: strings.actionFeint,
     [PlayerAction.RELOAD]: strings.actionReload,
   };
@@ -74,7 +75,8 @@ function actionDescription(action: PlayerAction): string {
   return {
     [PlayerAction.FIRE_HIGH]: strings.actionDescFireHigh,
     [PlayerAction.FIRE_LOW]: strings.actionDescFireLow,
-    [PlayerAction.DODGE]: strings.actionDescDodge,
+    [PlayerAction.DODGE_HIGH]: strings.actionDescDodgeHigh,
+    [PlayerAction.DODGE_LOW]: strings.actionDescDodgeLow,
     [PlayerAction.FEINT]: strings.actionDescFeint,
     [PlayerAction.RELOAD]: strings.actionDescReload,
   }[action];
@@ -384,7 +386,8 @@ export class DuelScene extends Phaser.Scene {
         this.playFireFlash();
       });
     } else if (
-      outcome.zegonDecision.zegonMove === "DODGE" ||
+      outcome.zegonDecision.zegonMove === "DODGE_HIGH" ||
+      outcome.zegonDecision.zegonMove === "DODGE_LOW" ||
       outcome.zegonDecision.zegonMove === "FEINT" ||
       outcome.zegonDecision.zegonMove === "RELOAD"
     ) {

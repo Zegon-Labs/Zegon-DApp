@@ -40,7 +40,7 @@ describe("archetypes", () => {
       PlayerAction.FIRE_HIGH,
       {
         predictedPlayerMove: PlayerAction.FIRE_HIGH,
-        zegonMove: ZegonAction.DODGE,
+        zegonMove: ZegonAction.DODGE_LOW,
         confidence: 0.8,
         taunt: "test",
       },
@@ -67,14 +67,14 @@ describe("archetypes", () => {
       },
       PlayerAction.RELOAD,
       {
-        predictedPlayerMove: PlayerAction.DODGE,
+        predictedPlayerMove: PlayerAction.DODGE_LOW,
         zegonMove: ZegonAction.FIRE_HIGH,
         confidence: 0.5,
         taunt: "test",
       },
     );
 
-    expect(outcome.playerDamage).toBe(Math.round(25 * 0.5 * 0.85));
+    expect(outcome.playerDamage).toBe(Math.round(20 * 0.5 * 0.85));
   });
 
   it("gambler picks rotating weapons from seed", () => {

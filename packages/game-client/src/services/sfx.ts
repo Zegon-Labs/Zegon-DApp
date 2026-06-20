@@ -143,7 +143,8 @@ export function applySfxVolume(): void {
 const ACTION_SFX: Partial<Record<PlayerAction, SfxId>> = {
   [PlayerAction.FIRE_HIGH]: "fire_high",
   [PlayerAction.FIRE_LOW]: "fire_low",
-  [PlayerAction.DODGE]: "dodge",
+  [PlayerAction.DODGE_HIGH]: "dodge",
+  [PlayerAction.DODGE_LOW]: "dodge",
   [PlayerAction.FEINT]: "feint",
   [PlayerAction.RELOAD]: "reload",
 };
@@ -215,7 +216,8 @@ export function playZegonMoveSfx(move: string): void {
   const map: Record<string, SfxId> = {
     FIRE_HIGH: "fire_high",
     FIRE_LOW: "fire_low",
-    DODGE: "dodge",
+    DODGE_HIGH: "dodge",
+    DODGE_LOW: "dodge",
     FEINT: "feint",
     RELOAD: "reload",
   };

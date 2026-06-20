@@ -2,6 +2,7 @@ export type AppView =
   | { type: "hub" }
   | { type: "settings" }
   | { type: "leaderboard" }
+  | { type: "achievements" }
   | { type: "game" };
 
 type NavigateListener = (view: AppView) => void;

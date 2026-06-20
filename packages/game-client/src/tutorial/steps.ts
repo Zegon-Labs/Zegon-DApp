@@ -31,20 +31,28 @@ export function buildTutorialScripts(locale: "en" | "es"): ScriptedRound[] {
     ? [
         "No veo… pero escucho tus pasos.",
         "Alto. Te tengo en la mira.",
-        "Te leí. La venda brilla.",
+        "Leí tu disparo. Alto contra alto.",
+        "Recargás… ¿o no?",
+        "Otra vez el mismo ritmo…",
         "Sin balas. Momento perfecto.",
+        "Recargar frente a un ciego… valiente.",
+        "¡DEADEYE! No escapás.",
       ]
     : [
         "I can't see… but I hear your steps.",
         "Hold still. I've got you.",
-        "Read you. The band glows.",
+        "Read your shot. High against high.",
+        "Reloading… or are you?",
+        "Same rhythm again…",
         "Out of ammo. Perfect moment.",
+        "Reloading against a blind man… bold.",
+        "DEADEYE! You won't escape.",
       ];
 
   return [
     {
       decision: {
-        predictedPlayerMove: PlayerAction.DODGE,
+        predictedPlayerMove: PlayerAction.DODGE_LOW,
         zegonMove: ZegonAction.RELOAD,
         confidence: 0.3,
         taunt: taunts[0]!,
@@ -60,10 +68,18 @@ export function buildTutorialScripts(locale: "en" | "es"): ScriptedRound[] {
     },
     {
       decision: {
-        predictedPlayerMove: PlayerAction.FIRE_LOW,
-        zegonMove: ZegonAction.FEINT,
-        confidence: 0.9,
+        predictedPlayerMove: PlayerAction.FIRE_HIGH,
+        zegonMove: ZegonAction.FIRE_HIGH,
+        confidence: 0.95,
         taunt: taunts[2]!,
+      },
+    },
+    {
+      decision: {
+        predictedPlayerMove: PlayerAction.RELOAD,
+        zegonMove: ZegonAction.FIRE_HIGH,
+        confidence: 0.35,
+        taunt: taunts[3]!,
       },
     },
     {
@@ -71,7 +87,7 @@ export function buildTutorialScripts(locale: "en" | "es"): ScriptedRound[] {
         predictedPlayerMove: PlayerAction.FIRE_HIGH,
         zegonMove: ZegonAction.RELOAD,
         confidence: 0.4,
-        taunt: locale === "es" ? "Otra vez el mismo ritmo…" : "Same rhythm again…",
+        taunt: taunts[4]!,
       },
     },
     {
@@ -79,7 +95,7 @@ export function buildTutorialScripts(locale: "en" | "es"): ScriptedRound[] {
         predictedPlayerMove: PlayerAction.RELOAD,
         zegonMove: ZegonAction.FIRE_HIGH,
         confidence: 0.4,
-        taunt: taunts[3]!,
+        taunt: taunts[5]!,
       },
     },
     {
@@ -87,15 +103,15 @@ export function buildTutorialScripts(locale: "en" | "es"): ScriptedRound[] {
         predictedPlayerMove: PlayerAction.RELOAD,
         zegonMove: ZegonAction.FIRE_LOW,
         confidence: 0.85,
-        taunt: locale === "es" ? "Recargar frente a un ciego… valiente." : "Reloading against a blind man… bold.",
+        taunt: taunts[6]!,
       },
     },
     {
       decision: {
-        predictedPlayerMove: PlayerAction.DODGE,
+        predictedPlayerMove: PlayerAction.DODGE_LOW,
         zegonMove: ZegonAction.FIRE_HIGH,
         confidence: 1,
-        taunt: locale === "es" ? "¡DEADEYE! No escapás." : "DEADEYE! You won't escape.",
+        taunt: taunts[7]!,
       },
     },
   ];

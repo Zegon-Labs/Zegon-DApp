@@ -232,6 +232,13 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             <button
               type="button"
               className="btn btn--menu"
+              onClick={() => gameBridge.navigate({ type: "achievements" })}
+            >
+              {strings.achievementsMenu}
+            </button>
+            <button
+              type="button"
+              className="btn btn--menu"
               onClick={() => gameBridge.navigate({ type: "settings" })}
             >
               {strings.settings}

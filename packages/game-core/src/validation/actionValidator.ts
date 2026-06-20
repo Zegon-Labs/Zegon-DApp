@@ -48,7 +48,8 @@ export function getAvailableActions(
   }
 
   const actions: PlayerAction[] = [
-    PlayerAction.DODGE,
+    PlayerAction.DODGE_HIGH,
+    PlayerAction.DODGE_LOW,
     PlayerAction.FEINT,
     PlayerAction.RELOAD,
   ];

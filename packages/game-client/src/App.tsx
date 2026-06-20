@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Toaster } from "sileo";
 import { HeroHub } from "./components/HeroHub.js";
+import { AchievementsPanel } from "./components/AchievementsPanel.js";
 import { LeaderboardPanel } from "./components/LeaderboardPanel.js";
 import { PhaserHost } from "./components/PhaserHost.js";
 import { ProfileSetupModal } from "./components/ProfileSetupModal.js";
@@ -95,6 +96,12 @@ export default function App() {
         <>
           <HeroHub />
           <LeaderboardPanel />
+        </>
+      )}
+      {!inGame && view.type === "achievements" && (
+        <>
+          <HeroHub />
+          <AchievementsPanel />
         </>
       )}
       <PhaserHost visible={inGame} />

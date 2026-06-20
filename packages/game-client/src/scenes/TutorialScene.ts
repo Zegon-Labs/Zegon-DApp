@@ -48,12 +48,21 @@ import {
   ScriptedZegonBrain,
 } from "../tutorial/steps.js";
 
+function isMirrorFireOutcome(outcome: RoundOutcome): boolean {
+  const zegonMove = outcome.zegonDecision.zegonMove;
+  return (
+    (outcome.playerAction === PlayerAction.FIRE_HIGH && zegonMove === "FIRE_HIGH") ||
+    (outcome.playerAction === PlayerAction.FIRE_LOW && zegonMove === "FIRE_LOW")
+  );
+}
+
 function actionLabel(action: PlayerAction): string {
   const strings = t();
   return {
     [PlayerAction.FIRE_HIGH]: strings.actionFireHigh,
     [PlayerAction.FIRE_LOW]: strings.actionFireLow,
-    [PlayerAction.DODGE]: strings.actionDodge,
+    [PlayerAction.DODGE_HIGH]: strings.actionDodgeHigh,
+    [PlayerAction.DODGE_LOW]: strings.actionDodgeLow,
     [PlayerAction.FEINT]: strings.actionFeint,
     [PlayerAction.RELOAD]: strings.actionReload,
   }[action];
@@ -389,6 +398,26 @@ export class TutorialScene extends Phaser.Scene {
     });
     if (outcome.deadeyeTriggered) {
       this.statusText.setText(strings.roundSummaryDeadeyeOn).setColor(COLORS.ember);
+    } else if (
+      isMirrorFireOutcome(outcome) &&
+      outcome.predictionCorrect &&
+      outcome.playerDamage > 0
+    ) {
+      const anchor = this.combatHud.playerDamageAnchor();
+      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
+      this.statusText.setText(
+        `${strings.tutorialGood} · ${strings.tutorialFeedbackMirrorRead}`,
+      ).setColor(COLORS.ember);
+      this.cameras.main.flash(120, 179, 18, 43);
+    } else if (
+      isMirrorFireOutcome(outcome) &&
+      !outcome.predictionCorrect &&
+      outcome.playerDamage === 0 &&
+      outcome.zegonDamage === 0
+    ) {
+      this.statusText.setText(
+        `${strings.tutorialGood} · ${strings.tutorialFeedbackMirrorStandoff}`,
+      ).setColor(COLORS.bone);
     } else if (outcome.predictionCorrect) {
       this.statusText.setText(
         `${strings.tutorialGood} · ${strings.roundSummaryRead} (+15 ${strings.hudBlindsight})`,

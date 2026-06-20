@@ -42,10 +42,15 @@ export function applyBlindsight(
   delta: number,
   modifiers?: DuelModifiers,
 ): BlindsightResult {
+  if (current <= BLINDSIGHT.MIN && delta < 0) {
+    return { value: BLINDSIGHT.MIN, isDeadeye: false, delta: 0 };
+  }
+
   const value = clampBlindsight(current + delta);
   const threshold = getEffectiveDeadeyeThreshold(modifiers);
   const isDeadeye = value >= threshold;
-  return { value, isDeadeye, delta };
+  const appliedDelta = value - current;
+  return { value, isDeadeye, delta: appliedDelta };
 }
 
 export function shouldTriggerDeadeye(

@@ -18,20 +18,127 @@ const baseCtx = {
 };
 
 describe("resolveRound", () => {
-  it("player FIRE hits when prediction wrong", () => {
+  it("mirror fire standoff when ZEGON fails to read", () => {
     const outcome = resolveRound(
       baseCtx,
       PlayerAction.FIRE_HIGH,
       {
-        predictedPlayerMove: PlayerAction.DODGE,
+        predictedPlayerMove: PlayerAction.DODGE_LOW,
         zegonMove: ZegonAction.FIRE_HIGH,
         confidence: 0.5,
         taunt: "test",
       },
     );
-    expect(outcome.zegonDamage).toBe(25);
+    expect(outcome.playerDamage).toBe(0);
+    expect(outcome.zegonDamage).toBe(0);
+    expect(outcome.predictionCorrect).toBe(false);
+  });
+
+  it("mirror fire hits player when ZEGON reads correctly", () => {
+    const outcome = resolveRound(
+      baseCtx,
+      PlayerAction.FIRE_HIGH,
+      {
+        predictedPlayerMove: PlayerAction.FIRE_HIGH,
+        zegonMove: ZegonAction.FIRE_HIGH,
+        confidence: 0.9,
+        taunt: "test",
+      },
+    );
+    expect(outcome.playerDamage).toBe(20);
+    expect(outcome.zegonDamage).toBe(0);
+    expect(outcome.predictionCorrect).toBe(true);
+  });
+
+  it("player FIRE hits when prediction wrong and shots differ", () => {
+    const outcome = resolveRound(
+      baseCtx,
+      PlayerAction.FIRE_HIGH,
+      {
+        predictedPlayerMove: PlayerAction.DODGE_LOW,
+        zegonMove: ZegonAction.FIRE_LOW,
+        confidence: 0.5,
+        taunt: "test",
+      },
+    );
+    expect(outcome.zegonDamage).toBe(20);
     expect(outcome.playerDamage).toBe(0);
     expect(outcome.predictionCorrect).toBe(false);
+  });
+
+  it("DODGE LOW avoids ZEGON fire high", () => {
+    const outcome = resolveRound(
+      baseCtx,
+      PlayerAction.DODGE_LOW,
+      {
+        predictedPlayerMove: PlayerAction.FIRE_HIGH,
+        zegonMove: ZegonAction.FIRE_HIGH,
+        confidence: 0.5,
+        taunt: "test",
+      },
+    );
+    expect(outcome.playerDamage).toBe(0);
+    expect(outcome.zegonDamage).toBe(0);
+  });
+
+  it("DODGE HIGH avoids ZEGON fire low", () => {
+    const outcome = resolveRound(
+      baseCtx,
+      PlayerAction.DODGE_HIGH,
+      {
+        predictedPlayerMove: PlayerAction.FIRE_LOW,
+        zegonMove: ZegonAction.FIRE_LOW,
+        confidence: 0.5,
+        taunt: "test",
+      },
+    );
+    expect(outcome.playerDamage).toBe(0);
+    expect(outcome.zegonDamage).toBe(0);
+  });
+
+  it("wrong dodge direction gets hit", () => {
+    const outcome = resolveRound(
+      baseCtx,
+      PlayerAction.DODGE_HIGH,
+      {
+        predictedPlayerMove: PlayerAction.DODGE_HIGH,
+        zegonMove: ZegonAction.FIRE_HIGH,
+        confidence: 0.5,
+        taunt: "test",
+      },
+    );
+    expect(outcome.playerDamage).toBe(20);
+    expect(outcome.zegonDamage).toBe(0);
+  });
+
+  it("FIRE LOW hits ZEGON dodging low (wrong direction)", () => {
+    const outcome = resolveRound(
+      baseCtx,
+      PlayerAction.FIRE_LOW,
+      {
+        predictedPlayerMove: PlayerAction.DODGE_LOW,
+        zegonMove: ZegonAction.DODGE_LOW,
+        confidence: 0.2,
+        taunt: "test",
+      },
+    );
+    expect(outcome.zegonDamage).toBe(20);
+    expect(outcome.playerDamage).toBe(0);
+  });
+
+  it("FIRE LOW misses ZEGON dodging high (correct direction)", () => {
+    const outcome = resolveRound(
+      baseCtx,
+      PlayerAction.FIRE_LOW,
+      {
+        predictedPlayerMove: PlayerAction.FIRE_HIGH,
+        zegonMove: ZegonAction.DODGE_HIGH,
+        confidence: 0.2,
+        taunt: "test",
+      },
+    );
+    expect(outcome.zegonDamage).toBe(0);
+    expect(outcome.playerDamage).toBe(0);
   });
 
   it("player FIRE fails when predicted correctly", () => {
@@ -40,7 +147,7 @@ describe("resolveRound", () => {
       PlayerAction.FIRE_HIGH,
       {
         predictedPlayerMove: PlayerAction.FIRE_HIGH,
-        zegonMove: ZegonAction.DODGE,
+        zegonMove: ZegonAction.DODGE_LOW,
         confidence: 0.8,
         taunt: "test",
       },
@@ -48,21 +155,6 @@ describe("resolveRound", () => {
     expect(outcome.playerDamage).toBe(0);
     expect(outcome.zegonDamage).toBe(0);
     expect(outcome.predictionCorrect).toBe(true);
-  });
-
-  it("DODGE avoids zegon fire", () => {
-    const outcome = resolveRound(
-      baseCtx,
-      PlayerAction.DODGE,
-      {
-        predictedPlayerMove: PlayerAction.FIRE_HIGH,
-        zegonMove: ZegonAction.FIRE_HIGH,
-        confidence: 0.5,
-        taunt: "test",
-      },
-    );
-    expect(outcome.playerDamage).toBe(0);
-    expect(outcome.zegonDamage).toBe(0);
   });
 
   it("FEINT lowers blindsight", () => {
@@ -85,7 +177,7 @@ describe("resolveRound", () => {
       baseCtx,
       PlayerAction.RELOAD,
       {
-        predictedPlayerMove: PlayerAction.DODGE,
+        predictedPlayerMove: PlayerAction.DODGE_LOW,
         zegonMove: ZegonAction.FIRE_HIGH,
         confidence: 0.3,
         taunt: "test",
@@ -95,12 +187,12 @@ describe("resolveRound", () => {
     expect(outcome.ammoAfter).toBe(6);
   });
 
-  it("DEADEYE guarantees zegon hit", () => {
+  it("DEADEYE pierces correct dodge when ZEGON read you", () => {
     const outcome = resolveRound(
       { ...baseCtx, isDeadeye: true },
-      PlayerAction.DODGE,
+      PlayerAction.DODGE_LOW,
       {
-        predictedPlayerMove: PlayerAction.DODGE,
+        predictedPlayerMove: PlayerAction.DODGE_LOW,
         zegonMove: ZegonAction.FIRE_HIGH,
         confidence: 0.9,
         taunt: "test",
@@ -115,8 +207,8 @@ describe("resolveRound", () => {
       baseCtx,
       PlayerAction.FIRE_LOW,
       {
-        predictedPlayerMove: PlayerAction.DODGE,
-        zegonMove: ZegonAction.DODGE,
+        predictedPlayerMove: PlayerAction.DODGE_HIGH,
+        zegonMove: ZegonAction.DODGE_HIGH,
         confidence: 0.2,
         taunt: "test",
       },

@@ -1,4 +1,9 @@
 import { COMBAT } from "../constants/index.js";
+import {
+  dodgeAvoidsShot,
+  isPlayerDodge,
+  isZegonDodge,
+} from "./dodge.js";
 import { applyZegonDamageMultiplier } from "../modes/zegonArchetypes.js";
 import { computeBlindsightFromOutcome } from "../blindsight/blindsight.js";
 import { getWeapon } from "../weapons/registry.js";
@@ -16,6 +21,17 @@ function isZegonFire(action: ZegonAction): boolean {
   return action === ZegonAction.FIRE_HIGH || action === ZegonAction.FIRE_LOW;
 }
 
+function isMirrorFire(
+  playerAction: PlayerAction,
+  zegonMove: ZegonAction,
+): boolean {
+  return (
+    (playerAction === PlayerAction.FIRE_HIGH &&
+      zegonMove === ZegonAction.FIRE_HIGH) ||
+    (playerAction === PlayerAction.FIRE_LOW && zegonMove === ZegonAction.FIRE_LOW)
+  );
+}
+
 function zegonHitsPlayer(
   zegonMove: ZegonAction,
   playerAction: PlayerAction,
@@ -27,11 +43,16 @@ function zegonHitsPlayer(
   }
 
   if (isDeadeye) {
-    return playerAction !== PlayerAction.DODGE || predictionCorrect;
+    if (isPlayerDodge(playerAction) && isZegonFire(zegonMove)) {
+      if (predictionCorrect) return true;
+      return !dodgeAvoidsShot(playerAction, zegonMove);
+    }
+    return predictionCorrect;
   }
 
-  if (playerAction === PlayerAction.DODGE) {
-    return false;
+  if (isPlayerDodge(playerAction)) {
+    if (!isZegonFire(zegonMove)) return false;
+    return !dodgeAvoidsShot(playerAction, zegonMove);
   }
 
   if (playerAction === PlayerAction.RELOAD) {
@@ -43,6 +64,9 @@ function zegonHitsPlayer(
   }
 
   if (isFireAction(playerAction)) {
+    if (isMirrorFire(playerAction, zegonMove)) {
+      return predictionCorrect;
+    }
     return predictionCorrect;
   }
 
@@ -59,6 +83,10 @@ function playerHitsZegon(
     return false;
   }
 
+  if (isMirrorFire(playerAction, zegonMove)) {
+    return false;
+  }
+
   if (predictionCorrect) {
     return false;
   }
@@ -67,8 +95,8 @@ function playerHitsZegon(
     return false;
   }
 
-  if (zegonMove === ZegonAction.DODGE) {
-    return false;
+  if (isZegonDodge(zegonMove)) {
+    return !dodgeAvoidsShot(zegonMove, playerAction);
   }
 
   return true;
@@ -116,7 +144,6 @@ export function resolveRound(
   zegonDecision: ZegonDecision,
   logMeta: Partial<RoundLogEntry> = {},
 ): RoundOutcome {
-  const weapon = getWeapon(ctx.weapon);
   const predictionCorrect =
     zegonDecision.predictedPlayerMove === playerAction;
 
@@ -142,7 +169,7 @@ export function resolveRound(
   if (zegonHits) {
     playerDamage = applyZegonDamageMultiplier(
       computeDamage(
-        weapon.damage,
+        COMBAT.HIT_DAMAGE,
         ctx.isDeadeye,
         isReloadVulnerable,
       ),
@@ -151,7 +178,7 @@ export function resolveRound(
   }
 
   if (playerHits) {
-    zegonDamage = weapon.damage;
+    zegonDamage = COMBAT.HIT_DAMAGE;
   }
 
   const ammoAfter = computeAmmoAfter(playerAction, ctx.ammo, ctx.weapon);

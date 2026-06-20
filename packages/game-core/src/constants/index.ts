@@ -2,7 +2,10 @@ import { WeaponId } from "../types/index.js";
 
 export const COMBAT = {
   INITIAL_HP: 100,
-  MAX_ROUNDS: 9,
+  /** Safety cap — duels end on HP, not round count. */
+  MAX_ROUNDS: 999,
+  /** Fixed damage per connected hit (5 skulls × 20 = 100 HP). */
+  HIT_DAMAGE: 20,
   RELOAD_VULNERABILITY_DAMAGE_MULTIPLIER: 0.5,
   DEADEYE_DAMAGE_MULTIPLIER: 1.5,
   DEADEYE_POST_CONSUME_BLINDSIGHT: 70,
