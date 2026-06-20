@@ -8,6 +8,7 @@ export type TutorialSegment =
       allowedActions: PlayerAction[];
       roundIndex: number;
       forceAmmoZero?: boolean;
+      forceDeadeye?: boolean;
     }
   | { kind: "finish"; titleKey: string; bodyKey: string };
 
@@ -49,6 +50,20 @@ export const TUTORIAL_FLOW: TutorialSegment[] = [
     allowedActions: [PlayerAction.RELOAD],
     roundIndex: 4,
     forceAmmoZero: true,
+  },
+  {
+    kind: "practice",
+    instructionKey: "tutorialStepDamage",
+    allowedActions: [PlayerAction.RELOAD],
+    roundIndex: 5,
+    forceAmmoZero: true,
+  },
+  {
+    kind: "practice",
+    instructionKey: "tutorialStepDeadeye",
+    allowedActions: [PlayerAction.DODGE],
+    roundIndex: 6,
+    forceDeadeye: true,
   },
   { kind: "modal", titleKey: "tutorialVerifyTitle", bodyKey: "tutorialVerifyBody" },
   { kind: "finish", titleKey: "tutorialComplete", bodyKey: "tutorialCompleteBody" },

@@ -13,7 +13,12 @@ import {
   handleVerify,
   handleGetPlayerProfile,
   handleSetPlayerProfile,
+  handleUpdateProfileStats,
+  handleDailyPoolInfo,
+  handleDailyClaim,
+  handleDailyEnterCheck,
 } from "./handlers/duelHandlers.js";
+import { handleHealth } from "./handlers/healthHandler.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 
@@ -45,6 +50,46 @@ const server = createServer(async (req, res) => {
   const url = req.url ?? "/";
 
   try {
+    if (url === "/api/health" && req.method === "GET") {
+      const result = await handleHealth();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.startsWith("/api/daily/pool") && req.method === "GET") {
+      const parsed = new URL(url, "http://localhost");
+      const seed = parsed.searchParams.get("seed") ?? undefined;
+      const result = await handleDailyPoolInfo(seed);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/daily/enter-check" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleDailyEnterCheck>[0];
+      const result = await handleDailyEnterCheck(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/daily/claim" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleDailyClaim>[0];
+      const result = await handleDailyClaim(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/profile/stats" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleUpdateProfileStats>[0];
+      const result = await handleUpdateProfileStats(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
     if (url === "/api/duel/start" && req.method === "POST") {
       const body = (await parseBody(req)) as Parameters<typeof handleStartDuel>[0];
       const result = await handleStartDuel(body);

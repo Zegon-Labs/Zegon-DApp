@@ -31,6 +31,7 @@ export interface OnChainRound {
 export class ContractService {
   private contract: ethers.Contract | null = null;
   private signer: ethers.Wallet | null = null;
+  private provider: ethers.JsonRpcProvider | null = null;
   private contractAddress: string | null = null;
 
   constructor() {
@@ -38,12 +39,17 @@ export class ContractService {
     const pk = process.env.SERVER_WALLET_PRIVATE_KEY;
     const address = process.env.ZEGON_DUEL_CONTRACT_ADDRESS;
 
+    this.provider = new ethers.JsonRpcProvider(rpc);
+
     if (pk && address) {
-      const provider = new ethers.JsonRpcProvider(rpc);
-      this.signer = new ethers.Wallet(pk, provider);
+      this.signer = new ethers.Wallet(pk, this.provider);
       this.contractAddress = address;
       this.contract = new ethers.Contract(address, ZEGON_DUEL_ABI, this.signer);
     }
+  }
+
+  getProvider(): ethers.JsonRpcProvider | null {
+    return this.provider;
   }
 
   isConfigured(): boolean {

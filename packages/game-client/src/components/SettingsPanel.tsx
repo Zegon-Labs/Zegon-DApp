@@ -24,6 +24,30 @@ import {
   onWalletChange,
   truncateAddress,
 } from "../services/wallet.js";
+import { ACHIEVEMENTS } from "@zegon/game-core";
+
+function AchievementsList() {
+  const { language: lang } = useLocale();
+  const wallet = getWalletAddress();
+  const profile = wallet ? getCachedProfile(wallet) : null;
+  const unlocked = new Set(profile?.achievements ?? []);
+
+  return (
+    <ul className="achievements-list">
+      {Object.values(ACHIEVEMENTS).map((a) => {
+        const done = unlocked.has(a.id);
+        const name = lang === "es" ? a.nameEs : a.nameEn;
+        const desc = lang === "es" ? a.descEs : a.descEn;
+        return (
+          <li key={a.id} className={done ? "achievements-list__item--done" : ""}>
+            <strong>{done ? "✓ " : ""}{name}</strong>
+            <span>{desc}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 function SettingsSection({
   title,
@@ -276,6 +300,10 @@ export function SettingsPanel() {
             checked={prefs.showActionHints}
             onChange={(v) => savePrefs({ showActionHints: v })}
           />
+        </SettingsSection>
+
+        <SettingsSection title={strings.achievementsTitle}>
+          <AchievementsList />
         </SettingsSection>
 
         <button

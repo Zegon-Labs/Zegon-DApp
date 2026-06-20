@@ -82,6 +82,22 @@ export function buildTutorialScripts(locale: "en" | "es"): ScriptedRound[] {
         taunt: taunts[3]!,
       },
     },
+    {
+      decision: {
+        predictedPlayerMove: PlayerAction.RELOAD,
+        zegonMove: ZegonAction.FIRE_LOW,
+        confidence: 0.85,
+        taunt: locale === "es" ? "Recargar frente a un ciego… valiente." : "Reloading against a blind man… bold.",
+      },
+    },
+    {
+      decision: {
+        predictedPlayerMove: PlayerAction.DODGE,
+        zegonMove: ZegonAction.FIRE_HIGH,
+        confidence: 1,
+        taunt: locale === "es" ? "¡DEADEYE! No escapás." : "DEADEYE! You won't escape.",
+      },
+    },
   ];
 }
 

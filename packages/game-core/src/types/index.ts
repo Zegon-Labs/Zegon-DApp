@@ -54,6 +54,8 @@ export interface RoundContext {
   ammo: number;
   blindsight: number;
   isDeadeye: boolean;
+  modifiers?: DuelModifiers;
+  archetype?: string;
 }
 
 export interface ZegonDecision {
@@ -95,6 +97,13 @@ export interface RoundOutcome {
   log: RoundLogEntry;
 }
 
+export interface DuelModifiers {
+  blindsightOnCorrect?: number;
+  deadeyeThreshold?: number;
+  zegonDodgeBias?: number;
+  zegonDamageMultiplier?: number;
+}
+
 export interface DuelConfig {
   maxRounds: number;
   initialPlayerHp: number;
@@ -102,6 +111,8 @@ export interface DuelConfig {
   weapon: WeaponId;
   seed?: string;
   mode: "standard" | "daily" | "challenge";
+  archetype?: string;
+  modifiers?: DuelModifiers;
 }
 
 export interface DuelState {

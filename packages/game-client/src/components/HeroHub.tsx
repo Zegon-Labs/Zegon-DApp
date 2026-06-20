@@ -12,6 +12,15 @@ import {
 } from "../services/wallet.js";
 import { fetchProfile, hasNickname } from "../services/profile.js";
 import { isTutorialDone } from "../tutorial/steps.js";
+import { ArchetypeSelector } from "./ArchetypeSelector.js";
+import type { ZegonArchetypeId } from "@zegon/game-core";
+import { getDailyArchetype } from "@zegon/game-core";
+import {
+  checkDailyEntered,
+  enterDailyPool,
+  fetchDailyPool,
+} from "../services/dailyStake.js";
+import { fetchHealth } from "../services/health.js";
 
 interface HeroHubProps {
   onNeedsProfile?: (address: string) => void;
@@ -37,10 +46,29 @@ function LockIcon() {
 }
 
 export function HeroHub({ onNeedsProfile }: HeroHubProps) {
-  const { strings } = useLocale();
+  const { strings, language: lang } = useLocale();
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
+  const [archetype, setArchetype] = useState<ZegonArchetypeId>("reader");
+  const [poolInfo, setPoolInfo] = useState<Awaited<ReturnType<typeof fetchDailyPool>> | null>(null);
+  const [staked, setStaked] = useState(false);
+  const [brainLabel, setBrainLabel] = useState("…");
+
+  const dailyArch = getDailyArchetype();
+  const dailyArchName = lang === "es" ? dailyArch.nameEs : dailyArch.nameEn;
 
   useEffect(() => onWalletChange(setWallet), []);
+
+  useEffect(() => {
+    void fetchDailyPool().then(setPoolInfo);
+    void fetchHealth().then((h) => {
+      setBrainLabel(h.brainMode === "tee" ? "0G TEE" : "Dummy Brain");
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!wallet || !poolInfo?.seed) return;
+    void checkDailyEntered(poolInfo.seed, wallet).then(setStaked);
+  }, [wallet, poolInfo?.seed]);
 
   const tutorialLabel = isTutorialDone()
     ? `${strings.tutorial} ${strings.tutorialDoneBadge}`
@@ -68,6 +96,34 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     }
   }
 
+  async function handleStakeDaily() {
+    if (!wallet) {
+      notify.error(strings.scoreSubmitNoWallet);
+      return;
+    }
+    if (!poolInfo?.poolAddress) {
+      notify.error(strings.dailyPoolNotConfigured);
+      return;
+    }
+    try {
+      const min = poolInfo.minStake ?? "0.01";
+      const tx = await enterDailyPool(poolInfo.poolAddress, poolInfo.seed, min);
+      setStaked(true);
+      notify.success(strings.dailyStaked, tx.slice(0, 10) + "…");
+      void fetchDailyPool().then(setPoolInfo);
+    } catch {
+      notify.error(strings.dailyStakeFailed);
+    }
+  }
+
+  function startDaily() {
+    if (poolInfo?.configured && !staked) {
+      notify.info(strings.dailyStakeRequired);
+      return;
+    }
+    gameBridge.startScene("DuelScene", { mode: "daily" });
+  }
+
   return (
     <main className="hero">
       <div className="hero__bg" aria-hidden="true">
@@ -88,6 +144,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
         </h1>
 
         <p className="hero__tagline">{strings.heroTagline}</p>
+        <p className="hero__brain-badge">{brainLabel}</p>
 
         <div className="hero__actions">
           <button
@@ -99,23 +156,37 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             <span className="btn__subtitle">{strings.tutorialTitle}</span>
           </button>
 
+          <p className="hero__section-label">{strings.pickArchetype}</p>
+          <ArchetypeSelector value={archetype} onChange={setArchetype} />
+
           <button
             type="button"
             className="btn btn--primary"
-            onClick={() => gameBridge.startScene("DuelScene", { mode: "standard" })}
+            onClick={() =>
+              gameBridge.startScene("DuelScene", { mode: "standard", archetypeId: archetype })
+            }
           >
             <span className="btn__title">{strings.duel}</span>
             <span className="btn__subtitle">{strings.heroPlaySubtitle}</span>
           </button>
 
-          <button
-            type="button"
-            className="btn btn--secondary"
-            style={{ marginTop: 10 }}
-            onClick={() => gameBridge.startScene("DuelScene", { mode: "daily" })}
-          >
-            <span>{strings.daily}</span>
-          </button>
+          <div className="daily-card">
+            <p className="daily-card__title">{strings.daily}</p>
+            <p className="daily-card__meta">
+              {dailyArchName} · {strings.dailyPoolLabel}{" "}
+              {poolInfo?.totalStaked ?? "0"} OG · {poolInfo?.entrants ?? 0}{" "}
+              {strings.dailyEntrants}
+            </p>
+            {poolInfo?.configured && !staked && (
+              <button type="button" className="btn btn--secondary btn--stake" onClick={() => void handleStakeDaily()}>
+                {strings.dailyStake} ({poolInfo.minStake ?? "0.01"} OG)
+              </button>
+            )}
+            {staked && <p className="daily-card__staked">{strings.dailyStakedBadge}</p>}
+            <button type="button" className="btn btn--secondary" onClick={startDaily}>
+              <span>{strings.dailyPlay}</span>
+            </button>
+          </div>
 
           <div className="hero__divider" role="separator">
             <span>{strings.heroOr}</span>

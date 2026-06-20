@@ -29,6 +29,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const h = await loadHandlers();
 
+    if (slug[0] === "health" && req.method === "GET") {
+      return res.status(200).json(await h.handleHealth());
+    }
     if (slug[0] === "duel" && slug[1] === "start" && req.method === "POST") {
       return res.status(200).json(await h.handleStartDuel(req.body));
     }
@@ -55,11 +58,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const duelId = slug[2] ?? "demo";
       return res.status(200).json(await h.handleVerify(duelId));
     }
+    if (slug[0] === "daily" && slug[1] === "pool") {
+      const seed = String(req.query.seed ?? "");
+      return res.status(200).json(await h.handleDailyPoolInfo(seed || undefined));
+    }
+    if (slug[0] === "daily" && slug[1] === "enter-check" && req.method === "POST") {
+      return res.status(200).json(await h.handleDailyEnterCheck(req.body));
+    }
+    if (slug[0] === "daily" && slug[1] === "claim" && req.method === "POST") {
+      return res.status(200).json(await h.handleDailyClaim(req.body));
+    }
     if (slug[0] === "daily" && slug[1] === "leaderboard") {
       return res.status(200).json(await h.handleDailyLeaderboard());
     }
     if (slug[0] === "daily" && slug[1] === "submit" && req.method === "POST") {
       return res.status(200).json(await h.handleSubmitScore(req.body));
+    }
+    if (slug[0] === "player" && slug[1] === "profile" && slug[2] === "stats" && req.method === "POST") {
+      return res.status(200).json(await h.handleUpdateProfileStats(req.body));
     }
     if (slug[0] === "player" && slug[1] === "profile" && req.method === "GET") {
       const address = String(req.query.address ?? slug[2] ?? "");

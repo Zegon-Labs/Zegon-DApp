@@ -99,12 +99,17 @@ function detectPattern(
   return { action: best, frequency: bestCount / window.length };
 }
 
-function counterMove(predicted: PlayerAction, rng: () => number): ZegonAction {
+function counterMove(
+  predicted: PlayerAction,
+  rng: () => number,
+  dodgeBias = 0,
+): ZegonAction {
   if (
     predicted === PlayerAction.FIRE_HIGH ||
     predicted === PlayerAction.FIRE_LOW
   ) {
-    return rng() > 0.5 ? ZegonAction.DODGE : ZegonAction.FIRE_LOW;
+    const dodgeChance = 0.5 + dodgeBias;
+    return rng() < dodgeChance ? ZegonAction.DODGE : ZegonAction.FIRE_LOW;
   }
   if (predicted === PlayerAction.DODGE) {
     return ZegonAction.FIRE_HIGH;
@@ -157,7 +162,11 @@ export class DummyZegonBrain implements IZegonBrain {
       confidence = confidenceFromFrequency(pattern.frequency);
     }
 
-    const zegonMove = counterMove(predicted, this.rng);
+    const zegonMove = counterMove(
+      predicted,
+      this.rng,
+      ctx.modifiers?.zegonDodgeBias ?? 0,
+    );
     const taunt = tauntForConfidence(confidence, this.rng, this.locale);
 
     return {

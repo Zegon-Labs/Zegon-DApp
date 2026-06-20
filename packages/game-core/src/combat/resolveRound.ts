@@ -1,4 +1,5 @@
 import { COMBAT } from "../constants/index.js";
+import { applyZegonDamageMultiplier } from "../modes/zegonArchetypes.js";
 import { computeBlindsightFromOutcome } from "../blindsight/blindsight.js";
 import { getWeapon } from "../weapons/registry.js";
 import {
@@ -139,10 +140,13 @@ export function resolveRound(
   let zegonDamage = 0;
 
   if (zegonHits) {
-    playerDamage = computeDamage(
-      weapon.damage,
-      ctx.isDeadeye,
-      isReloadVulnerable,
+    playerDamage = applyZegonDamageMultiplier(
+      computeDamage(
+        weapon.damage,
+        ctx.isDeadeye,
+        isReloadVulnerable,
+      ),
+      ctx.modifiers,
     );
   }
 
@@ -156,6 +160,7 @@ export function resolveRound(
     ctx.blindsight,
     { predictionCorrect, playerAction },
     ctx.weapon,
+    ctx.modifiers,
   );
 
   const deadeyeTriggered =

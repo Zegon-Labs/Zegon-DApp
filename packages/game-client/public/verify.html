@@ -194,12 +194,20 @@
             <p class="meta"><strong>${T.duelId}:</strong> <code>${data.duelId}</code></p>
             <p class="meta"><strong>${T.contract}:</strong> <code>${data.contractAddress}</code></p>`;
 
+          if (data.teeVerified) {
+            html += `<p class="meta" style="color: var(--verified);"><strong>0G TEE:</strong> ✓ Attestation present</p>`;
+          }
+          if (data.storageUrl) {
+            html += `<p class="meta"><a href="${data.storageUrl}" target="_blank" rel="noopener">0G Storage log ↗</a></p>`;
+          }
+
           for (const r of data.rounds) {
             html += `
               <div class="round">
                 <h3>${T.round} ${r.roundIndex + 1}</h3>
                 <p>${T.zegonMove}: <strong>${moveLabel(r.zegonMove)}</strong></p>
                 <p class="proof">${T.commitBefore}: <strong>${r.commitBeforePlayer ? T.yes : T.no}</strong></p>
+                ${r.attestationHash ? `<p class="meta"><strong>TEE attestation:</strong> <code>${r.attestationHash.slice(0, 16)}…</code></p>` : ""}
                 <div class="links">
                   ${r.commitTxHash ? `<div><a href="${txUrl(r.commitTxHash)}" target="_blank" rel="noopener">${T.commitTx} →</a></div>` : ""}
                   ${r.revealTxHash ? `<div><a href="${txUrl(r.revealTxHash)}" target="_blank" rel="noopener">${T.revealTx} →</a></div>` : ""}

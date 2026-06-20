@@ -50,6 +50,8 @@ export function buildRoundContext(state: DuelState): RoundContext {
     ammo: state.ammo,
     blindsight: state.blindsight,
     isDeadeye: state.isDeadeye,
+    modifiers: state.config.modifiers,
+    archetype: state.config.archetype,
   };
 }
 

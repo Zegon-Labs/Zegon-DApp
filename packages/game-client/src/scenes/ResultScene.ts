@@ -1,11 +1,12 @@
 import Phaser from "phaser";
-import { createDailyDuel, type DuelResult } from "@zegon/game-core";
+import { createDailyDuel, DuelWinner, xpForResult, type DuelResult } from "@zegon/game-core";
 import { format, t } from "../i18n/index.js";
 import { gameBridge } from "../game/bridge.js";
 import { getCachedProfile } from "../services/profile.js";
 import { getWalletAddress } from "../services/wallet.js";
 import { createMenuButton, drawScanlines } from "../ui/components.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
+import { buildChallengeUrlFromResult, generateShareCard } from "../utils/shareCard.js";
 
 interface VerifyRound {
   roundIndex: number;
@@ -19,9 +20,12 @@ interface VerifyRound {
 interface VerifyResponse {
   duelId: string;
   verified: boolean;
+  teeVerified?: boolean;
+  brainMode?: string;
   contractAddress?: string;
   rounds: VerifyRound[];
   storageRoot?: string;
+  storageUrl?: string;
   recordTxHash?: string;
   explorerUrl?: string;
   recordTxExplorerUrl?: string;
@@ -37,6 +41,8 @@ export class ResultScene extends Phaser.Scene {
     duelId?: string | null;
     apiBaseUrl?: string;
     mode?: "standard" | "daily";
+    archetype?: string;
+    brainMode?: "tee" | "dummy";
   }): void {
     const { width, height } = this.scale;
     const result = data.result;
@@ -96,7 +102,7 @@ export class ResultScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     if (mode === "daily") {
-      void this.submitDailyScore(result.score, dailyLabel);
+      void this.submitDailyScore(result, dailyLabel, duelId);
     }
 
     createMenuButton(this, width / 2, height / 2 + 90, strings.verifyOnChain, () => {
@@ -119,14 +125,28 @@ export class ResultScene extends Phaser.Scene {
       void navigator.clipboard?.writeText(text);
     });
 
-    createMenuButton(this, width / 2, height / 2 + 190, strings.menu, () => {
+    createMenuButton(this, width / 2, height / 2 + 190, strings.shareCard, () => {
+      void generateShareCard(result, {
+        archetype: data.archetype,
+        brainMode: data.brainMode,
+      });
+    });
+
+    createMenuButton(this, width / 2, height / 2 + 240, strings.challengeLink, () => {
+      const seed = mode === "daily" ? createDailyDuel().seed! : `standard-${data.archetype ?? "reader"}`;
+      const url = buildChallengeUrlFromResult(seed, data.archetype);
+      void navigator.clipboard?.writeText(url);
+    });
+
+    createMenuButton(this, width / 2, height / 2 + 290, strings.menu, () => {
       gameBridge.navigate({ type: "hub" });
     });
   }
 
   private async submitDailyScore(
-    score: number,
+    result: DuelResult,
     label: Phaser.GameObjects.Text,
+    duelId?: string | null,
   ): Promise<void> {
     const strings = t();
     const address = getWalletAddress();
@@ -147,8 +167,12 @@ export class ResultScene extends Phaser.Scene {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           playerId: address,
-          score,
+          score: result.score,
           seed: daily.seed,
+          duelId: duelId ?? undefined,
+          won: result.winner === DuelWinner.PLAYER,
+          timesRead: result.timesRead,
+          xpGain: xpForResult(result),
         }),
       });
       const data = (await res.json()) as { accepted?: boolean; reason?: string };
@@ -156,6 +180,10 @@ export class ResultScene extends Phaser.Scene {
         label.setText(strings.scoreSubmitted).setColor(COLORS.cyan);
       } else if (data.reason === "PROFILE_REQUIRED") {
         label.setText(strings.scoreSubmitNoProfile);
+      } else if (data.reason === "DAILY_ALREADY_SUBMITTED") {
+        label.setText(strings.dailyAlreadySubmitted);
+      } else if (data.reason === "DUEL_NOT_VERIFIED") {
+        label.setText(strings.duelNotVerified);
       }
     } catch {
       label.setText(strings.leaderboardEmpty);
@@ -173,8 +201,9 @@ export class ResultScene extends Phaser.Scene {
       const data = (await res.json()) as VerifyResponse;
       const proofCount = data.rounds.filter((r) => r.commitBeforePlayer).length;
       const status = data.verified ? strings.verifyOk : strings.verifyPending;
+      const tee = data.teeVerified ? `\n0G TEE ✓` : "";
       label.setText(
-        `${status}\n${strings.verifyRounds}: ${proofCount}/${data.rounds.length}` +
+        `${status}${tee}\n${strings.verifyRounds}: ${proofCount}/${data.rounds.length}` +
         (data.contractAddress ? `\n${data.contractAddress.slice(0, 10)}…` : ""),
       );
     } catch {

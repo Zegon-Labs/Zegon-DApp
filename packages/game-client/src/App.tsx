@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Toaster } from "sileo";
+import { HackathonStatusBar } from "./components/HackathonStatusBar.js";
 import { HeroHub } from "./components/HeroHub.js";
 import { LeaderboardPanel } from "./components/LeaderboardPanel.js";
 import { PhaserHost } from "./components/PhaserHost.js";
@@ -58,6 +59,17 @@ export default function App() {
         </>
       )}
       <PhaserHost visible={inGame} />
+      {inGame && (
+        <div className="hackathon-bar-wrap">
+          <HackathonStatusBar
+            commitTxHash={
+              typeof sessionStorage !== "undefined"
+                ? sessionStorage.getItem("zegon-last-commit")
+                : null
+            }
+          />
+        </div>
+      )}
       {profileSetupAddress && !inGame && (
         <ProfileSetupModal
           address={profileSetupAddress}

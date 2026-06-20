@@ -17,6 +17,8 @@ import {
   ZegonDecision,
   createDailyDuel,
   decodeChallenge,
+  createStandardDuelWithArchetype,
+  type ZegonArchetypeId,
 } from "@zegon/game-core";
 
 export type BrainMode = "dummy" | "api";
@@ -33,10 +35,18 @@ export interface GameCoreAdapterOptions {
 class ApiZegonBrain implements IZegonBrain {
   private duelId: string | null = null;
   private sessionToken: string | null = null;
+  private attestationHashes: string[] = [];
+  private lastCommitTxHash: string | null = null;
+  private lastBrainMode: "tee" | "dummy" = "dummy";
 
   constructor(
     private readonly apiBaseUrl: string,
     private readonly onSessionToken: (token: string) => void,
+    private readonly onCommitMeta: (meta: {
+      attestationHash?: string;
+      commitTxHash?: string;
+      brainMode: "tee" | "dummy";
+    }) => void,
   ) {}
 
   setDuelId(duelId: string): void {
@@ -45,6 +55,23 @@ class ApiZegonBrain implements IZegonBrain {
 
   setSessionToken(token: string | null): void {
     this.sessionToken = token;
+  }
+
+  getAttestationHashes(): readonly string[] {
+    return this.attestationHashes;
+  }
+
+  getLastCommitTxHash(): string | null {
+    return this.lastCommitTxHash;
+  }
+
+  getLastBrainMode(): "tee" | "dummy" {
+    return this.lastBrainMode;
+  }
+
+  resetAttestations(): void {
+    this.attestationHashes = [];
+    this.lastCommitTxHash = null;
   }
 
   async decide(ctx: RoundContext): Promise<ZegonDecision> {
@@ -67,11 +94,29 @@ class ApiZegonBrain implements IZegonBrain {
       throw new Error(`API commit failed: ${res.status}`);
     }
 
-    const data = (await res.json()) as { taunt: string; sessionToken: string };
+    const data = (await res.json()) as {
+      taunt: string;
+      sessionToken: string;
+      attestationHash?: string;
+      commitTxHash?: string;
+      brainMode?: "tee" | "dummy";
+    };
     if (data.sessionToken) {
       this.sessionToken = data.sessionToken;
       this.onSessionToken(data.sessionToken);
     }
+    if (data.attestationHash) {
+      this.attestationHashes.push(data.attestationHash);
+    }
+    if (data.commitTxHash) {
+      this.lastCommitTxHash = data.commitTxHash;
+    }
+    this.lastBrainMode = data.brainMode ?? "dummy";
+    this.onCommitMeta({
+      attestationHash: data.attestationHash,
+      commitTxHash: data.commitTxHash,
+      brainMode: this.lastBrainMode,
+    });
 
     return {
       predictedPlayerMove: PlayerAction.FIRE_HIGH,
@@ -91,6 +136,8 @@ export class GameCoreAdapter {
   private _duelId: string | null = null;
   private _sessionToken: string | null = null;
   private _lastAttestationHash: string | null = null;
+  private _lastCommitTxHash: string | null = null;
+  private _brainMode: "tee" | "dummy" = "dummy";
   private unsubscribe: (() => void) | null = null;
 
   constructor(options: GameCoreAdapterOptions = {}) {
@@ -114,6 +161,19 @@ export class GameCoreAdapter {
     } else if (this.brainMode === "api" && !this.offline) {
       this.apiBrain = new ApiZegonBrain(this.apiBaseUrl, (token) => {
         this._sessionToken = token;
+      }, (meta) => {
+        this._brainMode = meta.brainMode;
+        if (meta.commitTxHash) {
+          this._lastCommitTxHash = meta.commitTxHash;
+          try {
+            sessionStorage.setItem("zegon-last-commit", meta.commitTxHash);
+          } catch {
+            /* ignore */
+          }
+        }
+        if (meta.attestationHash) {
+          this._lastAttestationHash = this.computeCompositeAttestation();
+        }
       });
       brain = this.apiBrain;
     } else {
@@ -135,7 +195,7 @@ export class GameCoreAdapter {
 
   async initDuel(
     mode: "standard" | "daily" | "tutorial" = "standard",
-    options?: { config?: Partial<DuelConfig> },
+    options?: { config?: Partial<DuelConfig>; archetypeId?: string },
   ): Promise<void> {
     if (options?.config) {
       Object.assign(this.controller.getState().config, options.config);
@@ -144,6 +204,13 @@ export class GameCoreAdapter {
     if (mode === "daily") {
       const dailyConfig = createDailyDuel();
       Object.assign(this.controller.getState().config, dailyConfig);
+    }
+
+    if (mode === "standard" && options?.archetypeId) {
+      const std = createStandardDuelWithArchetype(
+        options.archetypeId as ZegonArchetypeId,
+      );
+      Object.assign(this.controller.getState().config, std);
     }
 
     if (this.brainMode === "api" && !this.offline && mode !== "tutorial") {
@@ -169,7 +236,9 @@ export class GameCoreAdapter {
   }
 
   patchState(
-    partial: Partial<Pick<DuelState, "ammo" | "blindsight" | "playerHp" | "zegonHp">>,
+    partial: Partial<
+      Pick<DuelState, "ammo" | "blindsight" | "playerHp" | "zegonHp" | "isDeadeye">
+    >,
   ): void {
     this.controller.patchState(partial);
   }
@@ -261,6 +330,7 @@ export class GameCoreAdapter {
 
     const attestationHash =
       this._lastAttestationHash ??
+      this.computeCompositeAttestation() ??
       `${this._duelId}-${result.score}`.padEnd(64, "0").slice(0, 64);
 
     try {
@@ -285,6 +355,26 @@ export class GameCoreAdapter {
 
   getDuelId(): string | null {
     return this._duelId;
+  }
+
+  getBrainMode(): "tee" | "dummy" {
+    return this._brainMode;
+  }
+
+  getLastCommitTxHash(): string | null {
+    return this._lastCommitTxHash ?? this.apiBrain?.getLastCommitTxHash() ?? null;
+  }
+
+  private computeCompositeAttestation(): string | null {
+    const hashes = this.apiBrain?.getAttestationHashes() ?? [];
+    if (hashes.length === 0) return null;
+    if (hashes.length === 1) return hashes[0]!;
+    let h = 0;
+    const joined = hashes.join(":");
+    for (let i = 0; i < joined.length; i++) {
+      h = (Math.imul(31, h) + joined.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h).toString(16).padStart(64, "0").slice(0, 64);
   }
 
   getApiBaseUrl(): string {

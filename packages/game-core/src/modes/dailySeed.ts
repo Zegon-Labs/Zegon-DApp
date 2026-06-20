@@ -1,5 +1,6 @@
 import { DEFAULT_DUEL_CONFIG } from "../constants/index.js";
 import { DuelConfig, WeaponId } from "../types/index.js";
+import { applyArchetypeToConfig, getDailyArchetype } from "./zegonArchetypes.js";
 
 const WEAPONS_ROTATION: WeaponId[] = [
   WeaponId.REVOLVER,
@@ -26,14 +27,17 @@ export function getDailySeed(date: Date = new Date()): string {
 export function createDailyDuel(date: Date = new Date()): DuelConfig {
   const seed = getDailySeed(date);
   const hash = hashString(seed);
+  const archetype = getDailyArchetype(date);
 
-  return {
+  const base: DuelConfig = {
     ...DEFAULT_DUEL_CONFIG,
     seed,
     mode: "daily",
     weapon: WEAPONS_ROTATION[hash % WEAPONS_ROTATION.length]!,
     initialZegonHp: 100 + (hash % 20),
   };
+
+  return applyArchetypeToConfig(base, archetype.id);
 }
 
 export function createStandardDuel(

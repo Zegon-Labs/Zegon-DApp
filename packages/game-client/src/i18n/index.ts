@@ -88,6 +88,8 @@ export interface LocaleStrings {
   tutorialStepRead: string;
   tutorialStepFeint: string;
   tutorialStepReload: string;
+  tutorialStepDamage: string;
+  tutorialStepDeadeye: string;
   tutorialComplete: string;
   tutorialCompleteBody: string;
   tutorialWrong: string;
@@ -114,6 +116,22 @@ export interface LocaleStrings {
   leaderboardRank: string;
   scoreSubmitted: string;
   scoreSubmitNoWallet: string;
+  pickArchetype: string;
+  dailyPoolLabel: string;
+  dailyEntrants: string;
+  dailyStake: string;
+  dailyStaked: string;
+  dailyStakedBadge: string;
+  dailyStakeRequired: string;
+  dailyStakeFailed: string;
+  dailyPoolNotConfigured: string;
+  dailyPlay: string;
+  achievementsTitle: string;
+  claimReward: string;
+  shareCard: string;
+  challengeLink: string;
+  dailyAlreadySubmitted: string;
+  duelNotVerified: string;
   connectWallet: string;
   heroTagline: string;
   heroPlaySubtitle: string;
@@ -271,6 +289,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "ZEGON expects another shot. FEINT — break your pattern; Blindsight drops if it mispredicted.",
     tutorialStepReload:
       "No ammo left. RELOAD — you'll be vulnerable if ZEGON fires.",
+    tutorialStepDamage:
+      "RELOAD again — ZEGON will shoot. Watch your HP drop (−damage).",
+    tutorialStepDeadeye:
+      "DEADEYE active! ZEGON fires — DODGE if you can (almost lethal).",
     tutorialComplete: "You're ready",
     tutorialCompleteBody:
       "You know HP, Blindsight, DEADEYE, all five actions, and ammo.\n\nHead back to the menu when you're ready.",
@@ -313,6 +335,22 @@ const LOCALES: Record<Language, LocaleStrings> = {
     leaderboardRank: "#{rank}  {id}  —  {score}",
     scoreSubmitted: "Score submitted to daily board",
     scoreSubmitNoWallet: "Connect wallet to save your daily score",
+    pickArchetype: "Choose your ZEGON",
+    dailyPoolLabel: "Pool",
+    dailyEntrants: "entrants",
+    dailyStake: "Stake to enter",
+    dailyStaked: "Staked!",
+    dailyStakedBadge: "✓ Staked for today",
+    dailyStakeRequired: "Stake OG to play today's daily",
+    dailyStakeFailed: "Stake failed — check wallet & balance",
+    dailyPoolNotConfigured: "Daily pool not configured yet",
+    dailyPlay: "Play daily duel",
+    achievementsTitle: "Achievements",
+    claimReward: "Claim OG reward",
+    shareCard: "Download share card",
+    challengeLink: "Copy challenge link",
+    dailyAlreadySubmitted: "Daily attempt already submitted",
+    duelNotVerified: "Duel could not be verified on-chain",
     scoreSubmitNoProfile: "Create a nickname in Settings to appear on the ranking",
     settingsSectionProfile: "Profile",
     settingsSectionLanguage: "Language",
@@ -453,6 +491,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "ZEGON espera otro disparo. FINTA — rompé el patrón; baja el ciego-vista si predijo mal.",
     tutorialStepReload:
       "Sin balas. RECARGÁ — quedás vulnerable si ZEGON dispara.",
+    tutorialStepDamage:
+      "RECARGÁ otra vez — ZEGON dispara. Mirá bajar tus PS (−daño).",
+    tutorialStepDeadeye:
+      "¡DEADEYE activo! ZEGON dispara — ESQUIVÁ si podés (casi letal).",
     tutorialComplete: "Estás listo",
     tutorialCompleteBody:
       "Ya conocés PS, ciego-vista, DEADEYE, las cinco acciones y la munición.\n\nVolvé al menú cuando quieras seguir.",
@@ -495,6 +537,22 @@ const LOCALES: Record<Language, LocaleStrings> = {
     leaderboardRank: "#{rank}  {id}  —  {score}",
     scoreSubmitted: "Puntaje enviado al ranking diario",
     scoreSubmitNoWallet: "Conectá wallet para guardar tu puntaje diario",
+    pickArchetype: "Elegí tu ZEGON",
+    dailyPoolLabel: "Pool",
+    dailyEntrants: "entrantes",
+    dailyStake: "Apostar para entrar",
+    dailyStaked: "¡Apostado!",
+    dailyStakedBadge: "✓ Apostado hoy",
+    dailyStakeRequired: "Apostá OG para jugar el daily de hoy",
+    dailyStakeFailed: "Falló la apuesta — revisá wallet y saldo",
+    dailyPoolNotConfigured: "Pool diario aún no configurado",
+    dailyPlay: "Jugar duelo diario",
+    achievementsTitle: "Logros",
+    claimReward: "Reclamar premio OG",
+    shareCard: "Descargar tarjeta",
+    challengeLink: "Copiar link de desafío",
+    dailyAlreadySubmitted: "Ya enviaste tu intento diario",
+    duelNotVerified: "No se pudo verificar el duelo on-chain",
     scoreSubmitNoProfile: "Creá un nickname en Ajustes para aparecer en el ranking",
     settingsSectionProfile: "Perfil",
     settingsSectionLanguage: "Idioma",

@@ -6,8 +6,8 @@ import {
 } from "../adapters/GameCoreAdapter.js";
 import { shouldUseServerApi, apiBaseUrl } from "../services/apiMode.js";
 import { t } from "../i18n/index.js";
-import type { DuelEvent, RoundOutcome } from "@zegon/game-core";
-import { ActionValidationError } from "@zegon/game-core";
+import type { DuelEvent, RoundOutcome, ZegonArchetypeId } from "@zegon/game-core";
+import { ActionValidationError, getArchetype, getDailyArchetype } from "@zegon/game-core";
 import {
   createActionButton,
   createLabeledPanel,
@@ -24,7 +24,9 @@ import {
 } from "../ui/components.js";
 import { actionButtonWidth, DUEL_LAYOUT as L } from "../ui/layout.js";
 import { buildRoundSummary } from "../ui/roundSummary.js";
+import { showFloatingDamage } from "../ui/floatingDamage.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
+import { getLanguage } from "../i18n/index.js";
 
 function actionLabel(action: PlayerAction | string): string {
   const strings = t();
@@ -86,16 +88,23 @@ export class DuelScene extends Phaser.Scene {
   private actionTooltipText!: Phaser.GameObjects.Text;
   private actionButtons: ActionButtonHandle[] = [];
   private mode: "standard" | "daily" = "standard";
+  private archetypeLabel = "";
   private showingRoundResult = false;
 
   constructor() {
     super("DuelScene");
   }
 
-  init(data: { mode?: "standard" | "daily" }): void {
+  init(data: {
+    mode?: "standard" | "daily";
+    archetypeId?: ZegonArchetypeId;
+  }): void {
     this.mode = data.mode ?? "standard";
+    this.archetypeId = data.archetypeId ?? "reader";
     this.showingRoundResult = false;
   }
+
+  private archetypeId: ZegonArchetypeId = "reader";
 
   create(): void {
     const { width } = this.scale;
@@ -160,17 +169,17 @@ export class DuelScene extends Phaser.Scene {
       L.roundResult.w,
       L.roundResult.h,
       C.ash,
-      0.92,
-    ).setStrokeStyle(1, C.fog).setDepth(11).setVisible(false);
+      0.94,
+    ).setStrokeStyle(1, C.fog).setDepth(14).setVisible(false);
 
     this.roundResultText = this.add.text(width / 2, L.roundResult.y, "", {
       fontFamily: FONT,
-      fontSize: "17px",
+      fontSize: "13px",
       color: COLORS.bone,
       align: "center",
-      wordWrap: { width: L.roundResult.w - 24 },
-      lineSpacing: 4,
-    }).setOrigin(0.5).setDepth(12).setVisible(false);
+      wordWrap: { width: L.roundResult.w - 28 },
+      lineSpacing: 2,
+    }).setOrigin(0.5).setDepth(15).setVisible(false);
 
     this.actionTooltipText = this.add.text(width / 2, L.tooltip.y, strings.actionTooltipHint, {
       fontFamily: FONT,
@@ -186,8 +195,28 @@ export class DuelScene extends Phaser.Scene {
       onEvent: (event) => this.handleEvent(event),
     });
 
+    const lang = getLanguage();
+    if (this.mode === "daily") {
+      const arch = getDailyArchetype();
+      this.archetypeLabel = lang === "es" ? arch.nameEs : arch.nameEn;
+    } else {
+      const arch = getArchetype(this.archetypeId);
+      this.archetypeLabel = lang === "es" ? arch.nameEs : arch.nameEn;
+    }
+
+    this.add
+      .text(width / 2, L.topBar.y, this.archetypeLabel, {
+        fontFamily: FONT,
+        fontSize: "14px",
+        color: COLORS.gold,
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(10);
+
+    void this.adapter.initDuel(this.mode, {
+      archetypeId: this.mode === "standard" ? this.archetypeId : undefined,
+    });
     this.createActionButtons();
-    void this.adapter.initDuel(this.mode);
     this.updateHud();
   }
 
@@ -239,19 +268,35 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private showRoundResult(outcome: RoundOutcome): void {
+    const { width } = this.scale;
     const summary = buildRoundSummary(outcome, t(), (action) =>
       actionLabel(action),
     );
     this.showingRoundResult = true;
     this.setPromptVisible(false);
     this.setTauntVisible(false);
+
+    const lineCount = summary.text.split("\n").length;
+    const panelH = Math.min(
+      L.roundResult.maxH,
+      Math.max(L.roundResult.h, 18 + lineCount * 14),
+    );
+    const panelY = L.roundResult.y;
+
+    this.roundResultPanel.setSize(L.roundResult.w, panelH);
+    this.roundResultPanel.setPosition(width / 2, panelY);
+    this.roundResultText.setPosition(width / 2, panelY);
     this.roundResultText.setText(summary.text).setColor(summary.color);
     this.roundResultPanel.setVisible(true);
     this.roundResultText.setVisible(true);
+    this.roundResultPanel.setAlpha(0.4);
+    this.roundResultText.setAlpha(0.4);
+
+    this.actionTooltipText.setAlpha(0.15);
 
     this.tweens.add({
       targets: [this.roundResultText, this.roundResultPanel],
-      alpha: { from: 0.4, to: 1 },
+      alpha: 1,
       duration: 200,
       ease: "Sine.Out",
     });
@@ -260,6 +305,7 @@ export class DuelScene extends Phaser.Scene {
       this.showingRoundResult = false;
       this.roundResultPanel.setVisible(false);
       this.roundResultText.setVisible(false);
+      this.actionTooltipText.setAlpha(1);
       this.setPromptVisible(true);
       this.setTauntVisible(true);
     });
@@ -283,9 +329,20 @@ export class DuelScene extends Phaser.Scene {
 
   private onRoundResolved(outcome: RoundOutcome): void {
     this.showRoundResult(outcome);
+    const { width } = this.scale;
     if (outcome.playerDamage > 0) {
+      showFloatingDamage(this, 80, L.stats.hpBarY - 20, outcome.playerDamage, "player");
       this.cameras.main.flash(180, 179, 18, 43);
       this.cameras.main.shake(150, 0.005);
+    }
+    if (outcome.zegonDamage > 0) {
+      showFloatingDamage(
+        this,
+        width - 80,
+        L.stats.hpBarY - 20,
+        outcome.zegonDamage,
+        "zegon",
+      );
     }
     if (
       outcome.zegonDecision.zegonMove === "FIRE_HIGH" ||
@@ -328,6 +385,8 @@ export class DuelScene extends Phaser.Scene {
           duelId: this.adapter.getDuelId(),
           apiBaseUrl: this.adapter.getApiBaseUrl(),
           mode: this.mode,
+          archetype: this.archetypeId,
+          brainMode: this.adapter.getBrainMode(),
         });
       });
     }
@@ -396,6 +455,7 @@ export class DuelScene extends Phaser.Scene {
       blindsight,
     );
 
+    this.hpGfx.clear();
     drawHpBar(
       this.hpGfx, 20, L.stats.hpBarY, L.stats.hpBarW, L.stats.hpBarH,
       playerHp, 100, C.cyan,

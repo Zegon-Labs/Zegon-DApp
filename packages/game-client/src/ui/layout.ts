@@ -10,7 +10,8 @@ export const DUEL_LAYOUT = {
   /** Center status band — left column (history) ends at x≈175, safe. */
   prompt: { y: 56, w: 440, h: 44 },
   taunt: { y: 108, maxW: 500 },
-  roundResult: { y: 56, w: 440, h: 96 },
+  /** Round resolve toast — above action bar, does not overlap prompt/taunt. */
+  roundResult: { y: 352, w: 520, h: 56, maxH: 92 },
 
   arena: { y: 228 },
   divider: { y: 332 },

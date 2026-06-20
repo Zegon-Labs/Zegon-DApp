@@ -3,5 +3,7 @@
   "operator": "0xcDFE7233fb5E4710591bbA906a5C72F171297EAa",
   "network": "galileo",
   "chainId": 16602,
-  "deployedAt": "2026-06-19T04:38:36.215Z"
+  "deployedAt": "2026-06-19T04:38:36.215Z",
+  "poolAddress": "0xF0011177988a323d2dFE4CFD29D2dFC2199F44ea",
+  "poolDeployedAt": "2026-06-20T00:21:27.465Z"
 }

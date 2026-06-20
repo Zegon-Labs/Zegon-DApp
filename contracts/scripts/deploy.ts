@@ -1,37 +1,39 @@
 import { ethers } from "hardhat";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 async function main() {
   const [operator] = await ethers.getSigners();
-  const Factory = await ethers.getContractFactory("ZegonDuel");
-  const contract = await Factory.deploy(operator.address);
-  await contract.waitForDeployment();
-  const address = await contract.getAddress();
 
-  console.log("ZegonDuel deployed to:", address);
+  const duelFactory = await ethers.getContractFactory("ZegonDuel");
+  const duel = await duelFactory.deploy(operator.address);
+  await duel.waitForDeployment();
+  const duelAddress = await duel.getAddress();
+
+  const poolFactory = await ethers.getContractFactory("ZegonDailyPool");
+  const pool = await poolFactory.deploy(operator.address);
+  await pool.waitForDeployment();
+  const poolAddress = await pool.getAddress();
+
+  console.log("ZegonDuel deployed to:", duelAddress);
+  console.log("ZegonDailyPool deployed to:", poolAddress);
   console.log("Operator:", operator.address);
-  console.log("Explorer:", `https://chainscan-galileo.0g.ai/address/${address}`);
 
   const deployInfo = {
-    address,
+    duelAddress,
+    poolAddress,
     operator: operator.address,
     network: "galileo",
     chainId: 16602,
     deployedAt: new Date().toISOString(),
   };
 
-  try {
-    const outDir = join(__dirname, "..", "deployments");
-    mkdirSync(outDir, { recursive: true });
-    writeFileSync(
-      join(outDir, "galileo.json"),
-      JSON.stringify(deployInfo, null, 2),
-    );
-    console.log("Saved deployment info to contracts/deployments/galileo.json");
-  } catch {
-    console.log("Set ZEGON_DUEL_CONTRACT_ADDRESS=", address);
-  }
+  const outDir = join(__dirname, "..", "deployments");
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(join(outDir, "galileo.json"), JSON.stringify(deployInfo, null, 2));
+  console.log("Saved contracts/deployments/galileo.json");
+  console.log("Set ZEGON_DUEL_CONTRACT_ADDRESS=", duelAddress);
+  console.log("Set ZEGON_DAILY_POOL_ADDRESS=", poolAddress);
 }
 
 main().catch(console.error);

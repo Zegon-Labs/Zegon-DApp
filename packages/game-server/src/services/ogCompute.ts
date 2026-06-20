@@ -149,15 +149,25 @@ export class OGComputeService {
         requestBody,
       );
 
-      const response = await fetch(metadata.endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Address: headers.Address,
-          "VLLM-Proxy": headers["VLLM-Proxy"],
-        },
-        body: requestBody,
-      });
+      const controller = new AbortController();
+      const timeoutMs = Number(process.env.OG_INFER_TIMEOUT_MS ?? "15000");
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      let response: Response;
+      try {
+        response = await fetch(metadata.endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Address: headers.Address,
+            "VLLM-Proxy": headers["VLLM-Proxy"],
+          },
+          body: requestBody,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       const body = await response.text();
       if (!response.ok) {

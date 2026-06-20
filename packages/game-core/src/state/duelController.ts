@@ -1,4 +1,8 @@
-import { COMBAT, DEFAULT_DUEL_CONFIG, SCORE } from "../constants/index.js";
+import { DEFAULT_DUEL_CONFIG, SCORE } from "../constants/index.js";
+import {
+  dailyStreakMultiplier,
+  surpriseComboBonus,
+} from "../progression/achievements.js";
 import { IZegonBrain } from "../ai/IZegonBrain.js";
 import {
   applyRoundOutcomeToHp,
@@ -32,6 +36,8 @@ import {
 export class DuelController {
   private state: DuelState;
   private listeners: DuelEventListener[] = [];
+
+  private surpriseStreak = 0;
 
   constructor(
     private readonly brain: IZegonBrain,
@@ -155,6 +161,12 @@ export class DuelController {
       roundsWonByZegon += 1;
     }
 
+    if (!outcome.predictionCorrect) {
+      this.surpriseStreak += 1;
+    } else {
+      this.surpriseStreak = 0;
+    }
+
     this.state = {
       ...this.state,
       playerHp: hp.playerHp,
@@ -214,12 +226,20 @@ export class DuelController {
   }
 
   patchState(
-    partial: Partial<Pick<DuelState, "ammo" | "blindsight" | "playerHp" | "zegonHp">>,
+    partial: Partial<
+      Pick<DuelState, "ammo" | "blindsight" | "playerHp" | "zegonHp" | "isDeadeye">
+    >,
   ): void {
     this.state = { ...this.state, ...partial };
   }
 
-  getResult(): DuelResult {
+  getSurpriseStreak(): number {
+    return this.surpriseStreak;
+  }
+
+  getResult(
+    scoreOptions?: { dailyStreakDays?: number; surpriseStreak?: number },
+  ): DuelResult {
     const timesRead = this.state.roundLogs.filter(
       (log) => log.predictionCorrect,
     ).length;
@@ -229,12 +249,18 @@ export class DuelController {
 
     let score =
       roundsPlayed * SCORE.SURVIVED_ROUND +
-      (SCORE.BLINDSIGHT_PENALTY_FACTOR * (100 - this.state.blindsight)) -
+      SCORE.BLINDSIGHT_PENALTY_FACTOR * (100 - this.state.blindsight) -
       timesRead * SCORE.TIMES_READ_PENALTY;
+
+    const streak = scoreOptions?.surpriseStreak ?? this.surpriseStreak;
+    score += surpriseComboBonus(streak) * Math.max(0, streak - 1);
 
     if (winner === DuelWinner.PLAYER) {
       score += SCORE.VICTORY_BONUS;
     }
+
+    const dailyMult = dailyStreakMultiplier(scoreOptions?.dailyStreakDays ?? 0);
+    score = Math.round(score * dailyMult);
 
     return {
       winner,
@@ -246,9 +272,7 @@ export class DuelController {
       playerHp: this.state.playerHp,
       zegonHp: this.state.zegonHp,
       roundLogs: this.state.roundLogs,
-      score: Math.max(0, Math.round(score)),
+      score: Math.max(0, score),
     };
   }
 }
-
-export { COMBAT };

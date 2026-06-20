@@ -6,6 +6,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy": "hardhat run scripts/deploy.ts --network galileo",
+    "deploy:pool": "hardhat run scripts/deploy-pool.ts --network galileo",
     "smoke:galileo": "hardhat run scripts/smoke-galileo.ts --network galileo"
   },
   "devDependencies": {

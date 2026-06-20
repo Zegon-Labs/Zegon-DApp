@@ -23,6 +23,7 @@ import {
   drawZegonFigure,
 } from "../ui/components.js";
 import { actionButtonWidth, DUEL_LAYOUT as L, TUTORIAL_BUBBLE } from "../ui/layout.js";
+import { showFloatingDamage } from "../ui/floatingDamage.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
 import { gameBridge } from "../game/bridge.js";
 import {
@@ -358,6 +359,9 @@ export class TutorialScene extends Phaser.Scene {
     if (step.forceAmmoZero) {
       this.adapter.patchState({ ammo: 0 });
     }
+    if (step.forceDeadeye) {
+      this.adapter.patchState({ blindsight: 100, isDeadeye: true });
+    }
 
     this.updateActionButtons(true);
   }
@@ -374,8 +378,9 @@ export class TutorialScene extends Phaser.Scene {
     if (step.forceAmmoZero) {
       this.adapter.patchState({ ammo: 0 });
     }
-
-    this.waitingAdvance = true;
+    if (step.forceDeadeye) {
+      this.adapter.patchState({ blindsight: 100, isDeadeye: true });
+    }
     this.actionButtons.forEach((btn) => {
       btn.resetHover();
       btn.setDimmed(true);
@@ -432,6 +437,7 @@ export class TutorialScene extends Phaser.Scene {
         COLORS.ember,
       );
     } else if (outcome.playerDamage > 0) {
+      showFloatingDamage(this, 80, L.stats.hpBarY - 20, outcome.playerDamage, "player");
       this.setPracticeFeedback(
         `${strings.roundSummaryYouHit} — ${strings.tutorialHpTitle}`,
         COLORS.ember,
@@ -468,6 +474,7 @@ export class TutorialScene extends Phaser.Scene {
       L.blindsight.barH,
       blindsight,
     );
+    this.hpGfx.clear();
     drawHpBar(
       this.hpGfx, 20, L.stats.hpBarY, L.stats.hpBarW, L.stats.hpBarH,
       playerHp, 100, C.cyan,

@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import {
   DuelConfig,
   DummyZegonBrain,
@@ -15,13 +15,25 @@ import {
   getNicknamesForAddresses,
   setProfile,
   isWalletAddress,
+  hasDailyAttempt,
+  updateProfileStats,
 } from "../services/playerProfiles.js";
 import { getOGComputeService } from "../services/ogCompute.js";
 import { loadSession, saveSession } from "../services/sessionStore.js";
 import { storeDuelLog, loadDuelLogPayload } from "../services/storage.js";
+import {
+  getPoolInfo,
+  getPoolContractAddress,
+  hasEnteredPool,
+  processDailyClaim,
+  isDailyPoolConfigured,
+} from "../services/dailyPool.js";
 import { uint8ToZegonAction } from "../services/moveMapping.js";
 import { encodeSessionToken, decodeSessionToken } from "../utils/sessionToken.js";
 import type { DuelSession, RoundLog } from "../types/duelSession.js";
+import { handleHealth } from "./healthHandler.js";
+
+export { handleHealth };
 
 export type { DuelSession, RoundLog };
 
@@ -57,6 +69,16 @@ async function persistSession(session: DuelSession): Promise<void> {
   await saveSession(session);
 }
 
+function compositeAttestationHash(logs: RoundLog[], duelId: string): string {
+  const hashes = logs
+    .map((l) => l.attestationHash)
+    .filter((h): h is string => Boolean(h));
+  if (hashes.length === 0) {
+    return createHash("sha256").update(duelId).digest("hex");
+  }
+  return createHash("sha256").update(hashes.join(":")).digest("hex");
+}
+
 export async function handleStartDuel(body: {
   config?: Partial<DuelConfig>;
 }): Promise<{ duelId: string; sessionToken: string }> {
@@ -88,6 +110,7 @@ export async function handleRoundCommit(body: {
   roundIndex: number;
   attestationHash?: string;
   commitTsOnChain?: number;
+  brainMode: "tee" | "dummy";
   sessionToken: string;
 }> {
   const session = await getSession(body.duelId, body.sessionToken);
@@ -158,6 +181,7 @@ export async function handleRoundCommit(body: {
     roundIndex: session.roundIndex,
     attestationHash,
     commitTsOnChain,
+    brainMode: useOG ? "tee" : "dummy",
     sessionToken: encodeSessionToken(session),
   };
 }
@@ -233,10 +257,15 @@ export async function handleRecordDuel(body: {
   const contract = getContractService();
   let recordTxHash: string | undefined;
 
+  const attestationHash =
+    body.attestationHash && body.attestationHash.length >= 64
+      ? body.attestationHash
+      : compositeAttestationHash(session.logs, body.duelId);
+
   if (contract.isConfigured()) {
     const tx = await contract.recordDuel(
       body.duelId,
-      body.attestationHash,
+      attestationHash,
       body.result,
     );
     recordTxHash = tx?.txHash;
@@ -260,7 +289,10 @@ export async function handleRecordDuel(body: {
 export async function handleVerify(duelId: string): Promise<{
   duelId: string;
   verified: boolean;
+  teeVerified: boolean;
+  brainMode: "tee" | "dummy";
   contractAddress?: string;
+  storageIndexerUrl?: string;
   rounds: Array<{
     roundIndex: number;
     commitHash: string;
@@ -283,6 +315,7 @@ export async function handleVerify(duelId: string): Promise<{
     };
   }>;
   storageRoot?: string;
+  storageUrl?: string;
   recordTxHash?: string;
   explorerUrl?: string;
   contractExplorerUrl?: string;
@@ -338,12 +371,23 @@ export async function handleVerify(duelId: string): Promise<{
   const allCommitBeforePlayer =
     rounds.length > 0 && rounds.every((r) => r.commitBeforePlayer);
 
+  const hasAttestation = rounds.some((r) => Boolean(r.attestationHash));
+  const useOg = process.env.USE_OG_COMPUTE === "true";
+  const storageIndexerUrl =
+    process.env.OG_STORAGE_INDEXER ?? "https://indexer-storage-turbo.0g.ai";
+
   return {
     duelId,
     verified: allCommitBeforePlayer || (session !== null && rounds.length > 0),
+    teeVerified: useOg && hasAttestation,
+    brainMode: useOg ? "tee" : "dummy",
     contractAddress: contract.getContractAddress() ?? undefined,
+    storageIndexerUrl,
     rounds,
     storageRoot: session?.storageRoot,
+    storageUrl: session?.storageRoot
+      ? `${storageIndexerUrl}/download?root=${encodeURIComponent(session.storageRoot)}`
+      : undefined,
     recordTxHash: session?.recordTxHash,
     explorerUrl: contract.getExplorerUrl(duelId),
     contractExplorerUrl: contract.getContractAddress()
@@ -396,6 +440,11 @@ export async function handleSubmitScore(body: {
   playerId: string;
   score: number;
   seed: string;
+  duelId?: string;
+  won?: boolean;
+  timesRead?: number;
+  xpGain?: number;
+  achievements?: string[];
 }): Promise<{ accepted: boolean; reason?: string }> {
   if (!isWalletAddress(body.playerId)) {
     return { accepted: false, reason: "WALLET_REQUIRED" };
@@ -404,8 +453,93 @@ export async function handleSubmitScore(body: {
   if (!profile) {
     return { accepted: false, reason: "PROFILE_REQUIRED" };
   }
+
+  const todaySeed = createDailyDuel().seed!;
+  if (body.seed !== todaySeed) {
+    return { accepted: false, reason: "INVALID_DAILY_SEED" };
+  }
+  if (hasDailyAttempt(profile, body.seed)) {
+    return { accepted: false, reason: "DAILY_ALREADY_SUBMITTED" };
+  }
+
+  if (body.duelId) {
+    const verify = await handleVerify(body.duelId);
+    if (!verify.verified) {
+      return { accepted: false, reason: "DUEL_NOT_VERIFIED" };
+    }
+  }
+
   await submitScore(body.playerId, body.score, body.seed);
+  await updateProfileStats(body.playerId, {
+    xpGain: body.xpGain ?? Math.floor(body.score / 10),
+    won: body.won,
+    timesRead: body.timesRead,
+    dailyScore: body.score,
+    dailySeed: body.seed,
+    duelId: body.duelId,
+    newAchievements: body.achievements,
+  });
   return { accepted: true };
+}
+
+export async function handleUpdateProfileStats(body: {
+  address: string;
+  xpGain?: number;
+  won?: boolean;
+  timesRead?: number;
+  achievements?: string[];
+}): Promise<{ profile: Awaited<ReturnType<typeof updateProfileStats>> }> {
+  const profile = await updateProfileStats(body.address, {
+    xpGain: body.xpGain,
+    won: body.won,
+    timesRead: body.timesRead,
+    newAchievements: body.achievements,
+  });
+  return { profile };
+}
+
+export async function handleDailyPoolInfo(seed?: string): Promise<{
+  seed: string;
+  configured: boolean;
+  poolAddress?: string;
+  totalStaked?: string;
+  entrants?: number;
+  closed?: boolean;
+  minStake?: string;
+}> {
+  const dailySeed = seed ?? createDailyDuel().seed!;
+  const configured = isDailyPoolConfigured();
+  if (!configured) {
+    return { seed: dailySeed, configured: false, poolAddress: getPoolContractAddress() };
+  }
+  const info = await getPoolInfo(dailySeed);
+  return {
+    seed: dailySeed,
+    configured: true,
+    poolAddress: getPoolContractAddress(),
+    totalStaked: info?.totalStaked,
+    entrants: info?.entrants,
+    closed: info?.closed,
+    minStake: info?.minStake,
+  };
+}
+
+export async function handleDailyClaim(body: {
+  seed: string;
+  player: string;
+  rank: number;
+}): Promise<Awaited<ReturnType<typeof processDailyClaim>>> {
+  return processDailyClaim(body);
+}
+
+export async function handleDailyEnterCheck(body: {
+  seed: string;
+  player: string;
+}): Promise<{ entered: boolean; configured: boolean }> {
+  return {
+    entered: await hasEnteredPool(body.seed, body.player),
+    configured: isDailyPoolConfigured(),
+  };
 }
 
 export { buildChallengeUrl };

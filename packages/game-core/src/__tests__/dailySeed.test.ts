@@ -13,7 +13,8 @@ describe("DailyDuel", () => {
     const b = createDailyDuel(date);
     expect(a).toEqual(b);
     expect(a.mode).toBe("daily");
-    expect(a.seed).toBe("2026-06-18");
+    expect(a.seed).toMatch(/^2026-06-18-/);
+    expect(a.archetype).toBeDefined();
   });
 
   it("different dates may differ", () => {

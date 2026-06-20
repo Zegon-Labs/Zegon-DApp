@@ -3,6 +3,17 @@ export interface PlayerProfile {
   nickname: string;
   createdAt: number;
   updatedAt: number;
+  xp?: number;
+  level?: number;
+  achievements?: string[];
+  unlocks?: string[];
+  stats?: {
+    duelsWon: number;
+    duelsPlayed: number;
+    bestDailyScore: number;
+    timesReadTotal: number;
+    streakDays: number;
+  };
 }
 
 const NICKNAME_RE = /^[a-zA-Z0-9_]{3,16}$/;
