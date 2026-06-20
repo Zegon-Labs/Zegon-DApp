@@ -104,7 +104,7 @@ body:has(.hero) {
   object-fit: cover;
   object-position: 28% 10%;
   animation: bg-drift 26s ease-in-out infinite;
-  filter: brightness(0.92) saturate(0.98);
+  filter: brightness(1.08) saturate(0.98);
   transform: scale(1.32) translate(calc(-4% - var(--hero-shift-x)), 0);
   transform-origin: 28% 10%;
 }
@@ -121,7 +121,7 @@ body:has(.hero) {
   background:
     radial-gradient(ellipse 130% 95% at calc(50% - var(--hero-shift-x)) 28%, rgba(179, 18, 43, 0.07) 0%, transparent 68%),
     radial-gradient(ellipse 160% 110% at calc(50% - var(--hero-shift-x)) 36%, rgba(12, 8, 18, 0.05) 0%, transparent 72%),
-    linear-gradient(to bottom, rgba(3, 2, 5, 0.14) 0%, transparent 24%, transparent 66%, rgba(3, 2, 5, 0.32) 100%);
+    linear-gradient(to bottom, transparent 0%, transparent 66%, rgba(3, 2, 5, 0.32) 100%);
   pointer-events: none;
 }
 
@@ -131,9 +131,10 @@ body:has(.hero) {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    transparent 62%,
-    rgba(2, 1, 5, 0.14) 84%,
-    rgba(3, 2, 5, 0.42) 100%
+    transparent 50%,
+    rgba(0, 0, 0, 0.75) 65%,
+    rgba(0, 0, 0, 0.97) 80%,
+    rgba(0, 0, 0, 1) 100%
   );
   pointer-events: none;
 }
@@ -348,18 +349,18 @@ body:has(.hero) {
   transition: filter 0.4s ease;
   -webkit-mask-image: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.92) 0%,
-    #000 16%,
-    #000 88%,
-    rgba(0, 0, 0, 0.75) 96%,
+    #000 0%,
+    #000 45%,
+    rgba(0, 0, 0, 0.55) 65%,
+    rgba(0, 0, 0, 0.1) 82%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.92) 0%,
-    #000 16%,
-    #000 88%,
-    rgba(0, 0, 0, 0.75) 96%,
+    #000 0%,
+    #000 45%,
+    rgba(0, 0, 0, 0.55) 65%,
+    rgba(0, 0, 0, 0.1) 82%,
     transparent 100%
   );
 }
