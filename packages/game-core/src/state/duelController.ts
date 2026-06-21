@@ -11,7 +11,8 @@ import {
 } from "../combat/resolveRound.js";
 import { getGamblerWeapon } from "../modes/zegonArchetypes.js";
 import { getStartingAmmo } from "../weapons/registry.js";
-import { WeaponId } from "../types/index.js";
+import { getEffectiveDeadeyeStreak, readingStreakToDisplay } from "../combat/readingStreak.js";
+import { DuelItemId, WeaponId } from "../types/index.js";
 import {
   buildRoundContext,
   determineDuelWinner,
@@ -55,6 +56,9 @@ function buildInitialState(config: DuelConfig): DuelState {
     weapon,
     ammo: getStartingAmmo(weapon),
     blindsight: 0,
+    readingStreak: 0,
+    equippedItem: DuelItemId.SMOKE,
+    itemCooldown: 0,
     isDeadeye: false,
     playerHistory: [],
     roundsWonByPlayer: 0,
@@ -215,7 +219,9 @@ export class DuelController {
       playerHp: hp.playerHp,
       zegonHp: hp.zegonHp,
       ammo: outcome.ammoAfter,
+      readingStreak: outcome.readingStreakAfter,
       blindsight: outcome.blindsightAfter,
+      itemCooldown: outcome.itemCooldownAfter,
       playerHistory: [...this.state.playerHistory, action],
       roundsWonByPlayer,
       roundsWonByZegon,
@@ -278,10 +284,41 @@ export class DuelController {
 
   patchState(
     partial: Partial<
-      Pick<DuelState, "ammo" | "blindsight" | "playerHp" | "zegonHp" | "isDeadeye">
+      Pick<
+        DuelState,
+        | "ammo"
+        | "blindsight"
+        | "readingStreak"
+        | "playerHp"
+        | "zegonHp"
+        | "isDeadeye"
+        | "equippedItem"
+        | "itemCooldown"
+      >
     >,
   ): void {
-    this.state = { ...this.state, ...partial };
+    const next = { ...this.state, ...partial };
+    if (partial.readingStreak != null) {
+      const deadeyeStreak = getEffectiveDeadeyeStreak(this.state.config.modifiers);
+      next.blindsight = readingStreakToDisplay(partial.readingStreak, deadeyeStreak);
+    }
+    this.state = next;
+  }
+
+  setEquippedItem(item: DuelItemId): void {
+    this.state = { ...this.state, equippedItem: item };
+  }
+
+  getEquippedItem(): DuelItemId {
+    return this.state.equippedItem;
+  }
+
+  getItemCooldown(): number {
+    return this.state.itemCooldown;
+  }
+
+  getReadingStreak(): number {
+    return this.state.readingStreak;
   }
 
   getSurpriseStreak(): number {
@@ -320,6 +357,7 @@ export class DuelController {
       roundsWonByZegon: this.state.roundsWonByZegon,
       timesRead,
       finalBlindsight: this.state.blindsight,
+      finalReadingStreak: this.state.readingStreak,
       playerHp: this.state.playerHp,
       zegonHp: this.state.zegonHp,
       roundLogs: this.state.roundLogs,

@@ -30,88 +30,68 @@ export function buildTutorialScripts(locale: "en" | "es"): ScriptedRound[] {
   const taunts = locale === "es"
     ? [
         "No veo… pero escucho tus pasos.",
-        "Alto. Te tengo en la mira.",
-        "Leí tu disparo. Alto contra alto.",
-        "Recargás… ¿o no?",
-        "Otra vez el mismo ritmo…",
-        "Sin balas. Momento perfecto.",
-        "Recargar frente a un ciego… valiente.",
-        "¡DEADEYE! No escapás.",
+        "Disparo. Te tengo.",
+        "Leí tu disparo.",
+        "Humo… no importa.",
+        "¡DEADEYE! La placa aguanta.",
+        "Espejo… devolvéselo.",
       ]
     : [
         "I can't see… but I hear your steps.",
-        "Hold still. I've got you.",
-        "Read your shot. High against high.",
-        "Reloading… or are you?",
-        "Same rhythm again…",
-        "Out of ammo. Perfect moment.",
-        "Reloading against a blind man… bold.",
-        "DEADEYE! You won't escape.",
+        "Shooting. I've got you.",
+        "Read your shot.",
+        "Smoke… doesn't matter.",
+        "DEADEYE! The plate holds.",
+        "Mirror… send it back.",
       ];
 
   return [
     {
       decision: {
-        predictedPlayerMove: PlayerAction.DODGE_LOW,
-        zegonMove: ZegonAction.RELOAD,
+        predictedPlayerMove: PlayerAction.DODGE,
+        zegonMove: ZegonAction.DODGE,
         confidence: 0.3,
         taunt: taunts[0]!,
       },
     },
     {
       decision: {
-        predictedPlayerMove: PlayerAction.FIRE_HIGH,
-        zegonMove: ZegonAction.FIRE_HIGH,
+        predictedPlayerMove: PlayerAction.FIRE,
+        zegonMove: ZegonAction.FIRE,
         confidence: 0.5,
         taunt: taunts[1]!,
       },
     },
     {
       decision: {
-        predictedPlayerMove: PlayerAction.FIRE_HIGH,
-        zegonMove: ZegonAction.FIRE_HIGH,
+        predictedPlayerMove: PlayerAction.FIRE,
+        zegonMove: ZegonAction.FIRE,
         confidence: 0.95,
         taunt: taunts[2]!,
       },
     },
     {
       decision: {
-        predictedPlayerMove: PlayerAction.RELOAD,
-        zegonMove: ZegonAction.FIRE_HIGH,
-        confidence: 0.35,
+        predictedPlayerMove: PlayerAction.USE_ITEM,
+        zegonMove: ZegonAction.FIRE,
+        confidence: 0.7,
         taunt: taunts[3]!,
       },
     },
     {
       decision: {
-        predictedPlayerMove: PlayerAction.FIRE_HIGH,
-        zegonMove: ZegonAction.RELOAD,
-        confidence: 0.4,
+        predictedPlayerMove: PlayerAction.USE_ITEM,
+        zegonMove: ZegonAction.FIRE,
+        confidence: 1,
         taunt: taunts[4]!,
       },
     },
     {
       decision: {
-        predictedPlayerMove: PlayerAction.RELOAD,
-        zegonMove: ZegonAction.FIRE_HIGH,
-        confidence: 0.4,
+        predictedPlayerMove: PlayerAction.USE_ITEM,
+        zegonMove: ZegonAction.FIRE,
+        confidence: 0.95,
         taunt: taunts[5]!,
-      },
-    },
-    {
-      decision: {
-        predictedPlayerMove: PlayerAction.RELOAD,
-        zegonMove: ZegonAction.FIRE_LOW,
-        confidence: 0.85,
-        taunt: taunts[6]!,
-      },
-    },
-    {
-      decision: {
-        predictedPlayerMove: PlayerAction.DODGE_LOW,
-        zegonMove: ZegonAction.FIRE_HIGH,
-        confidence: 1,
-        taunt: taunts[7]!,
       },
     },
   ];

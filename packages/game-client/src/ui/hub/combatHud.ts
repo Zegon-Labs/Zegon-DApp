@@ -7,13 +7,15 @@ export interface CombatHudState {
   zegonHp: number;
   playerMaxHp: number;
   zegonMaxHp: number;
-  ammo: number;
-  maxAmmo: number;
   blindsight: number;
+  readingStreak: number;
+  itemLabel: string;
+  itemStatus: string;
+  itemReady: boolean;
+  itemCooldown: number;
   playerLabel: string;
   zegonLabel: string;
-  weaponLabel: string;
-  hudWeapon: string;
+  hudItem: string;
   hudStatus: string;
   blindsightLabel: string;
   blindsightFlavor: string;
@@ -53,10 +55,9 @@ export class CombatHud {
       name: state.playerLabel,
       hp: state.playerHp,
       maxHp: state.playerMaxHp,
-      ammo: state.ammo,
-      maxAmmo: state.maxAmmo,
-      weaponLabel: state.weaponLabel,
-      detail: state.hudWeapon,
+      itemLabel: state.hudItem,
+      itemDetail: state.itemStatus,
+      itemReady: state.itemReady,
     });
     this.zegonBlock.update({
       name: state.zegonLabel,

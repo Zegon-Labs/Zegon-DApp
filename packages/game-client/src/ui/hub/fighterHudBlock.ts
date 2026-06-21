@@ -3,7 +3,6 @@ import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
 import { DUEL_LAYOUT as L, zegonStatsPanelX } from "../layout.js";
 import { paintDuelFrameCorners } from "./duelHudDraw.js";
 import {
-  drawBulletIcon,
   drawHeartIcon,
   drawSkullIcon,
 } from "./duelHudDraw.js";
@@ -12,8 +11,9 @@ export interface FighterHudBlockState {
   name: string;
   hp: number;
   maxHp?: number;
-  maxAmmo?: number;
-  ammo?: number;
+  itemLabel?: string;
+  itemDetail?: string;
+  itemReady?: boolean;
   weaponLabel?: string;
   statusLabel?: string;
   detail?: string;
@@ -114,15 +114,17 @@ export class FighterHudBlock {
         const cx = leftEdge + i * (this.iconSize + this.iconGap);
         drawHeartIcon(this.iconGfx, cx, rowY, this.iconSize, i < filledHp);
       }
-      const maxAmmo = state.maxAmmo ?? 6;
-      const ammo = state.ammo ?? 0;
-      const ammoY = rowY + this.iconSize + L.stats.rowGap;
-      for (let i = 0; i < maxAmmo; i++) {
-        const cx = leftEdge + i * (this.iconSize + this.iconGap);
-        drawBulletIcon(this.iconGfx, cx, ammoY, this.iconSize - 2, i < ammo);
+      const item = state.itemLabel?.trim();
+      const detail = state.itemDetail?.trim();
+      if (item && detail) {
+        this.metaText.setText(`${item} · ${detail}`);
+        this.metaText.setColor(state.itemReady ? COLORS.verified : COLORS.ember);
+      } else if (detail) {
+        this.metaText.setText(detail);
+        this.metaText.setColor(state.itemReady ? COLORS.verified : COLORS.ember);
+      } else {
+        this.metaText.setText("");
       }
-      const weapon = state.weaponLabel ?? "REVOLVER";
-      this.metaText.setText(`${state.detail ?? "WEAPON"} ${weapon}`);
     } else {
       for (let i = 0; i < HEART_SLOTS; i++) {
         const cx = rightEdge - (HEART_SLOTS - 1 - i) * (this.iconSize + this.iconGap);

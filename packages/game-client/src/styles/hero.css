@@ -774,6 +774,40 @@ body:has(.hero) {
   letter-spacing: 0.06em;
 }
 
+.hero__tutorial-callout {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 77, 46, 0.45);
+  border-radius: 2px;
+  background: rgba(179, 18, 43, 0.14);
+  color: var(--bone);
+  font-family: var(--font-mono);
+  font-size: var(--menu-fs-sm);
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+
+.hero__menu .btn--menu-emphasis {
+  border-color: rgba(255, 77, 46, 0.75);
+  color: var(--ember);
+  animation: tutorial-menu-pulse 2.4s ease-in-out infinite;
+}
+
+.hero__menu .btn--primary-muted {
+  opacity: 0.88;
+}
+
+@keyframes tutorial-menu-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 77, 46, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(255, 77, 46, 0.35);
+  }
+}
+
 .hero__menu .hero__guest-note {
   margin: 0;
   padding-top: calc(var(--menu-gap) + 3px);

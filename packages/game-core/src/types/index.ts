@@ -1,19 +1,18 @@
 export enum PlayerAction {
-  FIRE_HIGH = "FIRE_HIGH",
-  FIRE_LOW = "FIRE_LOW",
-  DODGE_HIGH = "DODGE_HIGH",
-  DODGE_LOW = "DODGE_LOW",
-  FEINT = "FEINT",
-  RELOAD = "RELOAD",
+  FIRE = "FIRE",
+  DODGE = "DODGE",
+  USE_ITEM = "USE_ITEM",
 }
 
 export enum ZegonAction {
-  FIRE_HIGH = "FIRE_HIGH",
-  FIRE_LOW = "FIRE_LOW",
-  DODGE_HIGH = "DODGE_HIGH",
-  DODGE_LOW = "DODGE_LOW",
-  FEINT = "FEINT",
-  RELOAD = "RELOAD",
+  FIRE = "FIRE",
+  DODGE = "DODGE",
+}
+
+export enum DuelItemId {
+  SMOKE = "SMOKE",
+  MIRROR = "MIRROR",
+  PLATE = "PLATE",
 }
 
 export enum DuelPhase {
@@ -54,7 +53,11 @@ export interface RoundContext {
   zegonHp: number;
   weapon: WeaponId;
   ammo: number;
+  /** Legacy display value derived from reading streak. */
   blindsight: number;
+  readingStreak: number;
+  equippedItem: DuelItemId;
+  itemCooldown: number;
   isDeadeye: boolean;
   modifiers?: DuelModifiers;
   archetype?: string;
@@ -83,6 +86,7 @@ export interface RoundLogEntry {
   playerAction: PlayerAction;
   zegonDecision: ZegonDecision;
   predictionCorrect: boolean;
+  itemUsed?: DuelItemId;
 }
 
 export interface RoundOutcome {
@@ -93,15 +97,19 @@ export interface RoundOutcome {
   zegonDamage: number;
   blindsightDelta: number;
   blindsightAfter: number;
+  readingStreakAfter: number;
   deadeyeTriggered: boolean;
   deadeyeConsumed: boolean;
   ammoAfter: number;
+  itemCooldownAfter: number;
+  itemUsed?: DuelItemId;
   log: RoundLogEntry;
 }
 
 export interface DuelModifiers {
   blindsightOnCorrect?: number;
   deadeyeThreshold?: number;
+  deadeyeStreak?: number;
   zegonDodgeBias?: number;
   zegonDamageMultiplier?: number;
 }
@@ -125,6 +133,9 @@ export interface DuelState {
   weapon: WeaponId;
   ammo: number;
   blindsight: number;
+  readingStreak: number;
+  equippedItem: DuelItemId;
+  itemCooldown: number;
   isDeadeye: boolean;
   playerHistory: readonly PlayerAction[];
   roundsWonByPlayer: number;
@@ -141,6 +152,7 @@ export interface DuelResult {
   roundsWonByZegon: number;
   timesRead: number;
   finalBlindsight: number;
+  finalReadingStreak: number;
   playerHp: number;
   zegonHp: number;
   roundLogs: readonly RoundLogEntry[];
@@ -163,23 +175,22 @@ export interface DuelEvent {
 export type DuelEventListener = (event: DuelEvent) => void;
 
 export function isFireAction(action: PlayerAction | ZegonAction): boolean {
-  return action === PlayerAction.FIRE_HIGH || action === PlayerAction.FIRE_LOW;
+  return action === PlayerAction.FIRE || action === ZegonAction.FIRE;
 }
 
 export const ALL_PLAYER_ACTIONS: readonly PlayerAction[] = [
-  PlayerAction.FIRE_HIGH,
-  PlayerAction.FIRE_LOW,
-  PlayerAction.DODGE_HIGH,
-  PlayerAction.DODGE_LOW,
-  PlayerAction.FEINT,
-  PlayerAction.RELOAD,
+  PlayerAction.FIRE,
+  PlayerAction.DODGE,
+  PlayerAction.USE_ITEM,
 ];
 
 export const ALL_ZEGON_ACTIONS: readonly ZegonAction[] = [
-  ZegonAction.FIRE_HIGH,
-  ZegonAction.FIRE_LOW,
-  ZegonAction.DODGE_HIGH,
-  ZegonAction.DODGE_LOW,
-  ZegonAction.FEINT,
-  ZegonAction.RELOAD,
+  ZegonAction.FIRE,
+  ZegonAction.DODGE,
+];
+
+export const ALL_DUEL_ITEMS: readonly DuelItemId[] = [
+  DuelItemId.SMOKE,
+  DuelItemId.MIRROR,
+  DuelItemId.PLATE,
 ];

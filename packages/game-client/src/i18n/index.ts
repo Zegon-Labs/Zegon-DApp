@@ -22,19 +22,28 @@ export interface LocaleStrings {
   hudHp: string;
   hudAmmo: string;
   hudBlindsight: string;
-  actionFireHigh: string;
-  actionFireLow: string;
-  actionDodgeHigh: string;
-  actionDodgeLow: string;
-  actionFeint: string;
-  actionReload: string;
-  actionDescFireHigh: string;
-  actionDescFireLow: string;
-  actionDescDodgeHigh: string;
-  actionDescDodgeLow: string;
-  actionDescFeint: string;
-  actionDescReload: string;
+  hudItem: string;
+  actionFire: string;
+  actionDodge: string;
+  actionUseItem: string;
+  actionDescFire: string;
+  actionDescDodge: string;
+  actionDescUseItem: string;
+  itemSmoke: string;
+  itemMirror: string;
+  itemPlate: string;
+  itemCooldownReady: string;
+  itemCooldownIn: string;
+  itemDescSmoke: string;
+  itemDescMirror: string;
+  itemDescPlate: string;
+  duelTipDefault: string;
+  duelTipStreak1: string;
+  duelTipDeadeye: string;
+  duelTipRepeat: string;
+  duelTipItemReady: string;
   zegonPlayed: string;
+  zegonPredicted: string;
   youPlayed: string;
   zegonReadYou: string;
   actionTooltipHint: string;
@@ -70,12 +79,14 @@ export interface LocaleStrings {
   roundSummaryYouHit: string;
   roundSummaryZegonHit: string;
   roundSummaryNoDamage: string;
+  roundSummaryMissDodge: string;
+  roundSummaryYouDodged: string;
+  roundSummaryBothDodged: string;
   roundSummaryDeadeyeOn: string;
   roundSummaryDeadeyeUsed: string;
-  roundSummaryMirrorStandoff: string;
-  roundSummaryMirrorReadHit: string;
-  roundSummaryBlindsightFloor: string;
-  errorNoAmmo: string;
+  roundSummaryStreak: string;
+  roundSummaryDragHint: string;
+  errorItemCooldown: string;
   tutorial: string;
   tutorialTitle: string;
   tutorialDoneBadge: string;
@@ -90,8 +101,10 @@ export interface LocaleStrings {
   tutorialActionsBody: string;
   tutorialPredictionTitle: string;
   tutorialPredictionBody: string;
-  tutorialAmmoTitle: string;
-  tutorialAmmoBody: string;
+  tutorialItemsTitle: string;
+  tutorialItemsBody: string;
+  tutorialItemCooldownTitle: string;
+  tutorialItemCooldownBody: string;
   tutorialPracticeTitle: string;
   tutorialPracticeBody: string;
   tutorialVerifyTitle: string;
@@ -99,13 +112,9 @@ export interface LocaleStrings {
   tutorialStepFire: string;
   tutorialStepDodge: string;
   tutorialStepRead: string;
-  tutorialStepMirrorStandoff: string;
-  tutorialFeedbackMirrorRead: string;
-  tutorialFeedbackMirrorStandoff: string;
-  tutorialStepFeint: string;
-  tutorialStepReload: string;
-  tutorialStepDamage: string;
-  tutorialStepDeadeye: string;
+  tutorialStepItemSmoke: string;
+  tutorialStepItemPlate: string;
+  tutorialStepItemMirror: string;
   tutorialComplete: string;
   tutorialCompleteBody: string;
   tutorialCompleteBadge: string;
@@ -125,6 +134,8 @@ export interface LocaleStrings {
   tutorialLessonProgress: string;
   tutorialStepProgress: string;
   tutorialHudHint: string;
+  tutorialHudHintShort: string;
+  heroTutorialFirst: string;
   disconnectWallet: string;
   walletOptional: string;
   walletConnected: string;
@@ -233,20 +244,29 @@ const LOCALES: Record<Language, LocaleStrings> = {
     hudZegon: "ZEGON",
     hudHp: "HP",
     hudAmmo: "AMMO",
-    hudBlindsight: "BLINDSIGHT",
-    actionFireHigh: "FIRE HIGH",
-    actionFireLow: "FIRE LOW",
-    actionDodgeHigh: "DODGE HIGH",
-    actionDodgeLow: "DODGE LOW",
-    actionFeint: "FEINT",
-    actionReload: "RELOAD",
-    actionDescFireHigh: "Shoot high. Beats low dodge and feint.",
-    actionDescFireLow: "Shoot low. Beats high dodge and reload.",
-    actionDescDodgeHigh: "Dodge high · avoids low shots.",
-    actionDescDodgeLow: "Dodge low · avoids high shots.",
-    actionDescFeint: "Feint · breaks pattern. Only safe if ZEGON mispredicted.",
-    actionDescReload: "Reload · restore ammo (vulnerable).",
+    hudBlindsight: "READ STREAK",
+    hudItem: "ITEM",
+    actionFire: "SHOOT",
+    actionDodge: "DODGE",
+    actionUseItem: "USE ITEM",
+    actionDescFire: "Shoot · hits if ZEGON mispredicted.",
+    actionDescDodge: "Dodge · blocks ZEGON's shot.",
+    actionDescUseItem: "Use equipped item (pick above).",
+    itemSmoke: "SMOKE",
+    itemMirror: "MIRROR",
+    itemPlate: "PLATE",
+    itemCooldownReady: "Item ready",
+    itemCooldownIn: "Item in {n} rounds",
+    itemDescSmoke: "Vanishes from ZEGON's read · resets streak · cancels DEADEYE.",
+    itemDescMirror: "If ZEGON read you and shoots · reflects damage (lethal on DEADEYE).",
+    itemDescPlate: "Blocks ZEGON's shot · cancels DEADEYE · does not break the read.",
+    duelTipDefault: "Tip · Alternate SHOOT and DODGE so ZEGON can't read you.",
+    duelTipStreak1: "Tip · ZEGON read you once. Change your move now!",
+    duelTipDeadeye: "Tip · DEADEYE! Dodge won't help — use an item or surprise.",
+    duelTipRepeat: "Tip · Same move twice — ZEGON will predict you. Vary!",
+    duelTipItemReady: "Tip · Item ready. Pick one above, then USE ITEM.",
     zegonPlayed: "ZEGON played",
+    zegonPredicted: "ZEGON predicted",
     youPlayed: "You played",
     zegonReadYou: "ZEGON READ YOU!",
     actionTooltipHint: "Hover a button to see what it does",
@@ -283,65 +303,59 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryYouHit: "You took",
     roundSummaryZegonHit: "ZEGON took",
     roundSummaryNoDamage: "No damage this round",
+    roundSummaryMissDodge: "ZEGON dodged — your shot missed",
+    roundSummaryYouDodged: "You dodged — no damage taken",
+    roundSummaryBothDodged: "Both dodged — no damage",
     roundSummaryDeadeyeOn: "DEADEYE activated · next shot is lethal",
     roundSummaryDeadeyeUsed: "DEADEYE spent",
-    roundSummaryMirrorStandoff: "Same shot — standoff, no damage",
-    roundSummaryMirrorReadHit:
-      "Mirror shot · ZEGON read you, so its bullet still lands",
-    roundSummaryBlindsightFloor: "Blindsight already at zero",
-    errorNoAmmo: "No ammo · reload first.",
+    roundSummaryStreak: "Read streak",
+    roundSummaryDragHint: "← swipe to continue →",
+    errorItemCooldown: "Item on cooldown.",
     tutorial: "TUTORIAL",
     tutorialTitle: "Welcome to the duel",
     tutorialDoneBadge: "✓ DONE",
     tutorialIntro:
-      "ZEGON is a blind gunslinger AI · it cannot see your current move.\n\nBut it reads patterns in your history. Repeat gestures and Blindsight rises. Survive by being unpredictable.",
+      "ZEGON is a blind gunslinger AI · it cannot see your current move.\n\nIt reads patterns in your history. Repeat the same choice twice and its read streak rises. First to 0 HP loses.",
     tutorialHpTitle: "Life (HP)",
     tutorialHpBody:
-      "You and ZEGON start at 100 HP (bottom corners).\n\n• Your bar = cyan (left)\n• ZEGON's bar = ember (right)\n\nSuccessful shots deal damage. At 0 HP you lose. First to break the opponent wins.",
-    tutorialBlindsightTitle: "Blindsight · the band",
+      "You and ZEGON start at 100 HP (bottom corners).\n\nSuccessful shots deal 20 damage. At 0 HP you lose. First to break the opponent wins.",
+    tutorialBlindsightTitle: "Read streak",
     tutorialBlindsightBody:
-      "The meter top-right is ZEGON's Blindsight (the glowing band).\n\n• +15 when ZEGON predicts your action correctly\n• −10 when you surprise it\n• −8 when you Feint successfully\n\nHigh Blindsight = screen glitches intensify. ZEGON is reading you.",
+      "Top-right shows how many times ZEGON read you in a row.\n\n• Wrong prediction · streak resets\n• Two reads in a row · DEADEYE warning\n\nVary SHOOT and DODGE so it cannot lock onto you.",
     tutorialDeadeyeTitle: "DEADEYE",
     tutorialDeadeyeBody:
-      "At 100% Blindsight, ZEGON enters DEADEYE.\n\nIts next shot becomes lethal · almost impossible to dodge unless you broke the read.\n\nWatch for the ember flash and \"DEADEYE!\" warning. Break patterns before it peaks.",
-    tutorialActionsTitle: "Six actions",
+      "After two consecutive reads, ZEGON enters DEADEYE.\n\nIts next hit is lethal (all your remaining HP). Dodge won't help.\n\nUse an item: Smoke cancels the read, Plate blocks the shot, Mirror reflects it back.",
+    tutorialActionsTitle: "Shoot, dodge, or item",
     tutorialActionsBody:
-      "FIRE HIGH / FIRE LOW · deal damage if ZEGON mispredicted (and heights don't clash).\n\nDODGE HIGH · avoids low shots.\nDODGE LOW · avoids high shots.\n\nFEINT · fake move; breaks rhythm. NOT a dodge · if ZEGON predicted your feint and fires, you take damage.\n\nRELOAD · restores ammo but you're vulnerable.",
-    tutorialPredictionTitle: "Prediction vs mirror shots",
+      "SHOOT · hits if ZEGON mispredicted and also shoots.\n\nDODGE · blocks a normal shot (not DEADEYE).\n\nUSE ITEM · pick Smoke, Mirror, or Plate below first, then press USE ITEM on your turn.",
+    tutorialPredictionTitle: "ZEGON makes two choices",
     tutorialPredictionBody:
-      "Each round ZEGON picks two things before you act:\n\n1) Prediction · what it thinks you will do (history only — never your current button)\n2) Its move · what it actually does\n\nMirror shot · you both fire the same height (high-high or low-low):\n• You never damage ZEGON on a mirror — bullets cross, standoff on its HP\n• You only take damage if it predicted your exact action and fired that height\n• Same height but wrong prediction · full standoff, no damage, Blindsight drops\n\nDifferent heights use normal hit / dodge rules.",
-    tutorialAmmoTitle: "Ammo",
-    tutorialAmmoBody:
-      "The revolver holds 6 rounds (shown as AMMO ×N under your HP).\n\nEach shot spends 1 bullet. At 0 ammo you cannot fire · you must RELOAD.\n\nReloading while ZEGON shoots = you get hit.",
-    tutorialPracticeTitle: "Practice round",
+      "Each round, before you act, ZEGON decides:\n\n1) Prediction · what it thinks you'll do\n2) Its move · SHOOT or DODGE\n\nAfter the round, the summary shows all three: its prediction, its move, and yours. Swipe it away to continue.",
+    tutorialItemsTitle: "Three different items",
+    tutorialItemsBody:
+      "Pick one chip below the action buttons (hover to read what each does):\n\n• Smoke · breaks the read, resets streak, cancels DEADEYE\n• Plate · blocks ZEGON's shot, cancels DEADEYE (still can read you)\n• Mirror · if ZEGON read you and shoots, damage goes back (lethal on DEADEYE)",
+    tutorialItemCooldownTitle: "When can you use items?",
+    tutorialItemCooldownBody:
+      "Only on your turn, when USE ITEM is enabled.\n\nBottom-left panel shows OBJETO · Item ready (green) or Item in X rounds.\n\nUsing an item starts a 4-round cooldown. Each round you play (shoot/dodge) counts one down.",
+    tutorialPracticeTitle: "Guided duel",
     tutorialPracticeBody:
-      "Now try guided moves against a scripted ZEGON — including mirror shots.\n\nFollow the hint bar above the buttons. Only the correct action will be enabled each step.",
+      "You'll play a short duel like the real mode: same HUD, buttons, items, and round flow.\n\nFollow each hint. Only the correct action is enabled each step.",
     tutorialVerifyTitle: "VERIFY · provably fair",
     tutorialVerifyBody:
       "After a real duel you can VERIFY on-chain: ZEGON committed its move before you acted, using only your history · never your current shot.\n\nThat's the 0G sealed AI proof. Optional, but the core of ZEGON.",
-    tutorialStepFire:
-      "ZEGON mispredicted. Shoot · FIRE HIGH or FIRE LOW. If you hit, ZEGON loses HP.",
-    tutorialStepDodge:
-      "ZEGON fires high. Use DODGE LOW · duck under the shot.",
+    tutorialStepFire: "ZEGON mispredicted. SHOOT · you'll hit.",
+    tutorialStepDodge: "ZEGON shoots. DODGE · stay safe.",
     tutorialStepRead:
-      "Mirror · both FIRE HIGH. ZEGON predicted FIRE HIGH (it read you). Shoot high anyway · you take damage, it doesn't — that's the read landing.",
-    tutorialStepMirrorStandoff:
-      "Mirror again · both FIRE HIGH, but ZEGON predicted RELOAD (wrong). Same shot height, no read · standoff, zero damage.",
-    tutorialFeedbackMirrorRead:
-      "Mirror + read · ZEGON predicted your exact shot, so its bullet hits you",
-    tutorialFeedbackMirrorStandoff:
-      "Mirror + mispredict · same height, but it didn't read you — standoff",
-    tutorialStepFeint:
-      "ZEGON expects another shot. FEINT · break your pattern; Blindsight drops if it mispredicted.",
-    tutorialStepReload:
-      "No ammo left. RELOAD · you'll be vulnerable if ZEGON fires.",
-    tutorialStepDamage:
-      "RELOAD again · ZEGON will shoot. Watch your HP drop (−damage).",
-    tutorialStepDeadeye:
-      "DEADEYE active! ZEGON fires high · DODGE LOW if you can (almost lethal if he read you).",
+      "ZEGON read you · both shoot. You take 20 damage — check the round summary after.",
+    tutorialStepItemSmoke:
+      "Select SMOKE, then USE ITEM · breaks the read and cancels DEADEYE threat.",
+    tutorialStepItemPlate:
+      "DEADEYE active! Select PLATE, then USE ITEM · blocks the lethal shot and cancels DEADEYE.",
+    tutorialStepItemMirror:
+      "Select MIRROR, then USE ITEM · ZEGON read you and shoots — reflect lethal damage back.",
     tutorialComplete: "Tutorial complete",
     tutorialCompleteBody:
-      "You learned HP, Blindsight, DEADEYE, predictions, mirror shots, all six actions, and ammo.\n\nYou're ready for a real duel.",
+      "You learned HP, read streak, DEADEYE, predictions, items, and cooldowns.\n\nYou're ready for a real duel.",
     tutorialCompleteBadge: "Completed",
     tutorialWrong: "Not that one · follow the hint.",
     tutorialGood: "Nice.",
@@ -358,7 +372,9 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialBackToMenu: "BACK TO MENU",
     tutorialLessonProgress: "Lesson {current}/{total}",
     tutorialStepProgress: "Practice {current}/{total}",
-    tutorialHudHint: "Bars: HP bottom · Blindsight top-right · Ammo under you",
+    tutorialHudHint: "Bottom-left · OBJETO status. Top-right · read streak.",
+    tutorialHudHintShort: "Tutorial duel",
+    heroTutorialFirst: "New here? Complete the tutorial before your first duel.",
     heroCharacterSpeak: "Listen to ZEGON",
     connectWallet: "CONNECT WALLET",
     heroTagline: "It can't see you. It reads you.",
@@ -465,20 +481,29 @@ const LOCALES: Record<Language, LocaleStrings> = {
     hudZegon: "ZEGON",
     hudHp: "PS",
     hudAmmo: "MUNICIÓN",
-    hudBlindsight: "CIEGO-VISTA",
-    actionFireHigh: "DISPARO ALTO",
-    actionFireLow: "DISPARO BAJO",
-    actionDodgeHigh: "ESQUIVA ALTA",
-    actionDodgeLow: "ESQUIVA BAJA",
-    actionFeint: "FINTA",
-    actionReload: "RECARGAR",
-    actionDescFireHigh: "Disparo alto. Gana contra esquiva baja y finta.",
-    actionDescFireLow: "Disparo bajo. Gana contra esquiva alta y recarga.",
-    actionDescDodgeHigh: "Esquiva alta · evita disparos bajos.",
-    actionDescDodgeLow: "Esquiva baja · evita disparos altos.",
-    actionDescFeint: "Finta · rompe patrón. Solo te protege si ZEGON predijo mal.",
-    actionDescReload: "Recargar · recuperás munición (quedás expuesto).",
+    hudBlindsight: "RACHA",
+    hudItem: "OBJETO",
+    actionFire: "DISPARAR",
+    actionDodge: "ESQUIVAR",
+    actionUseItem: "USAR OBJETO",
+    actionDescFire: "Dispará · pegás si ZEGON predijo mal.",
+    actionDescDodge: "Esquivá · bloquea el disparo de ZEGON.",
+    actionDescUseItem: "Usá el objeto equipado (elegí arriba).",
+    itemSmoke: "HUMO",
+    itemMirror: "ESPEJO",
+    itemPlate: "PLACA",
+    itemCooldownReady: "Objeto listo",
+    itemCooldownIn: "Objeto en {n} rondas",
+    itemDescSmoke: "Desaparecés de la lectura · reinicia racha · cancela DEADEYE.",
+    itemDescMirror: "Si ZEGON te leyó y dispara · refleja el daño (letal en DEADEYE).",
+    itemDescPlate: "Bloquea el disparo · cancela DEADEYE · no rompe la lectura.",
+    duelTipDefault: "Consejo · Alterná DISPARAR y ESQUIVAR para que no te lea.",
+    duelTipStreak1: "Consejo · ZEGON te leyó una vez. ¡Cambiá de jugada!",
+    duelTipDeadeye: "Consejo · ¡DEADEYE! Esquivar no sirve — usá un objeto o sorprendelo.",
+    duelTipRepeat: "Consejo · Repetiste la misma jugada. ¡Variá!",
+    duelTipItemReady: "Consejo · Objeto listo. Elegí arriba y usá OBJETO.",
     zegonPlayed: "ZEGON jugó",
+    zegonPredicted: "ZEGON predijo",
     youPlayed: "Vos jugaste",
     zegonReadYou: "¡ZEGON TE LEYÓ!",
     actionTooltipHint: "Pasá el mouse sobre un botón para ver qué hace",
@@ -515,65 +540,59 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryYouHit: "Recibiste",
     roundSummaryZegonHit: "ZEGON recibió",
     roundSummaryNoDamage: "Sin daño esta ronda",
+    roundSummaryMissDodge: "ZEGON esquivó — no le pegaste",
+    roundSummaryYouDodged: "Esquivaste — no recibiste daño",
+    roundSummaryBothDodged: "Ambos esquivaron — sin daño",
     roundSummaryDeadeyeOn: "¡DEADEYE activado · próximo disparo letal!",
     roundSummaryDeadeyeUsed: "DEADEYE consumido",
-    roundSummaryMirrorStandoff: "Mismo disparo — tablas, sin daño",
-    roundSummaryMirrorReadHit:
-      "Disparo espejo · ZEGON te leyó, su bala igual te alcanza",
-    roundSummaryBlindsightFloor: "Ciego-vista ya en cero",
-    errorNoAmmo: "Sin munición · recargá primero.",
+    roundSummaryStreak: "Racha de lectura",
+    roundSummaryDragHint: "← deslizá para continuar →",
+    errorItemCooldown: "Objeto en enfriamiento.",
     tutorial: "TUTORIAL",
     tutorialTitle: "Bienvenido al duelo",
     tutorialDoneBadge: "✓ HECHO",
     tutorialIntro:
-      "ZEGON es un pistolero IA ciego · no puede ver tu jugada actual.\n\nPero lee patrones en tu historial. Si repetís gestos, sube el ciego-vista. Sobreviví siendo impredecible.",
+      "ZEGON es un pistolero IA ciego · no puede ver tu jugada actual.\n\nLee patrones en tu historial. Repetí la misma elección dos veces y sube su racha. El primero en 0 PS pierde.",
     tutorialHpTitle: "Vida (PS)",
     tutorialHpBody:
-      "Vos y ZEGON empezáis con 100 PS (esquinas abajo).\n\n• Tu barra = cyan (izquierda)\n• Barra de ZEGON = ember (derecha)\n\nLos disparos acertados hacen daño. A 0 PS perdés. Gana quien rompa al rival.",
-    tutorialBlindsightTitle: "Ciego-vista · la venda",
+      "Vos y ZEGON empezáis con 100 PS (esquinas abajo).\n\nCada impacto hace 20 de daño. A 0 PS perdés. Gana quien derrote al rival.",
+    tutorialBlindsightTitle: "Racha de lectura",
     tutorialBlindsightBody:
-      "El medidor arriba a la derecha es el ciego-vista de ZEGON (la venda brillante).\n\n• +15 si ZEGON predice bien tu acción\n• −10 si lo sorprendés\n• −8 si la finta funciona\n\nCiego-vista alto = más glitch en pantalla. ZEGON te está leyendo.",
+      "Arriba a la derecha ves cuántas veces seguidas te leyó ZEGON.\n\n• Predicción fallida · racha a cero\n• Dos lecturas seguidas · aviso DEADEYE\n\nAlterná DISPARAR y ESQUIVAR para que no te lea.",
     tutorialDeadeyeTitle: "DEADEYE (Ojo de muerte)",
     tutorialDeadeyeBody:
-      "Al 100% de ciego-vista, ZEGON entra en DEADEYE.\n\nSu próximo disparo es letal · casi imposible de esquivar si te leyó.\n\nMirá el flash ember y el aviso \"¡OJO DE MUERTE!\". Rompé patrones antes de que llegue al máximo.",
-    tutorialActionsTitle: "Seis acciones",
+      "Tras dos lecturas seguidas, ZEGON entra en DEADEYE.\n\nSu próximo golpe es letal (toda tu vida). Esquivar no sirve.\n\nUsá un objeto: Humo cancela la lectura, Placa bloquea el tiro, Espejo lo devuelve.",
+    tutorialActionsTitle: "Disparar, esquivar u objeto",
     tutorialActionsBody:
-      "DISPARO ALTO / BAJO · dañan si ZEGON predijo mal (y las alturas no chocan).\n\nESQUIVA ALTA · evita tiros bajos.\nESQUIVA BAJA · evita tiros altos.\n\nFINTA · movimiento falso; rompe ritmo. NO es esquiva · si ZEGON predijo la finta y dispara, recibís daño.\n\nRECARGAR · recupera munición pero quedás expuesto.",
-    tutorialPredictionTitle: "Predicción vs disparo espejo",
+      "DISPARAR · pegás si ZEGON predijo mal y también dispara.\n\nESQUIVAR · bloquea un tiro normal (no DEADEYE).\n\nUSAR OBJETO · elegí Humo, Espejo o Placa abajo, luego USAR OBJETO en tu turno.",
+    tutorialPredictionTitle: "ZEGON toma dos decisiones",
     tutorialPredictionBody:
-      "Cada ronda ZEGON elige dos cosas antes de que actúes:\n\n1) Predicción · qué cree que vas a hacer (solo tu historial — nunca tu botón actual)\n2) Su jugada · lo que realmente hace\n\nDisparo espejo · los dos disparáis a la misma altura (alto-alto o bajo-bajo):\n• Nunca le quitás PS a ZEGON en un espejo — las balas se cruzan / tablas hacia él\n• Solo te lastima si predijo tu acción exacta y disparó a esa altura\n• Misma altura pero predicción errada · tablas totales, sin daño, baja el ciego-vista\n\nAlturas distintas siguen las reglas normales de impacto y esquiva.",
-    tutorialAmmoTitle: "Munición",
-    tutorialAmmoBody:
-      "El revólver tiene 6 balas (MUNICIÓN ×N bajo tus PS).\n\nCada disparo gasta 1. Con 0 balas no podés disparar · hay que RECARGAR.\n\nRecargar mientras ZEGON dispara = te pegan.",
-    tutorialPracticeTitle: "Ronda de práctica",
+      "Cada ronda, antes de vos, ZEGON decide:\n\n1) Predicción · qué cree que harás\n2) Su jugada · DISPARAR o ESQUIVAR\n\nDespués ves las tres en el resumen. Deslizalo para continuar.",
+    tutorialItemsTitle: "Tres objetos distintos",
+    tutorialItemsBody:
+      "Elegí un chip debajo de los botones (pasá el mouse para ver qué hace):\n\n• Humo · rompe la lectura, reinicia racha, cancela DEADEYE\n• Placa · bloquea el disparo, cancela DEADEYE (puede leerte igual)\n• Espejo · si te leyó y dispara, devuelve el daño (letal en DEADEYE)",
+    tutorialItemCooldownTitle: "¿Cuándo podés usar objetos?",
+    tutorialItemCooldownBody:
+      "Solo en tu turno, cuando USAR OBJETO está activo.\n\nAbajo a la izquierda: OBJETO · Objeto listo (verde) u Objeto en X rondas.\n\nAl usar uno, hay 4 rondas de cooldown. Cada ronda que jugás (disparar/esquivar) baja el contador.",
+    tutorialPracticeTitle: "Duelo guiado",
     tutorialPracticeBody:
-      "Ahora probá jugadas guiadas contra un ZEGON scripteado — incluidos disparos espejo.\n\nSeguí la barra de pistas sobre los botones. Solo la acción correcta estará habilitada.",
+      "Vas a jugar un duelo corto igual al real: mismo HUD, botones, objetos y resumen de ronda.\n\nSeguí cada pista. Solo la acción correcta estará habilitada.",
     tutorialVerifyTitle: "VERIFY · juego limpio",
     tutorialVerifyBody:
       "Tras un duelo real podés VERIFY on-chain: ZEGON comprometió su jugada antes de que actúes, usando solo tu historial · nunca tu disparo actual.\n\nEsa es la prueba de IA sellada de 0G. Opcional, pero el corazón de ZEGON.",
-    tutorialStepFire:
-      "ZEGON predijo mal. Dispará · DISPARO ALTO o BAJO. Si acertás, ZEGON pierde PS.",
-    tutorialStepDodge:
-      "ZEGON dispara alto. Usá ESQUIVA BAJA · te agachás bajo el tiro.",
+    tutorialStepFire: "ZEGON predijo mal. DISPARÁ · vas a pegar.",
+    tutorialStepDodge: "ZEGON dispara. ESQUIVÁ · quedás a salvo.",
     tutorialStepRead:
-      "Espejo · los dos DISPARO ALTO. ZEGON predijo DISPARO ALTO (te leyó). Dispará alto igual · vos recibís daño, él no — así cae la predicción.",
-    tutorialStepMirrorStandoff:
-      "Otro espejo · los dos DISPARO ALTO, pero ZEGON predijo RECARGAR (mal). Misma altura, sin lectura · tablas, cero daño.",
-    tutorialFeedbackMirrorRead:
-      "Espejo + lectura · ZEGON adivinó tu disparo exacto, su bala te pega",
-    tutorialFeedbackMirrorStandoff:
-      "Espejo + error · misma altura, pero no te leyó — tablas",
-    tutorialStepFeint:
-      "ZEGON espera otro disparo. FINTA · rompé el patrón; baja el ciego-vista si predijo mal.",
-    tutorialStepReload:
-      "Sin balas. RECARGÁ · quedás vulnerable si ZEGON dispara.",
-    tutorialStepDamage:
-      "RECARGÁ otra vez · ZEGON dispara. Mirá bajar tus PS (−daño).",
-    tutorialStepDeadeye:
-      "¡DEADEYE activo! ZEGON dispara alto · ESQUIVA BAJA si podés (casi letal si te leyó).",
+      "ZEGON te leyó · los dos disparan. Recibís 20 de daño — mirá el resumen después.",
+    tutorialStepItemSmoke:
+      "Elegí HUMO, luego USAR OBJETO · rompe la lectura y cancela DEADEYE.",
+    tutorialStepItemPlate:
+      "¡DEADEYE activo! Elegí PLACA, luego USAR OBJETO · bloquea el tiro letal y cancela DEADEYE.",
+    tutorialStepItemMirror:
+      "Elegí ESPEJO, luego USAR OBJETO · ZEGON te leyó y dispara — devolvé el daño letal.",
     tutorialComplete: "Tutorial completado",
     tutorialCompleteBody:
-      "Aprendiste PS, ciego-vista, DEADEYE, predicciones, disparos espejo, las seis acciones y la munición.\n\nEstás listo para un duelo real.",
+      "Aprendiste PS, racha, DEADEYE, predicciones, objetos y cooldowns.\n\nEstás listo para un duelo real.",
     tutorialCompleteBadge: "Completado",
     tutorialWrong: "Esa no · seguí la pista.",
     tutorialGood: "Bien.",
@@ -590,7 +609,9 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialBackToMenu: "VOLVER AL MENÚ",
     tutorialLessonProgress: "Lección {current}/{total}",
     tutorialStepProgress: "Práctica {current}/{total}",
-    tutorialHudHint: "Barras: PS abajo · Ciego-vista arriba-derecha · Munición bajo vos",
+    tutorialHudHint: "Abajo-izq · estado OBJETO. Arriba-der · racha de lectura.",
+    tutorialHudHintShort: "Duelo tutorial",
+    heroTutorialFirst: "¿Primera vez? Completá el tutorial antes del duelo.",
     heroCharacterSpeak: "Escuchar a ZEGON",
     connectWallet: "CONECTAR WALLET",
     heroTagline: "No te ve. Te lee.",

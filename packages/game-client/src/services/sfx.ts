@@ -141,12 +141,9 @@ export function applySfxVolume(): void {
 }
 
 const ACTION_SFX: Partial<Record<PlayerAction, SfxId>> = {
-  [PlayerAction.FIRE_HIGH]: "fire_high",
-  [PlayerAction.FIRE_LOW]: "fire_low",
-  [PlayerAction.DODGE_HIGH]: "dodge",
-  [PlayerAction.DODGE_LOW]: "dodge",
-  [PlayerAction.FEINT]: "feint",
-  [PlayerAction.RELOAD]: "reload",
+  [PlayerAction.FIRE]: "fire_high",
+  [PlayerAction.DODGE]: "dodge",
+  [PlayerAction.USE_ITEM]: "feint",
 };
 
 const FIRE_GAIN = 1.42;
@@ -198,11 +195,9 @@ export function playRoundOutcomeSfx(outcome: {
   }
 
   const playerFired =
-    outcome.playerAction === PlayerAction.FIRE_HIGH ||
-    outcome.playerAction === PlayerAction.FIRE_LOW;
+    outcome.playerAction === PlayerAction.FIRE || outcome.playerAction === "FIRE";
   const zegonFired =
-    outcome.zegonMove === PlayerAction.FIRE_HIGH ||
-    outcome.zegonMove === PlayerAction.FIRE_LOW;
+    outcome.zegonMove === PlayerAction.FIRE || outcome.zegonMove === "FIRE";
 
   if (playerFired && outcome.zegonDamage === 0 && outcome.playerDamage === 0) {
     playSfx("miss", { volume: 0.85 });
@@ -214,12 +209,8 @@ export function playRoundOutcomeSfx(outcome: {
 
 export function playZegonMoveSfx(move: string): void {
   const map: Record<string, SfxId> = {
-    FIRE_HIGH: "fire_high",
-    FIRE_LOW: "fire_low",
-    DODGE_HIGH: "dodge",
-    DODGE_LOW: "dodge",
-    FEINT: "feint",
-    RELOAD: "reload",
+    FIRE: "fire_high",
+    DODGE: "dodge",
   };
   const id = map[move];
   if (!id) return;

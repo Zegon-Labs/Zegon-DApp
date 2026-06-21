@@ -25,10 +25,13 @@ export const DUEL_LAYOUT = {
 
   arena: { y: 318, characterMaxH: 480 },
 
-  statusLine: { y: 412 },
-  chooseAction: { y: 442 },
-  actionHint: { y: 488 },
-  actions: { y: 536, h: 46, gap: 10 },
+  statusLine: { y: 428 },
+  chooseAction: { y: 448 },
+  duelTip: { y: 468 },
+  actions: { y: 512, h: 48, gap: 12 },
+  /** Single fixed line for action + item descriptions (hover / ?). */
+  actionDesc: { y: 552 },
+  items: { y: 600, h: 36, gap: 10, helpSize: 18 },
 
   stats: {
     panelW: 240,
@@ -42,7 +45,7 @@ export const DUEL_LAYOUT = {
     nameRowH: 26,
   },
 
-  roundToast: { x: 1256, y: 292, maxW: 260 },
+  roundToast: { x: 1180, y: 292, maxW: 260 },
 
   /** Top-right chrome — stacked hub buttons below blindsight panel. */
   chrome: {
@@ -81,7 +84,7 @@ export function practicePopupCenterY(): number {
 }
 
 export function actionButtonWidth(screenWidth: number, count: number, gap: number): number {
-  return Math.min(155, (screenWidth - 48 - gap * (count - 1)) / count);
+  return Math.min(210, (screenWidth - 48 - gap * (count - 1)) / count);
 }
 
 export const TITLE_LAYOUT = {

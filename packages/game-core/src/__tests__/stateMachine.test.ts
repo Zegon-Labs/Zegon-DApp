@@ -26,8 +26,8 @@ describe("DuelController", () => {
 
     expect(controller.getState().phase).toBe(DuelPhase.AWAITING_PLAYER);
 
-    const outcome = controller.submitPlayerAction(PlayerAction.FIRE_HIGH);
-    expect(outcome.playerAction).toBe(PlayerAction.FIRE_HIGH);
+    const outcome = controller.submitPlayerAction(PlayerAction.FIRE);
+    expect(outcome.playerAction).toBe(PlayerAction.FIRE);
     expect(controller.getState().playerHistory).toHaveLength(1);
   });
 

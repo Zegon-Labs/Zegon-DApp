@@ -7,16 +7,24 @@ export const COMBAT = {
   /** Fixed damage per connected hit (5 skulls × 20 = 100 HP). */
   HIT_DAMAGE: 20,
   RELOAD_VULNERABILITY_DAMAGE_MULTIPLIER: 0.5,
+  /** @deprecated DEADEYE now deals remaining player HP (lethal). */
   DEADEYE_DAMAGE_MULTIPLIER: 1.5,
   DEADEYE_POST_CONSUME_BLINDSIGHT: 70,
 } as const;
 
+export const READING = {
+  /** Consecutive correct reads before DEADEYE. */
+  DEADEYE_STREAK: 2,
+} as const;
+
+export const ITEM = {
+  COOLDOWN_ROUNDS: 4,
+} as const;
+
+/** @deprecated Legacy — display only, derived from reading streak. */
 export const BLINDSIGHT = {
   MIN: 0,
   MAX: 100,
-  ON_CORRECT_PREDICT: 15,
-  ON_WRONG_PREDICT: -10,
-  ON_FEINT: -8,
   DEADEYE_THRESHOLD: 100,
 } as const;
 

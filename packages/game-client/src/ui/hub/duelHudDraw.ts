@@ -105,22 +105,15 @@ export function drawActionIcon(
 ): void {
   g.lineStyle(2, color, 1);
   const s = size * 0.5;
-  if (action === "FIRE_HIGH" || action === "FIRE_LOW") {
+  if (action === "FIRE") {
     g.fillStyle(color, 1);
     g.fillRect(cx - s * 0.15, cy - s * 0.5, s * 0.3, s);
     g.fillTriangle(cx - s * 0.22, cy - s * 0.5, cx + s * 0.22, cy - s * 0.5, cx, cy - s * 0.85);
-  } else if (action === "DODGE_HIGH" || action === "DODGE_LOW") {
-    const up = action === "DODGE_HIGH";
-    if (up) {
-      g.strokeTriangle(cx - s, cy + s * 0.35, cx + s, cy + s * 0.35, cx, cy - s * 0.75);
-    } else {
-      g.strokeTriangle(cx - s, cy - s * 0.35, cx + s, cy - s * 0.35, cx, cy + s * 0.75);
-    }
-  } else if (action === "FEINT") {
-    g.lineBetween(cx - s * 0.6, cy - s * 0.6, cx + s * 0.6, cy + s * 0.6);
-    g.lineBetween(cx + s * 0.6, cy - s * 0.6, cx - s * 0.6, cy + s * 0.6);
-  } else if (action === "RELOAD") {
-    g.strokeRect(cx - s * 0.35, cy - s * 0.55, s * 0.7, s * 1.1);
-    g.lineBetween(cx - s * 0.15, cy - s * 0.2, cx + s * 0.15, cy - s * 0.2);
+  } else if (action === "DODGE") {
+    g.strokeTriangle(cx - s, cy + s * 0.35, cx + s, cy + s * 0.35, cx, cy - s * 0.75);
+  } else if (action === "USE_ITEM" || action.startsWith("ITEM_")) {
+    g.strokeRect(cx - s * 0.45, cy - s * 0.45, s * 0.9, s * 0.9);
+    g.lineBetween(cx - s * 0.2, cy, cx + s * 0.2, cy);
+    g.lineBetween(cx, cy - s * 0.2, cx, cy + s * 0.2);
   }
 }

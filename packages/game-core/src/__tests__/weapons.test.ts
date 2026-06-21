@@ -23,36 +23,42 @@ describe("WeaponRegistry", () => {
 });
 
 describe("ActionValidator", () => {
-  it("blocks fire without ammo", () => {
+  it("blocks item use on cooldown", () => {
     expect(
       canPerformAction(
-        { phase: DuelPhase.AWAITING_PLAYER, ammo: 0 },
-        PlayerAction.FIRE_HIGH,
+        { phase: DuelPhase.AWAITING_PLAYER, itemCooldown: 2 },
+        PlayerAction.USE_ITEM,
       ),
     ).toBe(false);
   });
 
-  it("allows reload without ammo", () => {
+  it("allows fire and dodge always", () => {
     expect(
       canPerformAction(
-        { phase: DuelPhase.AWAITING_PLAYER, ammo: 0 },
-        PlayerAction.RELOAD,
+        { phase: DuelPhase.AWAITING_PLAYER, itemCooldown: 0 },
+        PlayerAction.FIRE,
+      ),
+    ).toBe(true);
+    expect(
+      canPerformAction(
+        { phase: DuelPhase.AWAITING_PLAYER, itemCooldown: 3 },
+        PlayerAction.DODGE,
       ),
     ).toBe(true);
   });
 
-  it("returns fire actions only when ammo available", () => {
-    const withAmmo = getAvailableActions({
+  it("returns use item only when off cooldown", () => {
+    const ready = getAvailableActions({
       phase: DuelPhase.AWAITING_PLAYER,
-      ammo: 3,
+      itemCooldown: 0,
     });
-    expect(withAmmo).toContain(PlayerAction.FIRE_HIGH);
+    expect(ready).toContain(PlayerAction.USE_ITEM);
 
-    const noAmmo = getAvailableActions({
+    const cooling = getAvailableActions({
       phase: DuelPhase.AWAITING_PLAYER,
-      ammo: 0,
+      itemCooldown: 2,
     });
-    expect(noAmmo).not.toContain(PlayerAction.FIRE_HIGH);
-    expect(noAmmo).toContain(PlayerAction.RELOAD);
+    expect(cooling).not.toContain(PlayerAction.USE_ITEM);
+    expect(cooling).toContain(PlayerAction.FIRE);
   });
 });

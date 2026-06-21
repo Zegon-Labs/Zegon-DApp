@@ -4,6 +4,7 @@ export { drawSegmentedMeter as drawHubBlindsightMeter } from "./duelHudDraw.js";
 export { FighterHudBlock, type FighterHudBlockState, type FighterHudBlockOptions } from "./fighterHudBlock.js";
 export { CombatHud, type CombatHudState } from "./combatHud.js";
 export { ActionBar } from "./actionBar.js";
+export { ItemSelector, itemCooldownLabel, itemDescription } from "./itemSelector.js";
 export { DuelHistoryLog } from "./duelHistoryLog.js";
 export { RoundResultToast } from "./roundResultToast.js";
 export { ArenaView } from "./arenaView.js";

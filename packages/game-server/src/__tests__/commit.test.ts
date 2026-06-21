@@ -7,18 +7,18 @@ import { zegonActionToUint8 } from "../services/moveMapping.js";
 
 describe("commit hash alignment with Solidity", () => {
   it("produces valid bytes32 commit hashes", () => {
-    const { commitHash } = computeCommitHash(ZegonAction.DODGE_LOW);
+    const { commitHash } = computeCommitHash(ZegonAction.DODGE);
     expect(commitHash).toMatch(/^0x[a-f0-9]{64}$/);
   });
 
   it("verifyCommit accepts valid salt and move", () => {
-    const move = ZegonAction.RELOAD;
+    const move = ZegonAction.FIRE;
     const { commitHash, salt } = computeCommitHash(move);
     expect(verifyCommit(move, salt, commitHash)).toBe(true);
   });
 
   it("verifyCommit rejects wrong salt", () => {
-    const move = ZegonAction.DODGE_HIGH;
+    const move = ZegonAction.DODGE;
     const { commitHash } = computeCommitHash(move);
     expect(
       verifyCommit(move, randomBytes(32).toString("hex"), commitHash),
@@ -27,7 +27,7 @@ describe("commit hash alignment with Solidity", () => {
 
   it("matches keccak256(abi.encodePacked(uint8, bytes32))", () => {
     const salt = randomBytes(32).toString("hex");
-    const move = ZegonAction.FIRE_HIGH;
+    const move = ZegonAction.FIRE;
     const moveNum = zegonActionToUint8(move);
     const expected = ethers.solidityPackedKeccak256(
       ["uint8", "bytes32"],

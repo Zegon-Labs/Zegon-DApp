@@ -1,14 +1,13 @@
-import { COMBAT } from "../constants/index.js";
-import {
-  dodgeAvoidsShot,
-  isPlayerDodge,
-  isZegonDodge,
-} from "./dodge.js";
+import { COMBAT, ITEM } from "../constants/index.js";
 import { applyZegonDamageMultiplier } from "../modes/zegonArchetypes.js";
-import { computeBlindsightFromOutcome } from "../blindsight/blindsight.js";
-import { getWeapon } from "../weapons/registry.js";
 import {
-  isFireAction,
+  computeReadingStreakAfter,
+  getEffectiveDeadeyeStreak,
+  readingStreakToDisplay,
+} from "./readingStreak.js";
+import { isPlayerDodge, isZegonDodge } from "./dodge.js";
+import {
+  DuelItemId,
   PlayerAction,
   RoundContext,
   RoundLogEntry,
@@ -18,72 +17,90 @@ import {
 } from "../types/index.js";
 
 function isZegonFire(action: ZegonAction): boolean {
-  return action === ZegonAction.FIRE_HIGH || action === ZegonAction.FIRE_LOW;
+  return action === ZegonAction.FIRE;
 }
 
-function isMirrorFire(
+function isSmokeRound(
   playerAction: PlayerAction,
-  zegonMove: ZegonAction,
+  equippedItem: DuelItemId,
 ): boolean {
-  return (
-    (playerAction === PlayerAction.FIRE_HIGH &&
-      zegonMove === ZegonAction.FIRE_HIGH) ||
-    (playerAction === PlayerAction.FIRE_LOW && zegonMove === ZegonAction.FIRE_LOW)
-  );
+  return playerAction === PlayerAction.USE_ITEM && equippedItem === DuelItemId.SMOKE;
+}
+
+function isMirrorRound(
+  playerAction: PlayerAction,
+  equippedItem: DuelItemId,
+): boolean {
+  return playerAction === PlayerAction.USE_ITEM && equippedItem === DuelItemId.MIRROR;
+}
+
+function isPlateRound(
+  playerAction: PlayerAction,
+  equippedItem: DuelItemId,
+): boolean {
+  return playerAction === PlayerAction.USE_ITEM && equippedItem === DuelItemId.PLATE;
+}
+
+function effectivePredictionCorrect(
+  playerAction: PlayerAction,
+  equippedItem: DuelItemId,
+  predicted: PlayerAction,
+): boolean {
+  if (isSmokeRound(playerAction, equippedItem)) {
+    return false;
+  }
+  return predicted === playerAction;
 }
 
 function zegonHitsPlayer(
-  zegonMove: ZegonAction,
+  ctx: RoundContext,
   playerAction: PlayerAction,
+  zegonMove: ZegonAction,
   predictionCorrect: boolean,
-  isDeadeye: boolean,
 ): boolean {
   if (!isZegonFire(zegonMove)) {
     return false;
   }
 
-  if (isDeadeye) {
-    if (isPlayerDodge(playerAction) && isZegonFire(zegonMove)) {
-      if (predictionCorrect) return true;
-      return !dodgeAvoidsShot(playerAction, zegonMove);
-    }
-    return predictionCorrect;
+  if (isPlateRound(playerAction, ctx.equippedItem)) {
+    return false;
   }
 
   if (isPlayerDodge(playerAction)) {
-    if (!isZegonFire(zegonMove)) return false;
-    return !dodgeAvoidsShot(playerAction, zegonMove);
+    if (ctx.isDeadeye && predictionCorrect) return true;
+    return false;
   }
 
-  if (playerAction === PlayerAction.RELOAD) {
-    return true;
+  if (isSmokeRound(playerAction, ctx.equippedItem)) {
+    return false;
   }
 
-  if (playerAction === PlayerAction.FEINT) {
+  if (isMirrorRound(playerAction, ctx.equippedItem)) {
+    return false;
+  }
+
+  if (playerAction === PlayerAction.FIRE) {
     return predictionCorrect;
   }
 
-  if (isFireAction(playerAction)) {
-    if (isMirrorFire(playerAction, zegonMove)) {
-      return predictionCorrect;
-    }
+  if (playerAction === PlayerAction.USE_ITEM) {
     return predictionCorrect;
   }
 
-  return !predictionCorrect;
+  return false;
 }
 
 function playerHitsZegon(
   playerAction: PlayerAction,
+  equippedItem: DuelItemId,
   zegonMove: ZegonAction,
   predictionCorrect: boolean,
-  isDeadeye: boolean,
 ): boolean {
-  if (!isFireAction(playerAction)) {
-    return false;
+  if (isMirrorRound(playerAction, equippedItem)) {
+    return predictionCorrect && isZegonFire(zegonMove);
   }
 
-  if (isMirrorFire(playerAction, zegonMove)) {
+  if (playerAction !== PlayerAction.FIRE) {
     return false;
   }
 
@@ -91,51 +108,27 @@ function playerHitsZegon(
     return false;
   }
 
-  if (isDeadeye && isZegonFire(zegonMove)) {
+  if (isZegonDodge(zegonMove)) {
     return false;
   }
 
-  if (isZegonDodge(zegonMove)) {
-    return !dodgeAvoidsShot(zegonMove, playerAction);
-  }
-
-  return true;
+  return isZegonFire(zegonMove);
 }
 
-function computeAmmoAfter(
-  playerAction: PlayerAction,
-  currentAmmo: number,
-  weaponId: RoundContext["weapon"],
-): number {
-  const weapon = getWeapon(weaponId);
-
-  if (isFireAction(playerAction)) {
-    return Math.max(0, currentAmmo - 1);
+function zegonDamageToPlayer(ctx: RoundContext, zegonHits: boolean): number {
+  if (!zegonHits) return 0;
+  if (ctx.isDeadeye) {
+    return ctx.playerHp;
   }
-
-  if (playerAction === PlayerAction.RELOAD) {
-    return weapon.reloadAmount;
-  }
-
-  return currentAmmo;
+  return applyZegonDamageMultiplier(COMBAT.HIT_DAMAGE, ctx.modifiers);
 }
 
-function computeDamage(
-  baseDamage: number,
-  isDeadeye: boolean,
-  isReloadVulnerable: boolean,
-): number {
-  let damage = baseDamage;
-
-  if (isDeadeye) {
-    damage = Math.round(damage * COMBAT.DEADEYE_DAMAGE_MULTIPLIER);
+function mirrorDamageToZegon(ctx: RoundContext, mirrorHit: boolean): number {
+  if (!mirrorHit) return 0;
+  if (ctx.isDeadeye) {
+    return ctx.zegonHp;
   }
-
-  if (isReloadVulnerable) {
-    damage = Math.round(damage * COMBAT.RELOAD_VULNERABILITY_DAMAGE_MULTIPLIER);
-  }
-
-  return damage;
+  return COMBAT.HIT_DAMAGE;
 }
 
 export function resolveRound(
@@ -144,61 +137,85 @@ export function resolveRound(
   zegonDecision: ZegonDecision,
   logMeta: Partial<RoundLogEntry> = {},
 ): RoundOutcome {
-  const predictionCorrect =
-    zegonDecision.predictedPlayerMove === playerAction;
+  const usedSmoke = isSmokeRound(playerAction, ctx.equippedItem);
+  const usedMirror = isMirrorRound(playerAction, ctx.equippedItem);
+  const usedPlate = isPlateRound(playerAction, ctx.equippedItem);
+  const usedItem =
+    playerAction === PlayerAction.USE_ITEM ? ctx.equippedItem : undefined;
+
+  const predictionCorrect = effectivePredictionCorrect(
+    playerAction,
+    ctx.equippedItem,
+    zegonDecision.predictedPlayerMove,
+  );
+
+  const zegonFired = isZegonFire(zegonDecision.zegonMove);
+  const plateBlocked = usedPlate && zegonFired;
+  const mirrorReflected = usedMirror && predictionCorrect && zegonFired;
+
+  const deadeyeStreak = getEffectiveDeadeyeStreak(ctx.modifiers);
 
   const zegonHits = zegonHitsPlayer(
-    zegonDecision.zegonMove,
+    ctx,
     playerAction,
+    zegonDecision.zegonMove,
     predictionCorrect,
-    ctx.isDeadeye,
   );
 
   const playerHits = playerHitsZegon(
     playerAction,
+    ctx.equippedItem,
     zegonDecision.zegonMove,
     predictionCorrect,
-    ctx.isDeadeye,
   );
-
-  const isReloadVulnerable = playerAction === PlayerAction.RELOAD;
 
   let playerDamage = 0;
   let zegonDamage = 0;
 
   if (zegonHits) {
-    playerDamage = applyZegonDamageMultiplier(
-      computeDamage(
-        COMBAT.HIT_DAMAGE,
-        ctx.isDeadeye,
-        isReloadVulnerable,
-      ),
-      ctx.modifiers,
-    );
+    playerDamage = zegonDamageToPlayer(ctx, true);
   }
 
   if (playerHits) {
-    zegonDamage = COMBAT.HIT_DAMAGE;
+    zegonDamage = mirrorReflected
+      ? mirrorDamageToZegon(ctx, true)
+      : COMBAT.HIT_DAMAGE;
   }
 
-  const ammoAfter = computeAmmoAfter(playerAction, ctx.ammo, ctx.weapon);
+  const deadeyeConsumed =
+    ctx.isDeadeye &&
+    (zegonHits || usedSmoke || plateBlocked || mirrorReflected);
 
-  const blindsightResult = computeBlindsightFromOutcome(
-    ctx.blindsight,
-    { predictionCorrect, playerAction },
-    ctx.weapon,
-    ctx.modifiers,
+  const readingStreakAfter = computeReadingStreakAfter(
+    ctx.readingStreak,
+    predictionCorrect,
+    usedSmoke,
+    deadeyeConsumed,
+    plateBlocked,
   );
 
   const deadeyeTriggered =
-    blindsightResult.isDeadeye && !ctx.isDeadeye;
-  const deadeyeConsumed = ctx.isDeadeye && zegonHits;
+    !ctx.isDeadeye &&
+    readingStreakAfter >= deadeyeStreak &&
+    predictionCorrect &&
+    !usedSmoke;
+
+  const blindsightBefore = readingStreakToDisplay(ctx.readingStreak, deadeyeStreak);
+  const blindsightAfter = deadeyeConsumed
+    ? 0
+    : readingStreakToDisplay(readingStreakAfter, deadeyeStreak);
+
+  const itemCooldownAfter =
+    playerAction === PlayerAction.USE_ITEM
+      ? ITEM.COOLDOWN_ROUNDS
+      : Math.max(0, ctx.itemCooldown - 1);
 
   const log: RoundLogEntry = {
     roundIndex: ctx.roundIndex,
     playerAction,
     zegonDecision,
     predictionCorrect,
+    itemUsed: usedItem,
     ...logMeta,
   };
 
@@ -208,13 +225,14 @@ export function resolveRound(
     predictionCorrect,
     playerDamage,
     zegonDamage,
-    blindsightDelta: blindsightResult.delta,
-    blindsightAfter: deadeyeConsumed
-      ? COMBAT.DEADEYE_POST_CONSUME_BLINDSIGHT
-      : blindsightResult.value,
+    blindsightDelta: blindsightAfter - blindsightBefore,
+    blindsightAfter,
+    readingStreakAfter,
     deadeyeTriggered,
     deadeyeConsumed,
-    ammoAfter,
+    ammoAfter: ctx.ammo,
+    itemCooldownAfter,
+    itemUsed: usedItem,
     log,
   };
 }

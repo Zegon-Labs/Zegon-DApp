@@ -12,8 +12,6 @@ import {
 } from "../services/wallet.js";
 import { fetchProfile, hasNickname } from "../services/profile.js";
 import { isTutorialDone } from "../tutorial/steps.js";
-import { ArchetypePickerModal } from "./ArchetypePickerModal.js";
-import type { ZegonArchetypeId } from "@zegon/game-core";
 import { getDailyArchetype } from "@zegon/game-core";
 import {
   checkDailyEntered,
@@ -50,7 +48,6 @@ function LockIcon() {
 export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   const { strings, language: lang } = useLocale();
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
-  const [showArchetypePicker, setShowArchetypePicker] = useState(false);
   const [poolInfo, setPoolInfo] = useState<Awaited<ReturnType<typeof fetchDailyPool>> | null>(null);
   const [staked, setStaked] = useState(false);
   const [brainLabel, setBrainLabel] = useState("…");
@@ -72,13 +69,11 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     void checkDailyEntered(poolInfo.seed, wallet).then(setStaked);
   }, [wallet, poolInfo?.seed]);
 
-  const tutorialLabel = isTutorialDone()
+  const tutorialDone = isTutorialDone();
+  const tutorialLabel = tutorialDone
     ? `${strings.tutorial} ${strings.tutorialDoneBadge}`
     : strings.tutorial;
 
-  useEffect(() => {
-    if (showArchetypePicker) playSfx("ui_modal_open");
-  }, [showArchetypePicker]);
 
   async function handleWallet() {
     if (wallet) {
@@ -131,9 +126,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     gameBridge.startScene("DuelScene", { mode: "daily" });
   }
 
-  function startStandardDuel(archetypeId: ZegonArchetypeId) {
-    setShowArchetypePicker(false);
-    gameBridge.startScene("DuelScene", { mode: "standard", archetypeId });
+  function startStandardDuel() {
+    gameBridge.startScene("DuelScene", { mode: "standard", archetypeId: "reader" });
   }
 
   return (
@@ -176,19 +170,16 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           </div>
 
           <div className="hero__actions">
-          <button
-            type="button"
-            className="btn btn--primary btn--tutorial"
-            onClick={() => gameBridge.startScene("TutorialScene")}
-          >
-            <span className="btn__title">{tutorialLabel}</span>
-            <span className="btn__subtitle">{strings.tutorialTitle}</span>
-          </button>
+          {!tutorialDone && (
+            <p className="hero__tutorial-callout" role="status">
+              {strings.heroTutorialFirst}
+            </p>
+          )}
 
           <button
             type="button"
-            className="btn btn--primary"
-            onClick={() => setShowArchetypePicker(true)}
+            className={`btn btn--primary${tutorialDone ? "" : " btn--primary-muted"}`}
+            onClick={startStandardDuel}
           >
             <span className="btn__title">{strings.duel}</span>
             <span className="btn__subtitle">{strings.heroPlaySubtitle}</span>
@@ -224,10 +215,10 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           <div className="hero__menu-grid">
             <button
               type="button"
-              className="btn btn--menu"
-              onClick={() => gameBridge.navigate({ type: "leaderboard" })}
+              className={`btn btn--menu${tutorialDone ? "" : " btn--menu-emphasis"}`}
+              onClick={() => gameBridge.startScene("TutorialScene")}
             >
-              {strings.leaderboard}
+              {tutorialLabel}
             </button>
             <button
               type="button"
@@ -235,6 +226,13 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
               onClick={() => gameBridge.navigate({ type: "achievements" })}
             >
               {strings.achievementsMenu}
+            </button>
+            <button
+              type="button"
+              className="btn btn--menu"
+              onClick={() => gameBridge.navigate({ type: "leaderboard" })}
+            >
+              {strings.leaderboard}
             </button>
             <button
               type="button"
@@ -297,13 +295,6 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           </div>
         </div>
       </footer>
-
-      {showArchetypePicker && (
-        <ArchetypePickerModal
-          onConfirm={startStandardDuel}
-          onClose={() => setShowArchetypePicker(false)}
-        />
-      )}
     </main>
   );
 }

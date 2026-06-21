@@ -58,7 +58,7 @@ const ARCHETYPES: Record<ZegonArchetypeId, ZegonArchetype> = {
     advantageEs: "DEADEYE al 85% ciego-vista",
     tradeoffEn: "Starts with +10 HP",
     tradeoffEs: "Empieza con +10 PS",
-    modifiers: { deadeyeThreshold: 85 },
+    modifiers: { deadeyeStreak: 1 },
     initialPlayerHpDelta: 10,
   },
   gambler: {
@@ -133,12 +133,9 @@ export function createStandardDuelWithArchetype(
   return applyArchetypeToConfig(base, archetypeId);
 }
 
-export function getEffectiveBlindsightOnCorrect(modifiers?: DuelModifiers): number {
-  return modifiers?.blindsightOnCorrect ?? BLINDSIGHT.ON_CORRECT_PREDICT;
-}
-
 export function getEffectiveDeadeyeThreshold(modifiers?: DuelModifiers): number {
-  return modifiers?.deadeyeThreshold ?? BLINDSIGHT.DEADEYE_THRESHOLD;
+  if (modifiers?.deadeyeStreak === 1) return 85;
+  return BLINDSIGHT.DEADEYE_THRESHOLD;
 }
 
 export function applyZegonDamageMultiplier(

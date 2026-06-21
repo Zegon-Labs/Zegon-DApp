@@ -227,7 +227,7 @@ export function createHubActionButton(
   }
   const text = scene.add.text(actionId ? -w / 2 + 32 : 0, 0, label, {
     fontFamily: FONT,
-    fontSize: "13px",
+    fontSize: h >= 48 ? "14px" : "13px",
     color: COLORS.bone,
     align: "left",
   }).setOrigin(actionId ? 0 : 0.5, 0.5);

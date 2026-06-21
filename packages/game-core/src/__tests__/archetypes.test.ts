@@ -3,6 +3,7 @@ import {
   createStandardDuelWithArchetype,
   DuelController,
   DummyZegonBrain,
+  DuelItemId,
   getGamblerWeapon,
   PlayerAction,
   resolveRound,
@@ -11,16 +12,15 @@ import {
 } from "../index.js";
 
 describe("archetypes", () => {
-  it("reader starts with 90 player HP and +18 blindsight on read", () => {
+  it("reader starts with 90 player HP", () => {
     const config = createStandardDuelWithArchetype("reader");
     expect(config.initialPlayerHp).toBe(90);
-    expect(config.modifiers?.blindsightOnCorrect).toBe(18);
 
     const controller = new DuelController(new DummyZegonBrain(config.seed), config);
     expect(controller.getState().playerHp).toBe(90);
   });
 
-  it("deadeye starts with 110 player HP and triggers DEADEYE at 85%", () => {
+  it("deadeye archetype triggers DEADEYE after one read", () => {
     const config = createStandardDuelWithArchetype("deadeye");
     expect(config.initialPlayerHp).toBe(110);
 
@@ -32,22 +32,25 @@ describe("archetypes", () => {
         zegonHp: 100,
         weapon: WeaponId.REVOLVER,
         ammo: 6,
-        blindsight: 70,
+        blindsight: 0,
+        readingStreak: 0,
+        equippedItem: DuelItemId.SMOKE,
+        itemCooldown: 0,
         isDeadeye: false,
         modifiers: config.modifiers,
         archetype: "deadeye",
       },
-      PlayerAction.FIRE_HIGH,
+      PlayerAction.FIRE,
       {
-        predictedPlayerMove: PlayerAction.FIRE_HIGH,
-        zegonMove: ZegonAction.DODGE_LOW,
+        predictedPlayerMove: PlayerAction.FIRE,
+        zegonMove: ZegonAction.FIRE,
         confidence: 0.8,
         taunt: "test",
       },
     );
 
-    expect(outcome.blindsightAfter).toBeGreaterThanOrEqual(85);
     expect(outcome.deadeyeTriggered).toBe(true);
+    expect(outcome.readingStreakAfter).toBe(1);
   });
 
   it("phantom reduces zegon damage by 15%", () => {
@@ -61,20 +64,23 @@ describe("archetypes", () => {
         weapon: WeaponId.REVOLVER,
         ammo: 6,
         blindsight: 0,
+        readingStreak: 0,
+        equippedItem: DuelItemId.SMOKE,
+        itemCooldown: 0,
         isDeadeye: false,
         modifiers: config.modifiers,
         archetype: "phantom",
       },
-      PlayerAction.RELOAD,
+      PlayerAction.FIRE,
       {
-        predictedPlayerMove: PlayerAction.DODGE_LOW,
-        zegonMove: ZegonAction.FIRE_HIGH,
-        confidence: 0.5,
+        predictedPlayerMove: PlayerAction.FIRE,
+        zegonMove: ZegonAction.FIRE,
+        confidence: 0.9,
         taunt: "test",
       },
     );
 
-    expect(outcome.playerDamage).toBe(Math.round(20 * 0.5 * 0.85));
+    expect(outcome.playerDamage).toBe(Math.round(20 * 0.85));
   });
 
   it("gambler picks rotating weapons from seed", () => {

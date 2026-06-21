@@ -6,9 +6,6 @@ import {
   ZegonAction,
   ZegonDecision,
 } from "../types/index.js";
-import {
-  zegonDodgeVsFire,
-} from "../combat/dodge.js";
 import { IZegonBrain } from "./IZegonBrain.js";
 
 export type BrainLocale = "en" | "es";
@@ -107,26 +104,15 @@ function counterMove(
   rng: () => number,
   dodgeBias = 0,
 ): ZegonAction {
-  if (
-    predicted === PlayerAction.FIRE_HIGH ||
-    predicted === PlayerAction.FIRE_LOW
-  ) {
-    const dodgeChance = 0.5 + dodgeBias;
-    if (rng() < dodgeChance) {
-      return zegonDodgeVsFire(predicted);
-    }
-    return predicted === PlayerAction.FIRE_HIGH
-      ? ZegonAction.FIRE_LOW
-      : ZegonAction.FIRE_HIGH;
+  if (predicted === PlayerAction.FIRE) {
+    const dodgeChance = 0.45 + dodgeBias;
+    return rng() < dodgeChance ? ZegonAction.DODGE : ZegonAction.FIRE;
   }
-  if (predicted === PlayerAction.DODGE_HIGH) {
-    return ZegonAction.FIRE_LOW;
+  if (predicted === PlayerAction.DODGE) {
+    return ZegonAction.FIRE;
   }
-  if (predicted === PlayerAction.DODGE_LOW) {
-    return ZegonAction.FIRE_HIGH;
-  }
-  if (predicted === PlayerAction.RELOAD) {
-    return ZegonAction.FIRE_HIGH;
+  if (predicted === PlayerAction.USE_ITEM) {
+    return ZegonAction.FIRE;
   }
   return pickRandom(ALL_ZEGON_ACTIONS, rng);
 }

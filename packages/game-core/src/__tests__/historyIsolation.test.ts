@@ -13,10 +13,10 @@ describe("history isolation", () => {
     const historyBefore = controller.getState().playerHistory;
     expect(historyBefore).toHaveLength(0);
 
-    controller.submitPlayerAction(PlayerAction.DODGE_LOW);
+    controller.submitPlayerAction(PlayerAction.DODGE);
     const historyAfter = controller.getState().playerHistory;
     expect(historyAfter).toHaveLength(1);
-    expect(historyAfter[0]).toBe(PlayerAction.DODGE_LOW);
+    expect(historyAfter[0]).toBe(PlayerAction.DODGE);
   });
 
   it("accumulates history across rounds", async () => {

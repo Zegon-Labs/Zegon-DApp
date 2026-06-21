@@ -1,5 +1,4 @@
-import { DuelPhase, PlayerAction, DuelState } from "../types/index.js";
-import { isFireAction } from "../types/index.js";
+import { DuelPhase, DuelItemId, PlayerAction, DuelState } from "../types/index.js";
 
 export class ActionValidationError extends Error {
   constructor(message: string) {
@@ -9,14 +8,14 @@ export class ActionValidationError extends Error {
 }
 
 export function canPerformAction(
-  state: Pick<DuelState, "phase" | "ammo">,
+  state: Pick<DuelState, "phase" | "itemCooldown">,
   action: PlayerAction,
 ): boolean {
   if (state.phase !== DuelPhase.AWAITING_PLAYER) {
     return false;
   }
 
-  if (isFireAction(action) && state.ammo <= 0) {
+  if (action === PlayerAction.USE_ITEM && state.itemCooldown > 0) {
     return false;
   }
 
@@ -24,7 +23,7 @@ export function canPerformAction(
 }
 
 export function assertCanPerformAction(
-  state: Pick<DuelState, "phase" | "ammo">,
+  state: Pick<DuelState, "phase" | "itemCooldown">,
   action: PlayerAction,
 ): void {
   if (!canPerformAction(state, action)) {
@@ -33,29 +32,27 @@ export function assertCanPerformAction(
         `Cannot act during phase ${state.phase}`,
       );
     }
-    if (isFireAction(action) && state.ammo <= 0) {
-      throw new ActionValidationError("No ammo to fire");
+    if (action === PlayerAction.USE_ITEM && state.itemCooldown > 0) {
+      throw new ActionValidationError("Item on cooldown");
     }
     throw new ActionValidationError("Action not allowed");
   }
 }
 
 export function getAvailableActions(
-  state: Pick<DuelState, "phase" | "ammo">,
+  state: Pick<DuelState, "phase" | "itemCooldown">,
 ): PlayerAction[] {
   if (state.phase !== DuelPhase.AWAITING_PLAYER) {
     return [];
   }
 
   const actions: PlayerAction[] = [
-    PlayerAction.DODGE_HIGH,
-    PlayerAction.DODGE_LOW,
-    PlayerAction.FEINT,
-    PlayerAction.RELOAD,
+    PlayerAction.FIRE,
+    PlayerAction.DODGE,
   ];
 
-  if (state.ammo > 0) {
-    actions.unshift(PlayerAction.FIRE_HIGH, PlayerAction.FIRE_LOW);
+  if (state.itemCooldown <= 0) {
+    actions.push(PlayerAction.USE_ITEM);
   }
 
   return actions;
@@ -68,4 +65,8 @@ export function assertHistoryIsolation(
   if (history.includes(currentAction) && history.length === 0) {
     throw new ActionValidationError("History isolation violated");
   }
+}
+
+export function isValidDuelItem(item: string): item is DuelItemId {
+  return Object.values(DuelItemId).includes(item as DuelItemId);
 }

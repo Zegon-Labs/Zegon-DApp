@@ -2,16 +2,15 @@ import Phaser from "phaser";
 import {
   GameCoreAdapter,
   DuelPhase,
-  PlayerAction,
 } from "../adapters/GameCoreAdapter.js";
 import { shouldUseServerApi, apiBaseUrl } from "../services/apiMode.js";
 import { t } from "../i18n/index.js";
-import type { DuelEvent, RoundOutcome, ZegonArchetypeId } from "@zegon/game-core";
+import type { DuelEvent, RoundOutcome, ZegonArchetypeId, DuelItemId } from "@zegon/game-core";
 import {
   ActionValidationError,
   ALL_PLAYER_ACTIONS,
-  getEffectiveDeadeyeThreshold,
-  getWeapon,
+  getEffectiveDeadeyeStreak,
+  PlayerAction,
 } from "@zegon/game-core";
 import {
   blindsightBlinkAlpha,
@@ -31,6 +30,9 @@ import {
   addHubLogo,
   DuelHistoryLog,
   preloadLandingBackdrop,
+  ItemSelector,
+  itemCooldownLabel,
+  itemDescription,
   RoundResultToast,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
@@ -57,39 +59,47 @@ import {
   stopAllVoice,
 } from "../services/voice.js";
 
-function actionLabel(action: PlayerAction | string): string {
-  const strings = t();
-  const map: Record<string, string> = {
-    [PlayerAction.FIRE_HIGH]: strings.actionFireHigh,
-    [PlayerAction.FIRE_LOW]: strings.actionFireLow,
-    [PlayerAction.DODGE_HIGH]: strings.actionDodgeHigh,
-    [PlayerAction.DODGE_LOW]: strings.actionDodgeLow,
-    [PlayerAction.FEINT]: strings.actionFeint,
-    [PlayerAction.RELOAD]: strings.actionReload,
-  };
-  return map[action] ?? action;
-}
-
-function actionDescription(action: PlayerAction): string {
+function duelItemLabel(item: DuelItemId): string {
   const strings = t();
   return {
-    [PlayerAction.FIRE_HIGH]: strings.actionDescFireHigh,
-    [PlayerAction.FIRE_LOW]: strings.actionDescFireLow,
-    [PlayerAction.DODGE_HIGH]: strings.actionDescDodgeHigh,
-    [PlayerAction.DODGE_LOW]: strings.actionDescDodgeLow,
-    [PlayerAction.FEINT]: strings.actionDescFeint,
-    [PlayerAction.RELOAD]: strings.actionDescReload,
+    SMOKE: strings.itemSmoke,
+    MIRROR: strings.itemMirror,
+    PLATE: strings.itemPlate,
+  }[item];
+}
+
+function actionLabel(action: PlayerAction | string, equippedItem?: DuelItemId): string {
+  const strings = t();
+  if (action === PlayerAction.USE_ITEM || action === "USE_ITEM") {
+    return equippedItem
+      ? `${strings.actionUseItem} (${duelItemLabel(equippedItem)})`
+      : strings.actionUseItem;
+  }
+  if (action === PlayerAction.FIRE || action === "FIRE") return strings.actionFire;
+  if (action === PlayerAction.DODGE || action === "DODGE") return strings.actionDodge;
+  return String(action);
+}
+
+function actionDescription(action: PlayerAction, equippedItem?: DuelItemId): string {
+  const strings = t();
+  if (action === PlayerAction.USE_ITEM && equippedItem) {
+    return `${strings.actionDescUseItem} · ${duelItemLabel(equippedItem)}`;
+  }
+  return {
+    [PlayerAction.FIRE]: strings.actionDescFire,
+    [PlayerAction.DODGE]: strings.actionDescDodge,
+    [PlayerAction.USE_ITEM]: strings.actionDescUseItem,
   }[action];
 }
 
 function playerFiredAction(action: string): boolean {
-  return action === PlayerAction.FIRE_HIGH || action === PlayerAction.FIRE_LOW;
+  return action === PlayerAction.FIRE || action === "FIRE";
 }
 
 function formatSubmitError(err: unknown): string {
   const strings = t();
-  if (err instanceof ActionValidationError && err.message.includes("ammo")) {
-    return strings.errorNoAmmo;
+  if (err instanceof ActionValidationError && err.message.includes("cooldown")) {
+    return strings.errorItemCooldown;
   }
   if (err instanceof Error) {
     return err.message;
@@ -102,6 +112,7 @@ export class DuelScene extends Phaser.Scene {
   private arenaView!: ArenaView;
   private combatHud!: CombatHud;
   private actionBar!: ActionBar;
+  private itemSelector!: ItemSelector;
   private glitchOverlay!: Phaser.GameObjects.Container;
   private scanlines!: Phaser.GameObjects.Graphics;
   private blinkOverlay!: Phaser.GameObjects.Rectangle;
@@ -112,8 +123,8 @@ export class DuelScene extends Phaser.Scene {
   private statusLineText!: Phaser.GameObjects.Text;
   private chooseActionText!: Phaser.GameObjects.Text;
   private roundResultToast!: RoundResultToast;
-  private actionHintText!: Phaser.GameObjects.Text;
-  private actionTooltipText!: Phaser.GameObjects.Text;
+  private actionDescText!: Phaser.GameObjects.Text;
+  private duelTipText!: Phaser.GameObjects.Text;
   private mode: "standard" | "daily" = "standard";
   private showingRoundResult = false;
   private confirmModal: Phaser.GameObjects.Container | null = null;
@@ -124,6 +135,7 @@ export class DuelScene extends Phaser.Scene {
   private readingDotsElapsed = 0;
   private glitchAmbientOn = false;
   private hoveredAction: PlayerAction | null = null;
+  private hoveredItem: DuelItemId | null = null;
 
   constructor() {
     super("DuelScene");
@@ -175,25 +187,27 @@ export class DuelScene extends Phaser.Scene {
 
     this.chooseActionText = this.add.text(width / 2, L.chooseAction.y, strings.chooseAction, {
       fontFamily: FONT_DISPLAY,
-      fontSize: "22px",
+      fontSize: "18px",
       color: COLORS.bone,
       letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
-    this.actionHintText = this.add.text(width / 2, L.actionHint.y, strings.actionTooltipHint, {
+    this.duelTipText = this.add.text(width / 2, L.duelTip.y, strings.duelTipDefault, {
       fontFamily: FONT,
-      fontSize: "15px",
-      color: COLORS.dust,
+      fontSize: "13px",
+      color: COLORS.ember,
       align: "center",
-    }).setOrigin(0.5, 0).setDepth(11).setAlpha(0.75);
+      wordWrap: { width: width * 0.72 },
+    }).setOrigin(0.5, 0).setDepth(11).setAlpha(0.9);
 
-    this.actionTooltipText = this.add.text(width / 2, L.actionHint.y, "", {
+    this.actionDescText = this.add.text(width / 2, L.actionDesc.y, strings.actionTooltipHint, {
       fontFamily: FONT,
       fontSize: "14px",
-      color: COLORS.blood,
+      color: COLORS.dust,
       align: "center",
-      wordWrap: { width: width * 0.65 },
-    }).setOrigin(0.5, 0).setDepth(11).setAlpha(0);
+      wordWrap: { width: width * 0.78 },
+      lineSpacing: 4,
+    }).setOrigin(0.5, 0).setDepth(11).setAlpha(0.65);
 
     this.adapter = new GameCoreAdapter({
       brainMode: shouldUseServerApi() ? "api" : "dummy",
@@ -204,11 +218,19 @@ export class DuelScene extends Phaser.Scene {
     this.actionBar = new ActionBar(
       this,
       [...ALL_PLAYER_ACTIONS],
-      actionLabel,
+      (action) => actionLabel(action, this.adapter?.getEquippedItem()),
       (action) => void this.submitPlayerAction(action),
       12,
       (action, hovering) => this.showActionTooltip(action, hovering),
     );
+
+    this.itemSelector = new ItemSelector(this, {
+      labelFor: duelItemLabel,
+      descFor: (item) => itemDescription(item, t()),
+      onSelect: (item) => this.adapter?.setEquippedItem(item),
+      onItemHover: (item, hovering) => this.showItemTooltip(item, hovering),
+      depth: 12,
+    });
 
     void this.bootDuel();
 
@@ -265,48 +287,87 @@ export class DuelScene extends Phaser.Scene {
 
   private showActionTooltip(action: PlayerAction, visible: boolean): void {
     this.hoveredAction = visible ? action : null;
+    if (visible) this.hoveredItem = null;
     this.syncActionHintLine();
   }
 
+  private showItemTooltip(item: DuelItemId, visible: boolean): void {
+    this.hoveredItem = visible ? item : null;
+    if (visible) this.hoveredAction = null;
+    this.syncActionHintLine();
+  }
+
+  private setActionDescription(text: string, color: string = COLORS.blood): void {
+    this.actionDescText.setText(text).setColor(color).setAlpha(text ? 1 : 0);
+  }
+
+  private updateDuelTip(): void {
+    if (!this.adapter) return;
+    const strings = t();
+    const state = this.adapter.getState();
+    const streak = this.adapter.getReadingStreak();
+    const history = state.playerHistory;
+    const last = history[history.length - 1];
+    const prev = history[history.length - 2];
+
+    let tip = strings.duelTipDefault;
+    if (state.isDeadeye) {
+      tip = strings.duelTipDeadeye;
+    } else if (last != null && last === prev) {
+      tip = strings.duelTipRepeat;
+    } else if (streak >= 1) {
+      tip = strings.duelTipStreak1;
+    } else if (this.adapter.getItemCooldown() <= 0 && this.adapter.isAwaitingPlayer()) {
+      tip = strings.duelTipItemReady;
+    }
+
+    this.duelTipText.setText(tip);
+  }
+
   private syncActionHintLine(): void {
+    const equipped = this.adapter?.getEquippedItem();
     if (this.hoveredAction) {
-      this.actionHintText.setAlpha(0);
-      this.actionTooltipText
-        .setText(
-          `${actionLabel(this.hoveredAction)} · ${actionDescription(this.hoveredAction)}`,
-        )
-        .setColor(COLORS.blood)
-        .setAlpha(1);
+      this.setActionDescription(
+        `${actionLabel(this.hoveredAction, equipped)} — ${actionDescription(this.hoveredAction, equipped)}`,
+        COLORS.blood,
+      );
       return;
     }
 
-    this.actionTooltipText.setText("").setAlpha(0);
-    if (this.adapter?.isAwaitingPlayer() && !this.showingRoundResult) {
-      this.actionHintText.setAlpha(0.75);
+    if (this.hoveredItem) {
+      const strings = t();
+      this.setActionDescription(
+        `${duelItemLabel(this.hoveredItem)} — ${itemDescription(this.hoveredItem, strings)}`,
+        COLORS.blood,
+      );
+      return;
     }
+
+    if (this.adapter?.isAwaitingPlayer() && !this.showingRoundResult) {
+      this.setActionDescription(t().actionTooltipHint, COLORS.dust);
+      this.actionDescText.setAlpha(0.65);
+      return;
+    }
+
+    this.setActionDescription("", COLORS.dust);
   }
 
   private showRoundResult(outcome: RoundOutcome): void {
     const summary = buildRoundSummary(outcome, t(), (action) =>
-      actionLabel(action),
+      actionLabel(action, outcome.itemUsed ?? this.adapter.getEquippedItem()),
     );
     this.showingRoundResult = true;
     playSfx("round_resolve");
-    this.roundResultToast.show(summary.lines, summary.durationMs);
-    this.hoveredAction = null;
-    this.actionBar.resetHoverAll();
-    this.actionHintText.setAlpha(0.2);
-    this.actionTooltipText.setAlpha(0);
-    this.updateActionButtons();
-
-    this.time.delayedCall(summary.durationMs, () => {
+    this.roundResultToast.show(summary.lines, () => {
       this.showingRoundResult = false;
       this.syncActionHintLine();
-      if (!this.hoveredAction) {
-        this.actionHintText.setAlpha(this.adapter.isAwaitingPlayer() ? 0.75 : 0.2);
-      }
       this.updateActionButtons();
     });
+    this.hoveredAction = null;
+    this.hoveredItem = null;
+    this.actionBar.resetHoverAll();
+    this.actionDescText.setAlpha(0.2);
+    this.updateActionButtons();
   }
 
   private playArenaFlash(color: number, alpha = 0.7, radius = 60): void {
@@ -367,18 +428,14 @@ export class DuelScene extends Phaser.Scene {
       this.playArenaFlash(C.ember, 0.38, 44);
     }
     if (
-      outcome.zegonDecision.zegonMove === "FIRE_HIGH" ||
-      outcome.zegonDecision.zegonMove === "FIRE_LOW"
+      outcome.zegonDecision.zegonMove === "FIRE"
     ) {
       this.time.delayedCall(120, () => {
         playZegonMoveSfx(outcome.zegonDecision.zegonMove);
         this.playFireFlash();
       });
     } else if (
-      outcome.zegonDecision.zegonMove === "DODGE_HIGH" ||
-      outcome.zegonDecision.zegonMove === "DODGE_LOW" ||
-      outcome.zegonDecision.zegonMove === "FEINT" ||
-      outcome.zegonDecision.zegonMove === "RELOAD"
+      outcome.zegonDecision.zegonMove === "DODGE"
     ) {
       playZegonMoveSfx(outcome.zegonDecision.zegonMove);
     }
@@ -394,7 +451,7 @@ export class DuelScene extends Phaser.Scene {
         startSfxLoop("zegon_thinking", { volume: 0.32 });
         playThinkingVoice();
         this.chooseActionText.setAlpha(0.35);
-        this.actionHintText.setAlpha(0);
+        this.actionDescText.setAlpha(0);
         if (!this.showingRoundResult) {
           this.roundResultToast.hide();
         }
@@ -545,10 +602,10 @@ export class DuelScene extends Phaser.Scene {
 
   private updateArena(): void {
     const blindsight = this.adapter.getBlindsight();
-    const deadeyeThreshold = getEffectiveDeadeyeThreshold(
+    const deadeyeStreak = getEffectiveDeadeyeStreak(
       this.adapter.getState().config.modifiers,
     );
-    this.arenaView.update(blindsight, blindsight >= deadeyeThreshold - 5);
+    this.arenaView.update(blindsight, this.adapter.getReadingStreak() >= deadeyeStreak);
     this.syncGlitchOverlay(blindsight / 100);
   }
 
@@ -556,8 +613,9 @@ export class DuelScene extends Phaser.Scene {
     const strings = t();
     const state = this.adapter.getState();
     const blindsight = this.adapter.getBlindsight();
-    const weapon = state.config.weapon;
-    const maxAmmo = getWeapon(weapon).maxAmmo;
+    const readingStreak = this.adapter.getReadingStreak();
+    const itemCooldown = this.adapter.getItemCooldown();
+    const equipped = this.adapter.getEquippedItem();
     const taunt = this.adapter.getPendingTaunt();
     const usingApi = shouldUseServerApi();
     const brainTag = usingApi
@@ -567,7 +625,7 @@ export class DuelScene extends Phaser.Scene {
       : "LOCAL";
 
     const lines = state.roundLogs.map((log, i) =>
-      `R${i + 1} ${actionLabel(log.playerAction)}`.toUpperCase(),
+      `R${i + 1} ${actionLabel(log.playerAction, log.itemUsed ?? equipped)}`.toUpperCase(),
     );
     this.historyLog.update({
       roundLabel: `${strings.round} ${String(state.roundIndex + 1).padStart(2, "0")}`.toUpperCase(),
@@ -575,27 +633,39 @@ export class DuelScene extends Phaser.Scene {
       lines,
     });
 
-    const deadeyeThreshold = getEffectiveDeadeyeThreshold(state.config.modifiers);
-    const deadeyeNearThreshold = Math.max(70, deadeyeThreshold - 5);
+    const deadeyeStreak = getEffectiveDeadeyeStreak(state.config.modifiers);
+    const deadeyeNear = readingStreak >= deadeyeStreak - 1;
+
+    const itemStatus = itemCooldownLabel(
+      itemCooldown,
+      strings.itemCooldownReady,
+      (n) => strings.itemCooldownIn.replace("{n}", String(n)),
+    );
 
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
       playerMaxHp: state.config.initialPlayerHp,
       zegonMaxHp: state.config.initialZegonHp,
-      ammo: this.adapter.getAmmo(),
-      maxAmmo,
       blindsight,
+      readingStreak,
+      itemLabel: "",
+      itemStatus,
+      itemReady: itemCooldown <= 0,
+      itemCooldown,
       playerLabel: strings.hudYou,
       zegonLabel: strings.hudZegon,
-      weaponLabel: weapon,
-      hudWeapon: strings.hudWeapon,
+      hudItem: strings.hudItem,
       hudStatus: strings.hudStatus,
-      blindsightLabel: `${strings.hudBlindsight}  ${blindsight}%`,
+      blindsightLabel: `${strings.hudBlindsight}  ${readingStreak}/${deadeyeStreak}`,
       blindsightFlavor: taunt ? `"${taunt}"` : strings.blindsightFlavor,
-      nextMoveHint: `${strings.nextMoveHint} · ${brainTag}`,
-      zegonStatus: blindsight >= deadeyeNearThreshold ? strings.deadeyeNear : undefined,
+      nextMoveHint: brainTag,
+      zegonStatus: deadeyeNear ? strings.deadeyeNear : undefined,
     });
+
+    this.itemSelector.setCooldown(itemCooldown);
+    this.itemSelector.setInteractive(this.adapter.isAwaitingPlayer() && !this.showingRoundResult);
+    this.updateDuelTip();
   }
 
   private updateActionButtons(): void {
@@ -615,15 +685,12 @@ export class DuelScene extends Phaser.Scene {
 
     this.actionBar.setDimmedAll(true);
     this.hoveredAction = null;
-    this.actionHintText.setAlpha(0);
-    this.actionTooltipText.setText("").setAlpha(0);
+    this.hoveredItem = null;
+    this.setActionDescription("", COLORS.dust);
     playActionSfx(action);
     try {
       await this.adapter.submitAction(action);
     } catch (err) {
-      if (err instanceof ActionValidationError && err.message.includes("ammo")) {
-        playSfx("empty_gun");
-      }
       this.statusLineText.setText(formatSubmitError(err)).setColor(COLORS.ember);
     } finally {
       this.actionBar.setDimmedAll(false);
@@ -649,6 +716,7 @@ export class DuelScene extends Phaser.Scene {
     this.adapter?.destroy();
     this.combatHud?.destroy();
     this.actionBar?.destroy();
+    this.itemSelector?.destroy();
     this.arenaView?.destroy();
     this.historyLog?.destroy();
     this.roundResultToast?.destroy();

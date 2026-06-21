@@ -10,6 +10,7 @@ import {
   DuelWinner,
   DummyZegonBrain,
   IZegonBrain,
+  DuelItemId,
   PlayerAction,
   RoundContext,
   RoundOutcome,
@@ -122,8 +123,8 @@ class ApiZegonBrain implements IZegonBrain {
     });
 
     return {
-      predictedPlayerMove: PlayerAction.FIRE_HIGH,
-      zegonMove: ZegonAction.RELOAD,
+      predictedPlayerMove: PlayerAction.FIRE,
+      zegonMove: ZegonAction.DODGE,
       confidence: 0,
       taunt: data.taunt,
     };
@@ -254,10 +255,36 @@ export class GameCoreAdapter {
 
   patchState(
     partial: Partial<
-      Pick<DuelState, "ammo" | "blindsight" | "playerHp" | "zegonHp" | "isDeadeye">
+      Pick<
+        DuelState,
+        | "ammo"
+        | "blindsight"
+        | "readingStreak"
+        | "playerHp"
+        | "zegonHp"
+        | "isDeadeye"
+        | "equippedItem"
+        | "itemCooldown"
+      >
     >,
   ): void {
     this.controller.patchState(partial);
+  }
+
+  setEquippedItem(item: DuelItemId): void {
+    this.controller.setEquippedItem(item);
+  }
+
+  getEquippedItem() {
+    return this.controller.getEquippedItem();
+  }
+
+  getItemCooldown(): number {
+    return this.controller.getItemCooldown();
+  }
+
+  getReadingStreak(): number {
+    return this.controller.getReadingStreak();
   }
 
   getState() {
