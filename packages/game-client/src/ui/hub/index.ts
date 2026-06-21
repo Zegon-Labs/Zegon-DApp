@@ -8,6 +8,7 @@ export { ItemSelector, itemCooldownLabel, itemDescription } from "./itemSelector
 export { DuelHistoryLog } from "./duelHistoryLog.js";
 export { RoundResultToast } from "./roundResultToast.js";
 export { ArenaView } from "./arenaView.js";
+export { PlayerHandSprite, preloadPlayerHand, PLAYER_HAND_KEY } from "./playerHandSprite.js";
 export { createHubGameChrome, type HubGameChromeOptions } from "./sceneChrome.js";
 export { createHubResultPanel, type HubResultPanelButton, type HubResultPanelHandle } from "./resultPanel.js";
 export { createLandingBackdrop, preloadLandingBackdrop, preloadHubLogo, addHubLogo, LANDING_BG_KEY, LANDING_CHARACTER_KEY, LANDING_LOGO_KEY } from "./landingBackdrop.js";

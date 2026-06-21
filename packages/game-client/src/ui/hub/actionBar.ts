@@ -16,13 +16,22 @@ export class ActionBar {
     onAction: (action: PlayerAction) => void,
     depth = 10,
     onActionHover?: (action: PlayerAction, hovering: boolean) => void,
+    layoutHint?: {
+      /** Centre x of the first button; skips auto-centering when provided. */
+      xFirst?: number;
+      y?: number;
+      btnW?: number;
+      btnH?: number;
+      gap?: number;
+    },
   ) {
     this.actions = actions;
     const { width } = scene.scale;
-    const btnW = actionButtonWidth(width, actions.length, L.actions.gap);
-    const y = L.actions.y;
-    const total = actions.length * btnW + (actions.length - 1) * L.actions.gap;
-    let x = (width - total) / 2 + btnW / 2;
+    const gap = layoutHint?.gap ?? L.actions.gap;
+    const btnW = layoutHint?.btnW ?? actionButtonWidth(width, actions.length, gap);
+    const y = layoutHint?.y ?? L.actions.y;
+    const total = actions.length * btnW + (actions.length - 1) * gap;
+    let x = layoutHint?.xFirst ?? ((width - total) / 2 + btnW / 2);
 
     actions.forEach((action) => {
       const btn = createHubActionButton(
@@ -30,7 +39,7 @@ export class ActionBar {
         x,
         y,
         btnW,
-        L.actions.h,
+        layoutHint?.btnH ?? L.actions.h,
         labelFor(action),
         () => onAction(action),
         depth,
@@ -41,7 +50,7 @@ export class ActionBar {
       this.buttons.push(btn);
       this.enabledSnapshot.push(false);
       this.buttonContainers.push(btn.container);
-      x += btnW + L.actions.gap;
+      x += btnW + gap;
     });
   }
 

@@ -23,6 +23,16 @@ export interface FighterHudBlockOptions {
   align: "left" | "right";
   variant: "player" | "zegon";
   depth?: number;
+  /** Override L.stats values — used by the unified bottom strip in DuelScene. */
+  panelY?: number;
+  panelH?: number;
+  panelW?: number;
+  /** Explicit panel x (bypasses playerX / zegonStatsPanelX computation). */
+  panelX?: number;
+  pad?: number;
+  nameRowH?: number;
+  iconSize?: number;
+  iconGap?: number;
 }
 
 const HEART_SLOTS = 5;
@@ -34,22 +44,32 @@ export class FighterHudBlock {
   private readonly nameText: Phaser.GameObjects.Text;
   private readonly metaText: Phaser.GameObjects.Text;
   private readonly panelX: number;
-  private readonly panelY = L.stats.y;
-  private readonly panelW = L.stats.panelW;
-  private readonly panelH = L.stats.panelH;
+  private readonly panelY: number;
+  private readonly panelW: number;
+  private readonly panelH: number;
   private readonly variant: "player" | "zegon";
-  private readonly iconSize = L.stats.iconSize;
-  private readonly iconGap = L.stats.iconGap;
-  private readonly pad = L.stats.pad;
+  private readonly iconSize: number;
+  private readonly iconGap: number;
+  private readonly pad: number;
+  private readonly nameRowH: number;
 
   constructor(scene: Phaser.Scene, options: FighterHudBlockOptions) {
     this.variant = options.variant;
     const depth = options.depth ?? 9;
     const { width } = scene.scale;
-    this.panelX =
+
+    this.panelW = options.panelW ?? L.stats.panelW;
+    this.panelH = options.panelH ?? L.stats.panelH;
+    this.panelY = options.panelY ?? L.stats.y;
+    this.pad = options.pad ?? L.stats.pad;
+    this.nameRowH = options.nameRowH ?? L.stats.nameRowH;
+    this.iconSize = options.iconSize ?? L.stats.iconSize;
+    this.iconGap = options.iconGap ?? L.stats.iconGap;
+    this.panelX = options.panelX ?? (
       options.align === "left"
         ? L.stats.playerX
-        : zegonStatsPanelX(width);
+        : zegonStatsPanelX(width)
+    );
 
     this.container = scene.add.container(0, 0).setDepth(depth);
 
@@ -104,7 +124,7 @@ export class FighterHudBlock {
     this.nameText.setText(state.name.toUpperCase());
     this.iconGfx.clear();
 
-    const rowY = this.panelY + this.pad + L.stats.nameRowH;
+    const rowY = this.panelY + this.pad + this.nameRowH;
     const filledHp = this.hpSlots(state.hp, maxHp);
     const leftEdge = this.panelX + this.pad + this.iconSize / 2;
 
@@ -146,7 +166,7 @@ export class FighterHudBlock {
     const lostIndex = prevFilled - 1;
     const leftEdge = this.panelX + this.pad + this.iconSize / 2;
     const rightEdge = this.panelX + this.panelW - this.pad - this.iconSize / 2;
-    const rowY = this.panelY + this.pad + L.stats.nameRowH;
+    const rowY = this.panelY + this.pad + this.nameRowH;
     const cx =
       this.variant === "player"
         ? leftEdge + lostIndex * (this.iconSize + this.iconGap)
@@ -165,7 +185,7 @@ export class FighterHudBlock {
   }
 
   hpBarCenterY(): number {
-    return this.panelY + this.pad + L.stats.nameRowH;
+    return this.panelY + this.pad + this.nameRowH;
   }
 
   hpBarCenterX(): number {

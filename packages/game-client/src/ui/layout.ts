@@ -56,6 +56,48 @@ export const DUEL_LAYOUT = {
     buttonH: 40,
     buttonGap: 8,
   },
+
+  /**
+   * Unified bottom strip replacing the separate life-panels + action rows.
+   * Life panels sit flush left/right inside the strip; all 5 action buttons
+   * fill the centre zone in a single horizontal row.
+   * Texts (status, choose-action, tip, desc) sit immediately above the strip.
+   */
+  bottomStrip: {
+    // Strip background
+    y: 620,
+    h: 100,
+    centerY: 670,
+
+    // Texts just above the strip (origin 0.5,0 — top of text)
+    statusY: 530,
+    chooseActionY: 552,
+    duelTipY: 578,
+    actionDescY: 598,
+
+    // Life panel dimensions (same style as other HUD panels)
+    panelW: 194,
+    panelH: 86,
+    panelPad: 10,
+    nameRowH: 22,
+    iconSize: 16,
+    iconGap: 4,
+
+    // Action buttons (FIRE, DODGE) — first button centre x
+    buttonXFirst: 296,
+    buttonW: 164,
+    buttonH: 46,
+    buttonGap: 8,
+
+    // Item chips (HUMO, ESPEJO, PLACA) — first chip centre x
+    itemXFirst: 640,
+    itemW: 164,
+    itemH: 40,
+
+    // Character arena — more vertical room with strip anchored at bottom
+    arenaY: 295,
+    characterMaxH: 460,
+  },
 } as const;
 
 export const RESULT_LAYOUT = {

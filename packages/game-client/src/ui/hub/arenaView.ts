@@ -9,23 +9,29 @@ export class ArenaView {
   private playerOverlay: Phaser.GameObjects.Rectangle | null = null;
   private zegonOverlay: Phaser.GameObjects.Rectangle | null = null;
 
-  constructor(scene: Phaser.Scene, depth = 5) {
+  constructor(
+    scene: Phaser.Scene,
+    depth = 5,
+    opts?: { y?: number; characterMaxH?: number },
+  ) {
     const { width } = scene.scale;
     this.container = scene.add.container(0, 0).setDepth(depth);
 
+    const arenaY = opts?.y ?? L.arena.y;
+    const maxH = opts?.characterMaxH ?? L.arena.characterMaxH;
+
     this.playerOverlay = scene.add
-      .rectangle(width * 0.22, L.arena.y, width * 0.28, L.arena.characterMaxH * 0.55, C.blood, 1)
+      .rectangle(width * 0.22, arenaY, width * 0.28, maxH * 0.55, C.blood, 1)
       .setAlpha(0)
       .setBlendMode(Phaser.BlendModes.ADD);
     this.zegonOverlay = scene.add
-      .rectangle(width * 0.78, L.arena.y, width * 0.28, L.arena.characterMaxH * 0.55, C.blood, 1)
+      .rectangle(width * 0.78, arenaY, width * 0.28, maxH * 0.55, C.blood, 1)
       .setAlpha(0)
       .setBlendMode(Phaser.BlendModes.ADD);
     this.container.add([this.playerOverlay, this.zegonOverlay]);
 
     if (scene.textures.exists(LANDING_CHARACTER_KEY)) {
-      this.character = scene.add.image(width / 2, L.arena.y, LANDING_CHARACTER_KEY);
-      const maxH = L.arena.characterMaxH;
+      this.character = scene.add.image(width / 2, arenaY, LANDING_CHARACTER_KEY);
       const scale = maxH / this.character.height;
       this.character.setScale(scale).setAlpha(0.96);
       this.container.add(this.character);

@@ -10,6 +10,14 @@ export interface ItemSelectorOptions {
   onUseItem: (item: DuelItemId) => void;
   onItemHover?: (item: DuelItemId, hovering: boolean) => void;
   depth?: number;
+  layoutHint?: {
+    /** Centre x of the first chip; skips auto-centering when provided. */
+    xFirst?: number;
+    y?: number;
+    chipW?: number;
+    chipH?: number;
+    gap?: number;
+  };
 }
 
 interface ItemChip {
@@ -33,12 +41,12 @@ export class ItemSelector {
     this.labelFor = opts.labelFor;
     const depth = opts.depth ?? 11;
     const { width } = scene.scale;
-    const chipW = 138;
-    const chipH = L.items.h;
-    const gap = L.items.gap;
+    const chipW = opts.layoutHint?.chipW ?? 138;
+    const chipH = opts.layoutHint?.chipH ?? L.items.h;
+    const gap = opts.layoutHint?.gap ?? L.items.gap;
     const total = ALL_DUEL_ITEMS.length * chipW + (ALL_DUEL_ITEMS.length - 1) * gap;
-    let x = (width - total) / 2 + chipW / 2;
-    const y = L.items.y;
+    let x = opts.layoutHint?.xFirst ?? ((width - total) / 2 + chipW / 2);
+    const y = opts.layoutHint?.y ?? L.items.y;
 
     this.container = scene.add.container(0, 0).setDepth(depth);
 

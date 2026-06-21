@@ -33,6 +33,8 @@ import {
   itemCooldownLabel,
   itemDescription,
   RoundResultToast,
+  PlayerHandSprite,
+  preloadPlayerHand,
   type HubButtonHandle,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
@@ -140,6 +142,7 @@ export class DuelScene extends Phaser.Scene {
   private hoveredAction: PlayerAction | null = null;
   private hoveredItem: DuelItemId | null = null;
   private localeUnsub: (() => void) | null = null;
+  private playerHandSprite!: PlayerHandSprite;
 
   constructor() {
     super("DuelScene");
@@ -158,6 +161,7 @@ export class DuelScene extends Phaser.Scene {
 
   preload(): void {
     preloadLandingBackdrop(this);
+    preloadPlayerHand(this);
   }
 
   create(): void {
@@ -174,29 +178,55 @@ export class DuelScene extends Phaser.Scene {
       .setAlpha(0)
       .setBlendMode(Phaser.BlendModes.ADD);
 
-    this.arenaView = new ArenaView(this, 5);
-    this.combatHud = new CombatHud(this, 9);
+    this.arenaView = new ArenaView(this, 5, {
+      y: L.bottomStrip.arenaY,
+      characterMaxH: L.bottomStrip.characterMaxH,
+    });
+
+    // Player hand + revolver — first-person overlay above arena, below strip.
+    this.playerHandSprite = new PlayerHandSprite(this, 6);
+
+    // Unified bottom action strip — life panels + buttons live inside this band.
+    const stripGfx = this.add.graphics().setDepth(8);
+    const sX = 4, sW = width - 8;
+    stripGfx.fillStyle(C.ash, 0.82);
+    stripGfx.fillRoundedRect(sX, L.bottomStrip.y, sW, L.bottomStrip.h, 3);
+    stripGfx.lineStyle(1, C.blood, 0.6);
+    stripGfx.strokeRoundedRect(sX, L.bottomStrip.y, sW, L.bottomStrip.h, 3);
+
+    const stripPanelY = L.bottomStrip.y + Math.floor((L.bottomStrip.h - L.bottomStrip.panelH) / 2);
+    this.combatHud = new CombatHud(this, 9, {
+      panelY: stripPanelY,
+      panelH: L.bottomStrip.panelH,
+      panelW: L.bottomStrip.panelW,
+      pad: L.bottomStrip.panelPad,
+      nameRowH: L.bottomStrip.nameRowH,
+      iconSize: L.bottomStrip.iconSize,
+      iconGap: L.bottomStrip.iconGap,
+      playerPanelX: 8,
+      zegonPanelX: width - 8 - L.bottomStrip.panelW,
+    });
 
     addHubLogo(this, width / 2, L.header.logoY, L.header.logoMaxW, 11);
 
     this.historyLog = new DuelHistoryLog(this, strings.history, 12);
     this.roundResultToast = new RoundResultToast(this, 14);
 
-    this.statusLineText = this.add.text(width / 2, L.statusLine.y, "", {
+    this.statusLineText = this.add.text(width / 2, L.bottomStrip.statusY, "", {
       fontFamily: FONT,
       fontSize: "15px",
       color: COLORS.dust,
       letterSpacing: 1,
     }).setOrigin(0.5, 0).setDepth(11);
 
-    this.chooseActionText = this.add.text(width / 2, L.chooseAction.y, strings.chooseAction, {
+    this.chooseActionText = this.add.text(width / 2, L.bottomStrip.chooseActionY, strings.chooseAction, {
       fontFamily: FONT_DISPLAY,
       fontSize: "18px",
       color: COLORS.bone,
       letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(11);
 
-    this.duelTipText = this.add.text(width / 2, L.duelTip.y, strings.duelTipDefault, {
+    this.duelTipText = this.add.text(width / 2, L.bottomStrip.duelTipY, strings.duelTipDefault, {
       fontFamily: FONT,
       fontSize: "13px",
       color: COLORS.ember,
@@ -204,7 +234,7 @@ export class DuelScene extends Phaser.Scene {
       wordWrap: { width: width * 0.72 },
     }).setOrigin(0.5, 0).setDepth(11).setAlpha(0.9);
 
-    this.actionDescText = this.add.text(width / 2, L.actionDesc.y, strings.actionTooltipHint, {
+    this.actionDescText = this.add.text(width / 2, L.bottomStrip.actionDescY, strings.actionTooltipHint, {
       fontFamily: FONT,
       fontSize: "14px",
       color: COLORS.dust,
@@ -226,6 +256,13 @@ export class DuelScene extends Phaser.Scene {
       (action) => void this.submitPlayerAction(action),
       12,
       (action, hovering) => this.showActionTooltip(action, hovering),
+      {
+        xFirst: L.bottomStrip.buttonXFirst,
+        y: L.bottomStrip.centerY,
+        btnW: L.bottomStrip.buttonW,
+        btnH: L.bottomStrip.buttonH,
+        gap: L.bottomStrip.buttonGap,
+      },
     );
 
     this.itemSelector = new ItemSelector(this, {
@@ -237,6 +274,13 @@ export class DuelScene extends Phaser.Scene {
       },
       onItemHover: (item, hovering) => this.showItemTooltip(item, hovering),
       depth: 12,
+      layoutHint: {
+        xFirst: L.bottomStrip.itemXFirst,
+        y: L.bottomStrip.centerY,
+        chipW: L.bottomStrip.itemW,
+        chipH: L.bottomStrip.itemH,
+        gap: L.bottomStrip.buttonGap,
+      },
     });
 
     void this.bootDuel();
@@ -407,7 +451,7 @@ export class DuelScene extends Phaser.Scene {
 
   private playArenaFlash(color: number, alpha = 0.7, radius = 60): void {
     const { width } = this.scale;
-    const flash = this.add.circle(width / 2, L.arena.y + 45, radius, color, alpha).setDepth(20);
+    const flash = this.add.circle(width / 2, L.bottomStrip.arenaY + 45, radius, color, alpha).setDepth(20);
     this.tweens.add({
       targets: flash,
       alpha: 0,
@@ -753,6 +797,9 @@ export class DuelScene extends Phaser.Scene {
     this.hoveredItem = null;
     this.setActionDescription("", COLORS.dust);
     playActionSfx(action);
+    if (action === PlayerAction.FIRE) {
+      this.playerHandSprite.playFire();
+    }
     try {
       await this.adapter.submitAction(action);
     } catch (err) {
@@ -786,6 +833,7 @@ export class DuelScene extends Phaser.Scene {
     this.actionBar?.destroy();
     this.itemSelector?.destroy();
     this.arenaView?.destroy();
+    this.playerHandSprite?.destroy();
     this.historyLog?.destroy();
     this.roundResultToast?.destroy();
   }

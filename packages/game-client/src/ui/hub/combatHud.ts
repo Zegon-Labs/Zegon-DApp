@@ -24,23 +24,53 @@ export interface CombatHudState {
   zegonStatus?: string;
 }
 
+export interface CombatHudFighterLayout {
+  panelY?: number;
+  panelH?: number;
+  panelW?: number;
+  pad?: number;
+  nameRowH?: number;
+  iconSize?: number;
+  iconGap?: number;
+  /** Explicit x for the player (left) panel. */
+  playerPanelX?: number;
+  /** Explicit x for the zegon (right) panel. */
+  zegonPanelX?: number;
+}
+
 export class CombatHud {
   readonly container: Phaser.GameObjects.Container;
   private readonly playerBlock: FighterHudBlock;
   private readonly zegonBlock: FighterHudBlock;
   private readonly blindsightMeter: BlindsightMeter;
 
-  constructor(scene: Phaser.Scene, depth = 9) {
+  constructor(scene: Phaser.Scene, depth = 9, fighterLayout?: CombatHudFighterLayout) {
     this.container = scene.add.container(0, 0).setDepth(depth);
     this.playerBlock = new FighterHudBlock(scene, {
       align: "left",
       variant: "player",
       depth,
+      panelY: fighterLayout?.panelY,
+      panelH: fighterLayout?.panelH,
+      panelW: fighterLayout?.panelW,
+      pad: fighterLayout?.pad,
+      nameRowH: fighterLayout?.nameRowH,
+      iconSize: fighterLayout?.iconSize,
+      iconGap: fighterLayout?.iconGap,
+      panelX: fighterLayout?.playerPanelX,
     });
     this.zegonBlock = new FighterHudBlock(scene, {
       align: "right",
       variant: "zegon",
       depth,
+      panelY: fighterLayout?.panelY,
+      panelH: fighterLayout?.panelH,
+      panelW: fighterLayout?.panelW,
+      pad: fighterLayout?.pad,
+      nameRowH: fighterLayout?.nameRowH,
+      iconSize: fighterLayout?.iconSize,
+      iconGap: fighterLayout?.iconGap,
+      panelX: fighterLayout?.zegonPanelX,
     });
     this.blindsightMeter = new BlindsightMeter(scene, depth);
 
