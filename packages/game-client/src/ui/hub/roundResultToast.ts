@@ -341,4 +341,10 @@ export class RoundResultToast {
       this.dragHintText.setAlpha(0.82);
     }
   }
+
+  refreshLocale(): void {
+    if (this.dragHintText) {
+      this.dragHintText.setText(t().roundSummaryDragHint);
+    }
+  }
 }

@@ -5,6 +5,7 @@ import { playActionHover, playUiClick, playUiHover } from "../../services/sfx.js
 
 export interface HubButtonHandle {
   container: Phaser.GameObjects.Container;
+  setLabel: (label: string) => void;
   destroy: () => void;
 }
 
@@ -106,6 +107,9 @@ export function createHubPrimaryButton(
 
   return {
     container,
+    setLabel(next: string) {
+      text.setText(next);
+    },
     destroy: () => {
       idlePulse.stop();
       container.destroy(true);
@@ -150,6 +154,9 @@ export function createHubSecondaryButton(
 
   return {
     container,
+    setLabel(next: string) {
+      text.setText(next);
+    },
     destroy: () => container.destroy(true),
   };
 }
@@ -201,6 +208,7 @@ export interface HubActionButtonHandle {
   setEnabled: (enabled: boolean) => void;
   setDimmed: (dimmed: boolean) => void;
   resetHover: () => void;
+  setLabel: (label: string) => void;
 }
 
 import { drawActionIcon } from "./duelHudDraw.js";
@@ -328,6 +336,9 @@ export function createHubActionButton(
     resetHover() {
       clearHover();
     },
+    setLabel(next: string) {
+      text.setText(next);
+    },
   };
 }
 
@@ -398,6 +409,9 @@ export function createHubChoiceButton(
 
   return {
     container,
+    setLabel(next: string) {
+      text.setText(next);
+    },
     destroy: () => container.destroy(true),
   };
 }

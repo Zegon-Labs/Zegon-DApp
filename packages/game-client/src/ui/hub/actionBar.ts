@@ -70,6 +70,12 @@ export class ActionBar {
     this.buttons.forEach((btn) => btn.resetHover());
   }
 
+  refreshLabels(labelFor: (action: PlayerAction) => string): void {
+    this.buttons.forEach((btn, i) => {
+      btn.setLabel(labelFor(this.actions[i]!));
+    });
+  }
+
   setVisible(visible: boolean): void {
     for (const container of this.buttonContainers) {
       container.setVisible(visible);

@@ -8,16 +8,34 @@ import { ProfileSetupModal } from "./components/ProfileSetupModal.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
 import { gameBridge, type AppView } from "./game/bridge.js";
 import { fetchProfile, hasNickname } from "./services/profile.js";
-import { getWalletAddress, onWalletChange } from "./services/wallet.js";
+import { connectWallet, getWalletAddress, onWalletChange } from "./services/wallet.js";
 import { playSfx, playUiClick, playUiHover } from "./services/sfx.js";
 
 export default function App() {
   const [view, setView] = useState<AppView>({ type: "hub" });
   const [profileSetupAddress, setProfileSetupAddress] = useState<string | null>(null);
+  const [profileSetupRequired, setProfileSetupRequired] = useState(false);
+  const [profileSetupReady, setProfileSetupReady] = useState<(() => void) | null>(null);
   const [inGameSettings, setInGameSettings] = useState(false);
 
   useEffect(() => gameBridge.onNavigate(setView), []);
   useEffect(() => gameBridge.onSettingsOverlay(setInGameSettings), []);
+  useEffect(
+    () =>
+      gameBridge.onWalletConnectRequest(() => {
+        void connectWallet().catch(() => undefined);
+      }),
+    [],
+  );
+  useEffect(
+    () =>
+      gameBridge.onProfileSetupRequest((req) => {
+        setProfileSetupAddress(req.address);
+        setProfileSetupRequired(Boolean(req.required));
+        setProfileSetupReady(() => req.onReady ?? null);
+      }),
+    [],
+  );
 
   useEffect(() => {
     async function checkProfile(address: string | null) {
@@ -108,11 +126,24 @@ export default function App() {
       {inGame && inGameSettings && (
         <SettingsPanel overlay onClose={() => gameBridge.closeSettingsOverlay()} />
       )}
-      {profileSetupAddress && !inGame && (
+      {profileSetupAddress && (
         <ProfileSetupModal
           address={profileSetupAddress}
-          onComplete={() => setProfileSetupAddress(null)}
-          onSkip={() => setProfileSetupAddress(null)}
+          onComplete={() => {
+            profileSetupReady?.();
+            setProfileSetupAddress(null);
+            setProfileSetupRequired(false);
+            setProfileSetupReady(null);
+          }}
+          onSkip={
+            profileSetupRequired
+              ? undefined
+              : () => {
+                  setProfileSetupAddress(null);
+                  setProfileSetupRequired(false);
+                  setProfileSetupReady(null);
+                }
+          }
         />
       )}
     </>

@@ -220,6 +220,29 @@ export interface LocaleStrings {
   leaderboardYou: string;
   scoreSubmitNoProfile: string;
   settingsSoon: string;
+  lifeSingular: string;
+  lifePlural: string;
+  roundSummaryLifeLost: string;
+  roundSummaryYouLostAllLives: string;
+  scoreBreakdownTitle: string;
+  scoreLineRounds: string;
+  scoreLineBlindsight: string;
+  scoreLineTimesRead: string;
+  scoreLineSurprise: string;
+  scoreLineVictory: string;
+  scoreLineDailyMult: string;
+  scoreRankingTipsTitle: string;
+  scoreRankingTip1: string;
+  scoreRankingTip2: string;
+  scoreRankingTip3: string;
+  scoreRankingTip4: string;
+  connectWalletRanking: string;
+  connectWalletRankingBody: string;
+  globalScoreSubmitted: string;
+  globalScoreSubmitFailed: string;
+  globalScoreSubmitNoDuel: string;
+  globalLeaderboardTitle: string;
+  leaderboardGlobalSubtitle: string;
 }
 
 const LOCALES: Record<Language, LocaleStrings> = {
@@ -251,7 +274,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     actionUseItem: "USE ITEM",
     actionDescFire: "Shoot · hits if ZEGON mispredicted.",
     actionDescDodge: "Dodge · blocks ZEGON's shot.",
-    actionDescUseItem: "Use equipped item (pick above).",
+    actionDescUseItem: "Use item · tap HUMO, ESPEJO, or PLACA.",
     itemSmoke: "SMOKE",
     itemMirror: "MIRROR",
     itemPlate: "PLATE",
@@ -264,7 +287,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     duelTipStreak1: "Tip · ZEGON read you once. Change your move now!",
     duelTipDeadeye: "Tip · DEADEYE! Dodge won't help — use an item or surprise.",
     duelTipRepeat: "Tip · Same move twice — ZEGON will predict you. Vary!",
-    duelTipItemReady: "Tip · Item ready. Pick one above, then USE ITEM.",
+    duelTipItemReady: "Tip · Item ready. Tap HUMO, ESPEJO, or PLACA.",
     zegonPlayed: "ZEGON played",
     zegonPredicted: "ZEGON predicted",
     youPlayed: "You played",
@@ -316,9 +339,9 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialDoneBadge: "✓ DONE",
     tutorialIntro:
       "ZEGON is a blind gunslinger AI · it cannot see your current move.\n\nIt reads patterns in your history. Repeat the same choice twice and its read streak rises. First to 0 HP loses.",
-    tutorialHpTitle: "Life (HP)",
+    tutorialHpTitle: "Lives",
     tutorialHpBody:
-      "You and ZEGON start at 100 HP (bottom corners).\n\nSuccessful shots deal 20 damage. At 0 HP you lose. First to break the opponent wins.",
+      "You and ZEGON each have 5 lives (bottom corners).\n\nOne hit removes 1 life. At 0 lives you lose.",
     tutorialBlindsightTitle: "Read streak",
     tutorialBlindsightBody:
       "Top-right shows how many times ZEGON read you in a row.\n\n• Wrong prediction · streak resets\n• Two reads in a row · DEADEYE warning\n\nVary SHOOT and DODGE so it cannot lock onto you.",
@@ -327,16 +350,16 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "After two consecutive reads, ZEGON enters DEADEYE.\n\nIts next hit is lethal (all your remaining HP). Dodge won't help.\n\nUse an item: Smoke cancels the read, Plate blocks the shot, Mirror reflects it back.",
     tutorialActionsTitle: "Shoot, dodge, or item",
     tutorialActionsBody:
-      "SHOOT · hits if ZEGON mispredicted and also shoots.\n\nDODGE · blocks a normal shot (not DEADEYE).\n\nUSE ITEM · pick Smoke, Mirror, or Plate below first, then press USE ITEM on your turn.",
+      "SHOOT · hits if ZEGON mispredicted and also shoots.\n\nDODGE · blocks a normal shot (not DEADEYE).\n\nItems · tap HUMO, ESPEJO, or PLACA on your turn (one click).",
     tutorialPredictionTitle: "ZEGON makes two choices",
     tutorialPredictionBody:
       "Each round, before you act, ZEGON decides:\n\n1) Prediction · what it thinks you'll do\n2) Its move · SHOOT or DODGE\n\nAfter the round, the summary shows all three: its prediction, its move, and yours. Swipe it away to continue.",
     tutorialItemsTitle: "Three different items",
     tutorialItemsBody:
-      "Pick one chip below the action buttons (hover to read what each does):\n\n• Smoke · breaks the read, resets streak, cancels DEADEYE\n• Plate · blocks ZEGON's shot, cancels DEADEYE (still can read you)\n• Mirror · if ZEGON read you and shoots, damage goes back (lethal on DEADEYE)",
+      "Tap a chip below the action buttons (hover to read each effect):\n\n• Smoke · breaks the read, resets streak, cancels DEADEYE\n• Plate · blocks ZEGON's shot, cancels DEADEYE (still can read you)\n• Mirror · if ZEGON read you and shoots, damage goes back (lethal on DEADEYE)",
     tutorialItemCooldownTitle: "When can you use items?",
     tutorialItemCooldownBody:
-      "Only on your turn, when USE ITEM is enabled.\n\nBottom-left panel shows OBJETO · Item ready (green) or Item in X rounds.\n\nUsing an item starts a 4-round cooldown. Each round you play (shoot/dodge) counts one down.",
+      "Only on your turn, when the item chip is enabled.\n\nBottom-left panel shows OBJETO · Item ready (green) or Item in X rounds.\n\nUsing an item starts a 4-round cooldown.",
     tutorialPracticeTitle: "Guided duel",
     tutorialPracticeBody:
       "You'll play a short duel like the real mode: same HUD, buttons, items, and round flow.\n\nFollow each hint. Only the correct action is enabled each step.",
@@ -346,16 +369,15 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialStepFire: "ZEGON mispredicted. SHOOT · you'll hit.",
     tutorialStepDodge: "ZEGON shoots. DODGE · stay safe.",
     tutorialStepRead:
-      "ZEGON read you · both shoot. You take 20 damage — check the round summary after.",
-    tutorialStepItemSmoke:
-      "Select SMOKE, then USE ITEM · breaks the read and cancels DEADEYE threat.",
+      "ZEGON read you · both shoot. You lose 1 life — check the round summary after.",
+    tutorialStepItemSmoke: "Tap SMOKE · breaks the read and cancels DEADEYE threat.",
     tutorialStepItemPlate:
-      "DEADEYE active! Select PLATE, then USE ITEM · blocks the lethal shot and cancels DEADEYE.",
+      "DEADEYE active! Tap PLATE · blocks the lethal shot and cancels DEADEYE.",
     tutorialStepItemMirror:
-      "Select MIRROR, then USE ITEM · ZEGON read you and shoots — reflect lethal damage back.",
+      "Tap MIRROR · ZEGON read you and shoots — reflect lethal damage back.",
     tutorialComplete: "Tutorial complete",
     tutorialCompleteBody:
-      "You learned HP, read streak, DEADEYE, predictions, items, and cooldowns.\n\nYou're ready for a real duel.",
+      "You learned lives, read streak, DEADEYE, predictions, items, and scoring.\n\nConnect wallet after a duel to save your score on the global ranking.",
     tutorialCompleteBadge: "Completed",
     tutorialWrong: "Not that one · follow the hint.",
     tutorialGood: "Nice.",
@@ -384,7 +406,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     heroVerifyLine2b: "verified on-chain",
     heroOr: "or",
     heroBuiltOn: "Built on",
-    heroGuestNote: "Wallet optional · play as guest. Connect later for rewards and rankings.",
+    heroGuestNote: "Play free · connect at the end to rank on-chain.",
     footerComputeTitle: "0G Compute",
     footerComputeDesc: "Sealed inference",
     footerChainTitle: "0G Chain",
@@ -459,6 +481,29 @@ const LOCALES: Record<Language, LocaleStrings> = {
     leaderboardColScore: "Score",
     leaderboardYou: "you",
     settingsSoon: "Saved for later",
+    lifeSingular: "life",
+    lifePlural: "lives",
+    roundSummaryLifeLost: "−{n} {word}",
+    roundSummaryYouLostAllLives: "You lost all your lives",
+    scoreBreakdownTitle: "Score breakdown",
+    scoreLineRounds: "+{points} · {count} rounds played",
+    scoreLineBlindsight: "+{points} · low read streak bonus",
+    scoreLineTimesRead: "−{points} · read {count}×",
+    scoreLineSurprise: "+{points} · surprise streak",
+    scoreLineVictory: "+{points} · victory",
+    scoreLineDailyMult: "+{points} · daily streak ×{mult}",
+    scoreRankingTipsTitle: "Climb the ranking",
+    scoreRankingTip1: "Vary SHOOT and DODGE — repeats get read.",
+    scoreRankingTip2: "Win the duel for +100 bonus points.",
+    scoreRankingTip3: "Surprise ZEGON 2+ rounds for combo bonus.",
+    scoreRankingTip4: "Verify on-chain after duels for trust.",
+    connectWalletRanking: "CONNECT WALLET",
+    connectWalletRankingBody: "Connect wallet to save your score on the global ranking.",
+    globalScoreSubmitted: "Score saved on-chain",
+    globalScoreSubmitFailed: "Could not submit score on-chain",
+    globalScoreSubmitNoDuel: "No verified duel id · score not submitted",
+    globalLeaderboardTitle: "GLOBAL RANKING",
+    leaderboardGlobalSubtitle: "Best scores on-chain · top 10",
   },
   es: {
     pageTitle: "ZEGON · Supera al ciego",
@@ -488,7 +533,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     actionUseItem: "USAR OBJETO",
     actionDescFire: "Dispará · pegás si ZEGON predijo mal.",
     actionDescDodge: "Esquivá · bloquea el disparo de ZEGON.",
-    actionDescUseItem: "Usá el objeto equipado (elegí arriba).",
+    actionDescUseItem: "Usá un objeto · tocá HUMO, ESPEJO o PLACA.",
     itemSmoke: "HUMO",
     itemMirror: "ESPEJO",
     itemPlate: "PLACA",
@@ -501,7 +546,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     duelTipStreak1: "Consejo · ZEGON te leyó una vez. ¡Cambiá de jugada!",
     duelTipDeadeye: "Consejo · ¡DEADEYE! Esquivar no sirve — usá un objeto o sorprendelo.",
     duelTipRepeat: "Consejo · Repetiste la misma jugada. ¡Variá!",
-    duelTipItemReady: "Consejo · Objeto listo. Elegí arriba y usá OBJETO.",
+    duelTipItemReady: "Consejo · Objeto listo. Tocá HUMO, ESPEJO o PLACA.",
     zegonPlayed: "ZEGON jugó",
     zegonPredicted: "ZEGON predijo",
     youPlayed: "Vos jugaste",
@@ -553,9 +598,9 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialDoneBadge: "✓ HECHO",
     tutorialIntro:
       "ZEGON es un pistolero IA ciego · no puede ver tu jugada actual.\n\nLee patrones en tu historial. Repetí la misma elección dos veces y sube su racha. El primero en 0 PS pierde.",
-    tutorialHpTitle: "Vida (PS)",
+    tutorialHpTitle: "Vidas",
     tutorialHpBody:
-      "Vos y ZEGON empezáis con 100 PS (esquinas abajo).\n\nCada impacto hace 20 de daño. A 0 PS perdés. Gana quien derrote al rival.",
+      "Vos y ZEGON tienen 5 vidas cada uno (esquinas abajo).\n\nCada golpe quita 1 vida. A 0 vidas perdés.",
     tutorialBlindsightTitle: "Racha de lectura",
     tutorialBlindsightBody:
       "Arriba a la derecha ves cuántas veces seguidas te leyó ZEGON.\n\n• Predicción fallida · racha a cero\n• Dos lecturas seguidas · aviso DEADEYE\n\nAlterná DISPARAR y ESQUIVAR para que no te lea.",
@@ -564,16 +609,16 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "Tras dos lecturas seguidas, ZEGON entra en DEADEYE.\n\nSu próximo golpe es letal (toda tu vida). Esquivar no sirve.\n\nUsá un objeto: Humo cancela la lectura, Placa bloquea el tiro, Espejo lo devuelve.",
     tutorialActionsTitle: "Disparar, esquivar u objeto",
     tutorialActionsBody:
-      "DISPARAR · pegás si ZEGON predijo mal y también dispara.\n\nESQUIVAR · bloquea un tiro normal (no DEADEYE).\n\nUSAR OBJETO · elegí Humo, Espejo o Placa abajo, luego USAR OBJETO en tu turno.",
+      "DISPARAR · pegás si ZEGON predijo mal y también dispara.\n\nESQUIVAR · bloquea un tiro normal (no DEADEYE).\n\nObjetos · tocá HUMO, ESPEJO o PLACA en tu turno (un click).",
     tutorialPredictionTitle: "ZEGON toma dos decisiones",
     tutorialPredictionBody:
       "Cada ronda, antes de vos, ZEGON decide:\n\n1) Predicción · qué cree que harás\n2) Su jugada · DISPARAR o ESQUIVAR\n\nDespués ves las tres en el resumen. Deslizalo para continuar.",
     tutorialItemsTitle: "Tres objetos distintos",
     tutorialItemsBody:
-      "Elegí un chip debajo de los botones (pasá el mouse para ver qué hace):\n\n• Humo · rompe la lectura, reinicia racha, cancela DEADEYE\n• Placa · bloquea el disparo, cancela DEADEYE (puede leerte igual)\n• Espejo · si te leyó y dispara, devuelve el daño (letal en DEADEYE)",
+      "Tocá un chip debajo de los botones (pasá el mouse para ver el efecto):\n\n• Humo · rompe la lectura, reinicia racha, cancela DEADEYE\n• Placa · bloquea el disparo, cancela DEADEYE (puede leerte igual)\n• Espejo · si te leyó y dispara, devuelve el daño (letal en DEADEYE)",
     tutorialItemCooldownTitle: "¿Cuándo podés usar objetos?",
     tutorialItemCooldownBody:
-      "Solo en tu turno, cuando USAR OBJETO está activo.\n\nAbajo a la izquierda: OBJETO · Objeto listo (verde) u Objeto en X rondas.\n\nAl usar uno, hay 4 rondas de cooldown. Cada ronda que jugás (disparar/esquivar) baja el contador.",
+      "Solo en tu turno, cuando el chip del objeto está activo.\n\nAbajo a la izquierda: OBJETO · Objeto listo (verde) u Objeto en X rondas.\n\nAl usar uno, hay 4 rondas de cooldown.",
     tutorialPracticeTitle: "Duelo guiado",
     tutorialPracticeBody:
       "Vas a jugar un duelo corto igual al real: mismo HUD, botones, objetos y resumen de ronda.\n\nSeguí cada pista. Solo la acción correcta estará habilitada.",
@@ -583,16 +628,15 @@ const LOCALES: Record<Language, LocaleStrings> = {
     tutorialStepFire: "ZEGON predijo mal. DISPARÁ · vas a pegar.",
     tutorialStepDodge: "ZEGON dispara. ESQUIVÁ · quedás a salvo.",
     tutorialStepRead:
-      "ZEGON te leyó · los dos disparan. Recibís 20 de daño — mirá el resumen después.",
-    tutorialStepItemSmoke:
-      "Elegí HUMO, luego USAR OBJETO · rompe la lectura y cancela DEADEYE.",
+      "ZEGON te leyó · los dos disparan. Perdés 1 vida — mirá el resumen después.",
+    tutorialStepItemSmoke: "Tocá HUMO · rompe la lectura y cancela DEADEYE.",
     tutorialStepItemPlate:
-      "¡DEADEYE activo! Elegí PLACA, luego USAR OBJETO · bloquea el tiro letal y cancela DEADEYE.",
+      "¡DEADEYE activo! Tocá PLACA · bloquea el tiro letal y cancela DEADEYE.",
     tutorialStepItemMirror:
-      "Elegí ESPEJO, luego USAR OBJETO · ZEGON te leyó y dispara — devolvé el daño letal.",
+      "Tocá ESPEJO · ZEGON te leyó y dispara — devolvé el daño letal.",
     tutorialComplete: "Tutorial completado",
     tutorialCompleteBody:
-      "Aprendiste PS, racha, DEADEYE, predicciones, objetos y cooldowns.\n\nEstás listo para un duelo real.",
+      "Aprendiste vidas, racha, DEADEYE, predicciones, objetos y puntos.\n\nConectá wallet al final del duelo para guardar tu puntaje en el ranking global.",
     tutorialCompleteBadge: "Completado",
     tutorialWrong: "Esa no · seguí la pista.",
     tutorialGood: "Bien.",
@@ -621,7 +665,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     heroVerifyLine2b: "verifica on-chain",
     heroOr: "o",
     heroBuiltOn: "Construido en",
-    heroGuestNote: "Wallet opcional · jugá como invitado. Conectá después para recompensas y ranking.",
+    heroGuestNote: "Jugá gratis · conectá al final para rankear on-chain.",
     footerComputeTitle: "0G Compute",
     footerComputeDesc: "Inferencia sellada",
     footerChainTitle: "0G Chain",
@@ -696,6 +740,29 @@ const LOCALES: Record<Language, LocaleStrings> = {
     leaderboardColScore: "Pts",
     leaderboardYou: "vos",
     settingsSoon: "Guardado para más adelante",
+    lifeSingular: "vida",
+    lifePlural: "vidas",
+    roundSummaryLifeLost: "−{n} {word}",
+    roundSummaryYouLostAllLives: "Perdiste todas tus vidas",
+    scoreBreakdownTitle: "Desglose de puntos",
+    scoreLineRounds: "+{points} · {count} rondas jugadas",
+    scoreLineBlindsight: "+{points} · bonus por racha baja",
+    scoreLineTimesRead: "−{points} · leído {count}×",
+    scoreLineSurprise: "+{points} · racha de sorpresa",
+    scoreLineVictory: "+{points} · victoria",
+    scoreLineDailyMult: "+{points} · racha diaria ×{mult}",
+    scoreRankingTipsTitle: "Cómo subir en el ranking",
+    scoreRankingTip1: "Variá DISPARAR y ESQUIVAR — repetir te delata.",
+    scoreRankingTip2: "Ganá el duelo para +100 puntos extra.",
+    scoreRankingTip3: "Sorprendé a ZEGON 2+ rondas seguidas por combo.",
+    scoreRankingTip4: "Verificá on-chain después del duelo.",
+    connectWalletRanking: "CONECTAR WALLET",
+    connectWalletRankingBody: "Conectá wallet para guardar tu puntaje en el ranking global.",
+    globalScoreSubmitted: "Puntaje guardado on-chain",
+    globalScoreSubmitFailed: "No se pudo enviar el puntaje on-chain",
+    globalScoreSubmitNoDuel: "Sin id de duelo verificado · puntaje no enviado",
+    globalLeaderboardTitle: "RANKING GLOBAL",
+    leaderboardGlobalSubtitle: "Mejores puntajes on-chain · top 10",
   },
 };
 
@@ -721,6 +788,14 @@ function loadLanguage(): Language {
 
 let currentLanguage: Language = loadLanguage();
 
+type LanguageListener = (lang: Language) => void;
+const languageListeners = new Set<LanguageListener>();
+
+export function onLanguageChange(listener: LanguageListener): () => void {
+  languageListeners.add(listener);
+  return () => languageListeners.delete(listener);
+}
+
 export function getLanguage(): Language {
   return currentLanguage;
 }
@@ -733,6 +808,9 @@ export function setLanguage(lang: Language): void {
   if (typeof document !== "undefined") {
     document.documentElement.lang = lang;
     document.title = LOCALES[lang].pageTitle;
+  }
+  for (const listener of languageListeners) {
+    listener(lang);
   }
 }
 

@@ -1,6 +1,7 @@
 import { PlayerAction, ZegonAction, type RoundOutcome } from "@zegon/game-core";
 import type { LocaleStrings } from "../i18n/index.js";
 import { COLORS } from "./theme.js";
+import { damageToLives } from "./damageLives.js";
 
 type ActionLabelFn = (action: string) => string;
 
@@ -41,6 +42,7 @@ export function buildRoundSummary(
   outcome: RoundOutcome,
   strings: LocaleStrings,
   labelAction: ActionLabelFn,
+  deadeyeStreak = 2,
 ): RoundSummaryResult {
   const predicted = labelAction(outcome.zegonDecision.predictedPlayerMove);
   const zegonMove = labelAction(outcome.zegonDecision.zegonMove);
@@ -74,19 +76,26 @@ export function buildRoundSummary(
   }
 
   lines.push({
-    text: `${strings.roundSummaryStreak}: ${outcome.readingStreakAfter}/2`,
+    text: `${strings.roundSummaryStreak}: ${outcome.readingStreakAfter}/${deadeyeStreak}`,
     role: "delta",
   });
 
   if (outcome.playerDamage > 0) {
+    const lives = damageToLives(outcome.playerDamage);
+    const lifeWord = lives === 1 ? strings.lifeSingular : strings.lifePlural;
+    const lethal = lives >= 5;
     lines.push({
-      text: `${strings.roundSummaryYouHit} −${outcome.playerDamage} ${strings.hudHp}`,
+      text: lethal
+        ? strings.roundSummaryYouLostAllLives
+        : `${strings.roundSummaryYouHit} ${strings.roundSummaryLifeLost.replace("{n}", String(lives)).replace("{word}", lifeWord)}`,
       role: "damage",
     });
   }
   if (outcome.zegonDamage > 0) {
+    const lives = damageToLives(outcome.zegonDamage);
+    const lifeWord = lives === 1 ? strings.lifeSingular : strings.lifePlural;
     lines.push({
-      text: `${strings.roundSummaryZegonHit} −${outcome.zegonDamage} ${strings.hudHp}`,
+      text: `${strings.roundSummaryZegonHit} ${strings.roundSummaryLifeLost.replace("{n}", String(lives)).replace("{word}", lifeWord)}`,
       role: "damage",
     });
   }

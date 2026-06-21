@@ -1,13 +1,12 @@
 import Phaser from "phaser";
-import { format, getLanguage, t } from "../i18n/index.js";
+import { format, getLanguage, onLanguageChange, t } from "../i18n/index.js";
 import type { LocaleStrings } from "../i18n/index.js";
 import {
   GameCoreAdapter,
   DuelPhase,
-  PlayerAction,
 } from "../adapters/GameCoreAdapter.js";
 import type { DuelEvent, RoundOutcome, DuelItemId } from "@zegon/game-core";
-import { ALL_PLAYER_ACTIONS, getEffectiveDeadeyeStreak } from "@zegon/game-core";
+import { getEffectiveDeadeyeStreak, PlayerAction } from "@zegon/game-core";
 import {
   drawGlitchOverlay,
   drawScanlines,
@@ -26,6 +25,7 @@ import {
   createHubTutorialModal,
   createLandingBackdrop,
   preloadLandingBackdrop,
+  type HubButtonHandle,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
@@ -96,6 +96,8 @@ export class TutorialScene extends Phaser.Scene {
   private duelStarted = false;
   private waitingAdvance = false;
   private waitingInstruction = false;
+  private localeUnsub: (() => void) | null = null;
+  private chromeHandles: HubButtonHandle[] = [];
 
   constructor() {
     super("TutorialScene");
@@ -146,7 +148,7 @@ export class TutorialScene extends Phaser.Scene {
 
     this.actionBar = new ActionBar(
       this,
-      [...ALL_PLAYER_ACTIONS],
+      [PlayerAction.FIRE, PlayerAction.DODGE],
       (action) => actionLabel(action, this.adapter?.getEquippedItem()),
       (action) => void this.onAction(action),
       12,
@@ -156,14 +158,16 @@ export class TutorialScene extends Phaser.Scene {
     this.itemSelector = new ItemSelector(this, {
       labelFor: duelItemLabel,
       descFor: (item) => itemDescription(item, t()),
-      onSelect: (item) => this.adapter?.setEquippedItem(item),
+      onUseItem: (item) => void this.onUseItem(item),
       depth: 12,
     });
+
+    this.localeUnsub = onLanguageChange(() => this.refreshLocale());
 
     this.setGameVisible(false);
     this.runCurrentSegment();
 
-    createHubGameChrome(this, {
+    this.chromeHandles = createHubGameChrome(this, {
       skip: {
         label: strings.tutorialSkip,
         onClick: () => {
@@ -338,6 +342,49 @@ export class TutorialScene extends Phaser.Scene {
     this.updateActionButtons(true);
   }
 
+  private refreshLocale(): void {
+    const strings = t();
+    this.actionBar.refreshLabels((action) =>
+      actionLabel(action, this.adapter?.getEquippedItem()),
+    );
+    this.itemSelector.refreshLabels();
+    if (this.chromeHandles[0]) {
+      this.chromeHandles[0].setLabel(strings.tutorialSkip);
+    }
+    if (this.chromeHandles[1]) {
+      this.chromeHandles[1].setLabel(strings.settings);
+    }
+    this.updateHud();
+  }
+
+  private onUseItem(item: DuelItemId): void {
+    if (!this.duelStarted || !this.adapter.isAwaitingPlayer() || this.waitingAdvance) return;
+
+    const step = getPracticeForRound(this.adapter.getState().roundIndex);
+    if (!step?.allowedActions.includes(PlayerAction.USE_ITEM)) {
+      this.statusText.setText(t().tutorialWrong).setColor(COLORS.ember);
+      return;
+    }
+    if (step.equipItem && step.equipItem !== item) {
+      this.statusText.setText(t().tutorialWrong).setColor(COLORS.ember);
+      return;
+    }
+
+    this.adapter.setEquippedItem(item);
+    if (step.resetItemCooldown) {
+      this.adapter.patchState({ itemCooldown: 0 });
+    }
+    if (step.forceDeadeye) {
+      this.adapter.patchState({ readingStreak: 2, blindsight: 100, isDeadeye: true });
+    }
+
+    this.actionBar.setDimmedAll(true);
+    this.itemSelector.setDimmedAll(true);
+    playActionSfx(PlayerAction.USE_ITEM);
+    playSfx("tutorial_correct");
+    void this.adapter.submitAction(PlayerAction.USE_ITEM);
+  }
+
   private onAction(action: PlayerAction): void {
     if (!this.duelStarted || !this.adapter.isAwaitingPlayer() || this.waitingAdvance) return;
 
@@ -460,6 +507,7 @@ export class TutorialScene extends Phaser.Scene {
       zegonMaxHp: 100,
       blindsight,
       readingStreak,
+      deadeyeStreak,
       itemLabel: "",
       itemStatus,
       itemReady: itemCooldown <= 0,
@@ -501,11 +549,29 @@ export class TutorialScene extends Phaser.Scene {
       this.adapter.isAwaitingPlayer() &&
       allowed.size > 0;
 
-    this.actionBar.setEnabledMap(canAct, allowed);
+    const actionAllowed = new Set(
+      [...allowed].filter((a) => a !== PlayerAction.USE_ITEM),
+    );
+    this.actionBar.setEnabledMap(canAct, actionAllowed);
+
+    const itemAllowed =
+      canAct &&
+      allowed.has(PlayerAction.USE_ITEM) &&
+      (!step?.equipItem || step.equipItem);
+    this.itemSelector.setAllowedItems(
+      step?.equipItem ? new Set([step.equipItem]) : null,
+    );
+    this.itemSelector.setInteractive(Boolean(itemAllowed));
     if (!canAct) this.actionBar.resetHoverAll();
   }
 
   shutdown(): void {
+    this.localeUnsub?.();
+    this.localeUnsub = null;
+    for (const handle of this.chromeHandles) {
+      handle.destroy();
+    }
+    this.chromeHandles = [];
     stopAllSfxLoops();
     this.adapter?.destroy();
     this.combatHud?.destroy();

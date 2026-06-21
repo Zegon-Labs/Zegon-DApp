@@ -1,19 +1,24 @@
 import Phaser from "phaser";
 import { COLORS, FONT } from "./theme.js";
+import { formatLivesLost } from "./damageLives.js";
+import { t } from "../i18n/index.js";
 
 export function showFloatingDamage(
   scene: Phaser.Scene,
   x: number,
   y: number,
   amount: number,
-  _target: "player" | "zegon",
+  target: "player" | "zegon",
 ): void {
-  const prefix = amount > 0 ? "−" : "+";
-  const color = COLORS.blood;
+  const strings = t();
+  const label = formatLivesLost(amount, strings.lifeSingular, strings.lifePlural);
+  const color = target === "player" ? COLORS.blood : COLORS.verified;
+  const fontSize = target === "zegon" ? "26px" : "22px";
+
   const text = scene.add
-    .text(x, y, `${prefix}${Math.abs(amount)} HP`, {
+    .text(x, y, label, {
       fontFamily: FONT,
-      fontSize: "22px",
+      fontSize,
       color,
       stroke: "#0A0911",
       strokeThickness: 3,
@@ -25,6 +30,7 @@ export function showFloatingDamage(
     targets: text,
     y: y - 48,
     alpha: 0,
+    scale: target === "zegon" ? 1.15 : 1,
     duration: 900,
     ease: "Cubic.Out",
     onComplete: () => text.destroy(),

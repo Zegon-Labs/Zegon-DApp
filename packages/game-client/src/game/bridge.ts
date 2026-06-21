@@ -8,10 +8,19 @@ export type AppView =
 type NavigateListener = (view: AppView) => void;
 type SceneListener = (scene: string, data?: Record<string, unknown>) => void;
 type SettingsOverlayListener = (open: boolean) => void;
+type WalletRequestListener = () => void;
+type ProfileSetupRequest = {
+  address: string;
+  required?: boolean;
+  onReady?: () => void;
+};
+type ProfileSetupListener = (req: ProfileSetupRequest) => void;
 
 let navigateListener: NavigateListener | null = null;
 let sceneListener: SceneListener | null = null;
 let settingsOverlayListener: SettingsOverlayListener | null = null;
+let walletRequestListener: WalletRequestListener | null = null;
+let profileSetupListener: ProfileSetupListener | null = null;
 
 export const gameBridge = {
   navigate(view: AppView) {
@@ -35,6 +44,14 @@ export const gameBridge = {
     settingsOverlayListener?.(false);
   },
 
+  requestWalletConnect() {
+    walletRequestListener?.();
+  },
+
+  requestProfileSetup(req: ProfileSetupRequest) {
+    profileSetupListener?.(req);
+  },
+
   onNavigate(listener: NavigateListener) {
     navigateListener = listener;
     return () => {
@@ -53,6 +70,20 @@ export const gameBridge = {
     settingsOverlayListener = listener;
     return () => {
       if (settingsOverlayListener === listener) settingsOverlayListener = null;
+    };
+  },
+
+  onWalletConnectRequest(listener: WalletRequestListener) {
+    walletRequestListener = listener;
+    return () => {
+      if (walletRequestListener === listener) walletRequestListener = null;
+    };
+  },
+
+  onProfileSetupRequest(listener: ProfileSetupListener) {
+    profileSetupListener = listener;
+    return () => {
+      if (profileSetupListener === listener) profileSetupListener = null;
     };
   },
 };

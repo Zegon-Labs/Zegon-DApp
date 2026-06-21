@@ -107,7 +107,6 @@ export class FighterHudBlock {
     const rowY = this.panelY + this.pad + L.stats.nameRowH;
     const filledHp = this.hpSlots(state.hp, maxHp);
     const leftEdge = this.panelX + this.pad + this.iconSize / 2;
-    const rightEdge = this.panelX + this.panelW - this.pad - this.iconSize / 2;
 
     if (this.variant === "player") {
       for (let i = 0; i < HEART_SLOTS; i++) {
@@ -126,6 +125,7 @@ export class FighterHudBlock {
         this.metaText.setText("");
       }
     } else {
+      const rightEdge = this.panelX + this.panelW - this.pad - this.iconSize / 2;
       for (let i = 0; i < HEART_SLOTS; i++) {
         const cx = rightEdge - (HEART_SLOTS - 1 - i) * (this.iconSize + this.iconGap);
         drawSkullIcon(this.iconGfx, cx, rowY, this.iconSize, i < filledHp);
@@ -136,6 +136,32 @@ export class FighterHudBlock {
         this.metaText.setText("");
       }
     }
+  }
+
+  playLifeLost(previousHp: number, newHp: number, maxHp: number): void {
+    const prevFilled = this.hpSlots(previousHp, maxHp);
+    const nextFilled = this.hpSlots(newHp, maxHp);
+    if (nextFilled >= prevFilled) return;
+
+    const lostIndex = prevFilled - 1;
+    const leftEdge = this.panelX + this.pad + this.iconSize / 2;
+    const rightEdge = this.panelX + this.panelW - this.pad - this.iconSize / 2;
+    const rowY = this.panelY + this.pad + L.stats.nameRowH;
+    const cx =
+      this.variant === "player"
+        ? leftEdge + lostIndex * (this.iconSize + this.iconGap)
+        : rightEdge - (HEART_SLOTS - 1 - lostIndex) * (this.iconSize + this.iconGap);
+
+    const flash = this.container.scene.add.circle(cx, rowY, this.iconSize * 0.55, C.blood, 0.85);
+    flash.setDepth(this.container.depth + 1);
+    this.container.scene.tweens.add({
+      targets: flash,
+      scale: 1.8,
+      alpha: 0,
+      duration: 320,
+      ease: "Cubic.Out",
+      onComplete: () => flash.destroy(),
+    });
   }
 
   hpBarCenterY(): number {

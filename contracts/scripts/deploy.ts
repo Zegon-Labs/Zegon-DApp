@@ -15,13 +15,20 @@ async function main() {
   await pool.waitForDeployment();
   const poolAddress = await pool.getAddress();
 
+  const leaderboardFactory = await ethers.getContractFactory("ZegonLeaderboard");
+  const leaderboard = await leaderboardFactory.deploy();
+  await leaderboard.waitForDeployment();
+  const leaderboardAddress = await leaderboard.getAddress();
+
   console.log("ZegonDuel deployed to:", duelAddress);
   console.log("ZegonDailyPool deployed to:", poolAddress);
+  console.log("ZegonLeaderboard deployed to:", leaderboardAddress);
   console.log("Operator:", operator.address);
 
   const deployInfo = {
     duelAddress,
     poolAddress,
+    leaderboardAddress,
     operator: operator.address,
     network: "galileo",
     chainId: 16602,
@@ -34,6 +41,7 @@ async function main() {
   console.log("Saved contracts/deployments/galileo.json");
   console.log("Set ZEGON_DUEL_CONTRACT_ADDRESS=", duelAddress);
   console.log("Set ZEGON_DAILY_POOL_ADDRESS=", poolAddress);
+  console.log("Set ZEGON_LEADERBOARD_ADDRESS=", leaderboardAddress);
 }
 
 main().catch(console.error);

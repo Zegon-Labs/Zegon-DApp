@@ -9,6 +9,7 @@ export interface CombatHudState {
   zegonMaxHp: number;
   blindsight: number;
   readingStreak: number;
+  deadeyeStreak: number;
   itemLabel: string;
   itemStatus: string;
   itemReady: boolean;
@@ -68,10 +69,24 @@ export class CombatHud {
     });
     this.blindsightMeter.update(
       state.blindsightLabel,
-      state.blindsight,
+      state.readingStreak,
+      state.deadeyeStreak,
       state.blindsightFlavor,
       state.nextMoveHint,
+      state.blindsight,
     );
+  }
+
+  playPlayerHit(previousHp: number, newHp: number, maxHp: number): void {
+    this.playerBlock.playLifeLost(previousHp, newHp, maxHp);
+  }
+
+  playZegonHit(previousHp: number, newHp: number, maxHp: number): void {
+    this.zegonBlock.playLifeLost(previousHp, newHp, maxHp);
+  }
+
+  refreshLocale(state: CombatHudState): void {
+    this.update(state);
   }
 
   playerDamageAnchor(): { x: number; y: number } {

@@ -2,12 +2,12 @@ import Phaser from "phaser";
 import { ALL_DUEL_ITEMS, DuelItemId } from "@zegon/game-core";
 import { DUEL_LAYOUT as L } from "../layout.js";
 import { playActionHover, playUiClick } from "../../services/sfx.js";
-import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
+import { C, COLORS, FONT_DISPLAY } from "../theme.js";
 
 export interface ItemSelectorOptions {
   labelFor: (item: DuelItemId) => string;
   descFor: (item: DuelItemId) => string;
-  onSelect: (item: DuelItemId) => void;
+  onUseItem: (item: DuelItemId) => void;
   onItemHover?: (item: DuelItemId, hovering: boolean) => void;
   depth?: number;
 }
@@ -16,19 +16,21 @@ interface ItemChip {
   item: DuelItemId;
   container: Phaser.GameObjects.Container;
   bg: Phaser.GameObjects.Rectangle;
-  check: Phaser.GameObjects.Text;
   label: Phaser.GameObjects.Text;
 }
 
-/** Item chips with clear selection ring; description on hover via callback. */
+/** Item chips — one click uses the item (no separate USE ITEM step). */
 export class ItemSelector {
   private readonly chips: ItemChip[] = [];
   private readonly container: Phaser.GameObjects.Container;
-  private selected: DuelItemId = DuelItemId.SMOKE;
+  private readonly labelFor: (item: DuelItemId) => string;
   private cooldown = 0;
   private interactive = false;
+  private dimmed = false;
+  private allowedItems: Set<DuelItemId> | null = null;
 
   constructor(scene: Phaser.Scene, opts: ItemSelectorOptions) {
+    this.labelFor = opts.labelFor;
     const depth = opts.depth ?? 11;
     const { width } = scene.scale;
     const chipW = 138;
@@ -52,32 +54,24 @@ export class ItemSelector {
         letterSpacing: 1,
       }).setOrigin(0.5, 0.5);
 
-      const check = scene.add.text(-chipW / 2 + 12, 0, "▸", {
-        fontFamily: FONT,
-        fontSize: "16px",
-        color: COLORS.ember,
-      }).setOrigin(0.5, 0.5).setVisible(false);
-
-      chipContainer.add([bg, check, label]);
+      chipContainer.add([bg, label]);
       this.container.add(chipContainer);
 
-      const chip: ItemChip = { item, container: chipContainer, bg, check, label };
+      const chip: ItemChip = { item, container: chipContainer, bg, label };
       this.chips.push(chip);
 
       bg.setInteractive({ useHandCursor: true });
       bg.on("pointerover", () => {
-        if (this.interactive && this.cooldown <= 0) playActionHover();
+        if (this.canUseItem(item)) playActionHover();
         opts.onItemHover?.(item, true);
       });
       bg.on("pointerout", () => {
         opts.onItemHover?.(item, false);
       });
       bg.on("pointerdown", () => {
-        if (!this.interactive || this.cooldown > 0) return;
+        if (!this.canUseItem(item)) return;
         playUiClick();
-        this.selected = item;
-        opts.onSelect(item);
-        this.paintAll();
+        opts.onUseItem(item);
       });
 
       x += chipW + gap;
@@ -86,8 +80,9 @@ export class ItemSelector {
     this.paintAll();
   }
 
-  getSelected(): DuelItemId {
-    return this.selected;
+  setAllowedItems(items: Set<DuelItemId> | null): void {
+    this.allowedItems = items;
+    this.paintAll();
   }
 
   setCooldown(rounds: number): void {
@@ -100,33 +95,44 @@ export class ItemSelector {
     this.paintAll();
   }
 
-  private paintAll(): void {
-    const dimmed = !this.interactive || this.cooldown > 0;
-    for (const chip of this.chips) {
-      const active = chip.item === this.selected;
-      chip.container.setScale(active ? 1.04 : 1);
-      chip.check.setVisible(active && !dimmed);
+  setDimmedAll(dimmed: boolean): void {
+    this.dimmed = dimmed;
+    this.paintAll();
+  }
 
+  refreshLabels(): void {
+    for (const chip of this.chips) {
+      chip.label.setText(this.labelFor(chip.item));
+    }
+  }
+
+  private canUseItem(item: DuelItemId): boolean {
+    if (this.dimmed || !this.interactive || this.cooldown > 0) return false;
+    if (this.allowedItems && !this.allowedItems.has(item)) return false;
+    return true;
+  }
+
+  private paintAll(): void {
+    const globalDimmed = this.dimmed || !this.interactive || this.cooldown > 0;
+    for (const chip of this.chips) {
+      const blocked = this.allowedItems && !this.allowedItems.has(chip.item);
+      const dimmed = globalDimmed || blocked;
+
+      chip.container.setScale(1);
       if (dimmed) {
-        chip.bg.setFillStyle(C.ash, active ? 0.35 : 0.22);
-        chip.bg.setStrokeStyle(active ? 2 : 1, active ? C.ember : C.fog, active ? 0.7 : 0.35);
-        chip.label.setColor(active ? COLORS.ember : COLORS.dust);
-        chip.label.setAlpha(active ? 0.75 : 0.45);
+        chip.bg.setFillStyle(C.ash, blocked ? 0.18 : 0.22);
+        chip.bg.setStrokeStyle(1, C.fog, 0.35);
+        chip.label.setColor(COLORS.dust);
+        chip.label.setAlpha(blocked ? 0.35 : 0.45);
         chip.container.setAlpha(0.55);
         continue;
       }
 
       chip.container.setAlpha(1);
       chip.label.setAlpha(1);
-      if (active) {
-        chip.bg.setFillStyle(C.blood, 0.38);
-        chip.bg.setStrokeStyle(2, C.ember, 1);
-        chip.label.setColor(COLORS.ember);
-      } else {
-        chip.bg.setFillStyle(C.smoke, 0.72);
-        chip.bg.setStrokeStyle(1, C.fog, 0.55);
-        chip.label.setColor(COLORS.dust);
-      }
+      chip.bg.setFillStyle(C.smoke, 0.72);
+      chip.bg.setStrokeStyle(1, C.fog, 0.55);
+      chip.label.setColor(COLORS.bone);
     }
   }
 

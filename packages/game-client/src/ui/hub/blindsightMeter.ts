@@ -3,20 +3,20 @@ import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
 import { DUEL_LAYOUT as L, blindsightPanelX } from "../layout.js";
 import { drawSegmentedMeter, paintDuelFrameCorners } from "./duelHudDraw.js";
 
-/** Top-right blindsight panel — segmented meter, flavor copy, next-move hint. */
+/** Top-right read-streak panel — 2 ticks, no percentage. */
 export class BlindsightMeter {
   readonly container: Phaser.GameObjects.Container;
   private readonly panelGfx: Phaser.GameObjects.Graphics;
   private readonly meterGfx: Phaser.GameObjects.Graphics;
   private readonly cornerGfx: Phaser.GameObjects.Graphics;
   private readonly title: Phaser.GameObjects.Text;
-  private readonly percent: Phaser.GameObjects.Text;
   private readonly flavor: Phaser.GameObjects.Text;
   private readonly nextHint: Phaser.GameObjects.Text;
   private readonly panelW = L.blindsight.panelW;
   private readonly panelH = L.blindsight.panelH;
   private readonly panelX: number;
   private readonly panelY = L.blindsight.panelY;
+  private readonly streakSegments = 2;
 
   constructor(scene: Phaser.Scene, depth = 9) {
     const { width } = scene.scale;
@@ -39,12 +39,6 @@ export class BlindsightMeter {
       letterSpacing: 2,
     }).setOrigin(0, 0);
 
-    this.percent = scene.add.text(this.panelX + this.panelW - pad, barY + L.blindsight.barH + 4, "0%", {
-      fontFamily: FONT,
-      fontSize: "16px",
-      color: COLORS.ember,
-    }).setOrigin(1, 0);
-
     this.flavor = scene.add.text(innerX, barY + L.blindsight.barH + 22, "", {
       fontFamily: FONT,
       fontSize: "13px",
@@ -65,7 +59,6 @@ export class BlindsightMeter {
       this.cornerGfx,
       this.meterGfx,
       this.title,
-      this.percent,
       this.flavor,
       this.nextHint,
     ]);
@@ -92,12 +85,13 @@ export class BlindsightMeter {
 
   update(
     label: string,
-    value: number,
+    readingStreak: number,
+    deadeyeStreak: number,
     flavorText: string,
     nextHint: string,
+    vfxIntensity = 0,
   ): void {
-    this.title.setText(label.split("  ")[0] ?? "BLINDSIGHT");
-    this.percent.setText(`${value}%`);
+    this.title.setText(label);
     this.flavor.setText(flavorText);
     this.nextHint.setText(nextHint);
 
@@ -105,14 +99,18 @@ export class BlindsightMeter {
     const barX = this.panelX + pad;
     const barY = this.panelY + pad + 20;
     const barW = this.panelW - pad * 2;
+    const filledPct = Math.min(
+      100,
+      Math.round((readingStreak / Math.max(1, deadeyeStreak)) * 100),
+    );
     drawSegmentedMeter(
       this.meterGfx,
       barX,
       barY,
       barW,
       L.blindsight.barH,
-      value,
-      L.blindsight.segments,
+      vfxIntensity > 0 ? vfxIntensity : filledPct,
+      this.streakSegments,
     );
   }
 

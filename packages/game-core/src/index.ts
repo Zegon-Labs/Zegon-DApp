@@ -14,3 +14,4 @@ export * from "./modes/dailySeed.js";
 export * from "./modes/challenge.js";
 export * from "./modes/zegonArchetypes.js";
 export * from "./progression/achievements.js";
+export * from "./score/breakdown.js";

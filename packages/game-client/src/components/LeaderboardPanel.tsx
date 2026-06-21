@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { gameBridge } from "../game/bridge.js";
 import { useLocale } from "../hooks/useLocale.js";
-import { getWalletAddress, onWalletChange } from "../services/wallet.js";
+import { fetchOnChainLeaderboard, isLeaderboardContractConfigured } from "../services/onchainLeaderboard.js";
+import { displayNameFor, fetchProfile } from "../services/profile.js";
+import { getWalletAddress, onWalletChange, truncateAddress } from "../services/wallet.js";
 
 interface LeaderboardEntry {
   playerId: string;
   nickname?: string;
   displayName?: string;
   score: number;
-  timestamp: number;
+  timestamp?: number;
 }
 
 function formatTime(ts: number, locale: string): string {
@@ -26,6 +28,7 @@ export function LeaderboardPanel() {
   const { strings, language } = useLocale();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [globalMode, setGlobalMode] = useState(false);
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
 
   useEffect(() => onWalletChange(setWallet), []);
@@ -35,11 +38,53 @@ export function LeaderboardPanel() {
 
     async function load() {
       setLoading(true);
+      const onChain = isLeaderboardContractConfigured();
+      setGlobalMode(onChain);
+
+      if (onChain) {
+        const chainEntries = await fetchOnChainLeaderboard(10);
+        if (!cancelled && chainEntries && chainEntries.length > 0) {
+          const enriched = await Promise.all(
+            chainEntries.map(async (e) => {
+              const profile = await fetchProfile(e.playerId);
+              return {
+                ...e,
+                nickname: profile?.nickname,
+                displayName: profile
+                  ? displayNameFor(e.playerId, profile.nickname)
+                  : truncateAddress(e.playerId),
+              };
+            }),
+          );
+          setEntries(enriched);
+          setLoading(false);
+          return;
+        }
+      }
+
+      try {
+        const globalRes = await fetch("/api/global/leaderboard");
+        if (globalRes.ok) {
+          const globalData = (await globalRes.json()) as { entries: LeaderboardEntry[] };
+          if (!cancelled && (globalData.entries?.length ?? 0) > 0) {
+            setGlobalMode(true);
+            setEntries(globalData.entries ?? []);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // fall through to daily
+      }
+
       try {
         const res = await fetch("/api/daily/leaderboard");
         if (!res.ok) throw new Error("offline");
         const data = (await res.json()) as { entries: LeaderboardEntry[] };
-        if (!cancelled) setEntries(data.entries ?? []);
+        if (!cancelled) {
+          setGlobalMode(false);
+          setEntries(data.entries ?? []);
+        }
       } catch {
         if (!cancelled) setEntries([]);
       } finally {
@@ -58,9 +103,11 @@ export function LeaderboardPanel() {
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
       <div className="hero__panel hero__panel--wide">
-        <h2 className="hero__panel-title">{strings.leaderboardTitle}</h2>
+        <h2 className="hero__panel-title">
+          {globalMode ? strings.globalLeaderboardTitle : strings.leaderboardTitle}
+        </h2>
         <p className="hero__verify-copy" style={{ marginTop: 0 }}>
-          {strings.leaderboardSubtitle}
+          {globalMode ? strings.leaderboardGlobalSubtitle : strings.leaderboardSubtitle}
         </p>
         <p className="settings-hint" style={{ marginBottom: 14 }}>
           {strings.leaderboardWalletOnly}
@@ -83,7 +130,7 @@ export function LeaderboardPanel() {
               const name = e.displayName ?? e.nickname ?? e.playerId.slice(0, 10);
               return (
                 <div
-                  key={`${e.playerId}-${e.timestamp}`}
+                  key={`${e.playerId}-${e.timestamp ?? i}`}
                   className={`leaderboard-table__row${isYou ? " leaderboard-table__row--you" : ""}`}
                 >
                   <span>{i + 1}</span>
@@ -92,9 +139,11 @@ export function LeaderboardPanel() {
                     {isYou && (
                       <span className="leaderboard-table__you"> ({strings.leaderboardYou})</span>
                     )}
-                    <span className="leaderboard-table__time">
-                      {formatTime(e.timestamp, language)}
-                    </span>
+                    {e.timestamp ? (
+                      <span className="leaderboard-table__time">
+                        {formatTime(e.timestamp, language)}
+                      </span>
+                    ) : null}
                   </span>
                   <span>{e.score}</span>
                 </div>

@@ -5,6 +5,8 @@ import { createServer } from "node:http";
 loadEnv({ path: resolve(import.meta.dirname, "../../../.env") });
 import {
   handleDailyLeaderboard,
+  handleGlobalLeaderboard,
+  handleGlobalSubmit,
   handleRecordDuel,
   handleRoundCommit,
   handleRoundReveal,
@@ -132,6 +134,21 @@ const server = createServer(async (req, res) => {
 
     if (url === "/api/daily/leaderboard" && req.method === "GET") {
       const result = await handleDailyLeaderboard();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/global/leaderboard" && req.method === "GET") {
+      const result = await handleGlobalLeaderboard();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/global/submit" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleGlobalSubmit>[0];
+      const result = await handleGlobalSubmit(body);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;

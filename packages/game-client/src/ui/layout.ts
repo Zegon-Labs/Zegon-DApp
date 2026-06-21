@@ -60,7 +60,7 @@ export const DUEL_LAYOUT = {
 
 export const RESULT_LAYOUT = {
   panelCenterY: 360,
-  panelW: 310,
+  panelW: 540,
 } as const;
 
 export function resultButtonsStartY(): number {

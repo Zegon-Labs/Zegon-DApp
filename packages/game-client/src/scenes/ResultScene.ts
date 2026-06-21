@@ -1,9 +1,15 @@
 import Phaser from "phaser";
-import { createDailyDuel, DuelWinner, xpForResult, type DuelResult } from "@zegon/game-core";
-import { format, t } from "../i18n/index.js";
+import {
+  buildScoreBreakdownFromResult,
+  createDailyDuel,
+  DuelWinner,
+  xpForResult,
+  type DuelResult,
+} from "@zegon/game-core";
+import { format, onLanguageChange, t } from "../i18n/index.js";
 import { gameBridge } from "../game/bridge.js";
-import { getCachedProfile } from "../services/profile.js";
-import { getWalletAddress } from "../services/wallet.js";
+import { getCachedProfile, hasNickname } from "../services/profile.js";
+import { getWalletAddress, onWalletChange } from "../services/wallet.js";
 import {
   createHubResultPanel,
   createLandingBackdrop,
@@ -11,10 +17,15 @@ import {
 } from "../ui/hub/index.js";
 import { drawScanlines } from "../ui/components.js";
 import { C, COLORS } from "../ui/theme.js";
+import { formatScoreBreakdown } from "../ui/scoreBreakdownText.js";
 import { buildChallengeUrlFromResult, generateShareCard } from "../utils/shareCard.js";
 import { playDuelEndSfx, playSfx } from "../services/sfx.js";
 import { playDuelEndVoice, stopAllVoice } from "../services/voice.js";
 import { openVerifyDuelWindow } from "../utils/verifyWindow.js";
+import {
+  isLeaderboardContractConfigured,
+  submitScoreOnChain,
+} from "../services/onchainLeaderboard.js";
 
 interface VerifyResponse {
   duelId: string;
@@ -25,6 +36,16 @@ interface VerifyResponse {
 
 export class ResultScene extends Phaser.Scene {
   private panelHandle: ReturnType<typeof createHubResultPanel> | null = null;
+  private result!: DuelResult;
+  private duelId: string | null = null;
+  private apiBaseUrl = "";
+  private mode: "standard" | "daily" = "standard";
+  private archetype?: string;
+  private brainMode?: "tee" | "dummy";
+  private scoreOptions: { dailyStreakDays?: number; surpriseStreak?: number } = {};
+  private scoreSubmitted = false;
+  private localeUnsub: (() => void) | null = null;
+  private walletUnsub: (() => void) | null = null;
 
   constructor() {
     super("ResultScene");
@@ -41,117 +62,218 @@ export class ResultScene extends Phaser.Scene {
     mode?: "standard" | "daily";
     archetype?: string;
     brainMode?: "tee" | "dummy";
+    scoreOptions?: { dailyStreakDays?: number; surpriseStreak?: number };
   }): void {
-    this.panelHandle?.destroy();
-    this.panelHandle = null;
-
-    const { width, height } = this.scale;
-    const result = data.result;
-    const strings = t();
-    const duelId = data.duelId;
-    const apiBase = data.apiBaseUrl ?? "";
-    const mode = data.mode ?? "standard";
+    this.result = data.result;
+    this.duelId = data.duelId ?? null;
+    this.apiBaseUrl = data.apiBaseUrl ?? "";
+    this.mode = data.mode ?? "standard";
+    this.archetype = data.archetype;
+    this.brainMode = data.brainMode;
+    this.scoreOptions = data.scoreOptions ?? {};
+    this.scoreSubmitted = false;
 
     this.cameras.main.setBackgroundColor(C.void);
     createLandingBackdrop(this, 0);
     drawScanlines(this, 98, 0.05);
 
+    playDuelEndSfx(this.result.winner);
+    playDuelEndVoice(this.result.winner);
+
+    this.renderPanel();
+
+    if (this.mode === "daily" && this.panelHandle) {
+      void this.submitDailyScore(this.panelHandle.dailyLabel, this.duelId);
+    }
+
+    void this.trySubmitGlobalScore();
+
+    if (this.duelId) {
+      void this.loadVerifySummary(`${this.apiBaseUrl}/api/duel/verify/${this.duelId}`);
+    }
+
+    this.localeUnsub = onLanguageChange(() => this.renderPanel());
+    this.walletUnsub = onWalletChange(() => {
+      this.renderPanel();
+      void this.trySubmitGlobalScore();
+      if (this.mode === "daily" && this.panelHandle) {
+        void this.submitDailyScore(this.panelHandle.dailyLabel, this.duelId);
+      }
+    });
+  }
+
+  private buildStatsText(): string {
+    const strings = t();
+    const breakdown = buildScoreBreakdownFromResult(this.result, this.scoreOptions);
+    const scoreBlock = formatScoreBreakdown(breakdown, strings, this.result.score);
+
+    return [
+      `${strings.rounds}: ${this.result.roundsPlayed}`,
+      `${strings.timesRead}: ${this.result.timesRead}`,
+      `${strings.finalBlindsight}: ${this.result.finalBlindsight}%`,
+      "",
+      scoreBlock,
+    ].join("\n");
+  }
+
+  private renderPanel(): void {
+    const { width, height } = this.scale;
+    const strings = t();
+    const prevVerifyText = this.panelHandle?.verifyLabel.text;
+    this.panelHandle?.destroy();
+
     const winnerLabel =
-      result.winner === "PLAYER"
+      this.result.winner === "PLAYER"
         ? strings.youWin
-        : result.winner === "ZEGON"
+        : this.result.winner === "ZEGON"
           ? strings.zegonWins
           : strings.draw;
 
     const winnerColor =
-      result.winner === "PLAYER" ? COLORS.verified : COLORS.ember;
+      this.result.winner === "PLAYER" ? COLORS.verified : COLORS.ember;
 
-    playDuelEndSfx(result.winner);
-    playDuelEndVoice(result.winner);
+    const wallet = getWalletAddress();
+    const buttons: Array<{ label: string; primary?: boolean; onClick: () => void }> = [];
 
-    const statsText = [
-      `${strings.rounds}: ${result.roundsPlayed}`,
-      `${strings.timesRead}: ${result.timesRead}`,
-      `${strings.finalBlindsight}: ${result.finalBlindsight}%`,
-      `${strings.score}: ${result.score}`,
-    ].join("\n");
+    if (!wallet) {
+      buttons.push({
+        label: strings.connectWalletRanking,
+        primary: true,
+        onClick: () => gameBridge.requestWalletConnect(),
+      });
+    } else if (!hasNickname(wallet)) {
+      buttons.push({
+        label: strings.profileSetupTitle,
+        primary: true,
+        onClick: () =>
+          gameBridge.requestProfileSetup({
+            address: wallet,
+            required: true,
+            onReady: () => void this.trySubmitGlobalScore(),
+          }),
+      });
+    }
+
+    buttons.push(
+      {
+        label: strings.verifyOnChain,
+        onClick: () => {
+          if (this.duelId) {
+            openVerifyDuelWindow(this.duelId);
+          } else {
+            this.panelHandle?.setVerifyText(strings.verifyOffline);
+          }
+        },
+      },
+      {
+        label: strings.share,
+        onClick: () => {
+          const text = format(strings.shareText, {
+            score: this.result.score,
+            timesRead: this.result.timesRead,
+          });
+          void navigator.clipboard?.writeText(text);
+        },
+      },
+      {
+        label: strings.shareCard,
+        onClick: () => {
+          void generateShareCard(this.result, {
+            archetype: this.archetype,
+            brainMode: this.brainMode,
+          });
+        },
+      },
+      {
+        label: strings.challengeLink,
+        onClick: () => {
+          const seed =
+            this.mode === "daily"
+              ? createDailyDuel().seed!
+              : `standard-${this.archetype ?? "reader"}`;
+          const url = buildChallengeUrlFromResult(seed, this.archetype);
+          void navigator.clipboard?.writeText(url);
+        },
+      },
+      {
+        label: strings.menu,
+        onClick: () => {
+          this.scene.stop("ResultScene");
+          gameBridge.navigate({ type: "hub" });
+        },
+      },
+    );
 
     const brainTag =
-      data.brainMode === "tee" ? "0G TEE" : data.brainMode === "dummy" ? "0G API" : "";
+      this.brainMode === "tee" ? "0G TEE" : this.brainMode === "dummy" ? "0G API" : "";
 
     this.panelHandle = createHubResultPanel(this, width / 2, height / 2, {
       winnerLabel,
       winnerColor,
-      statsText,
+      statsText: this.buildStatsText(),
       verifyPlaceholder: brainTag || strings.verifyPending,
-      buttons: [
-        {
-          label: strings.verifyOnChain,
-          onClick: () => {
-            if (duelId) {
-              openVerifyDuelWindow(duelId);
-            } else {
-              this.panelHandle?.setVerifyText(strings.verifyOffline);
-            }
-          },
-        },
-        {
-          label: strings.share,
-          onClick: () => {
-            const text = format(strings.shareText, {
-              score: result.score,
-              timesRead: result.timesRead,
-            });
-            void navigator.clipboard?.writeText(text);
-          },
-        },
-        {
-          label: strings.shareCard,
-          onClick: () => {
-            void generateShareCard(result, {
-              archetype: data.archetype,
-              brainMode: data.brainMode,
-            });
-          },
-        },
-        {
-          label: strings.challengeLink,
-          onClick: () => {
-            const seed =
-              mode === "daily"
-                ? createDailyDuel().seed!
-                : `standard-${data.archetype ?? "reader"}`;
-            const url = buildChallengeUrlFromResult(seed, data.archetype);
-            void navigator.clipboard?.writeText(url);
-          },
-        },
-        {
-          label: strings.menu,
-          onClick: () => {
-            this.scene.stop("ResultScene");
-            gameBridge.navigate({ type: "hub" });
-          },
-        },
-      ],
+      walletHint: !wallet ? strings.connectWalletRankingBody : undefined,
+      buttons,
     });
 
-    if (mode === "daily") {
-      void this.submitDailyScore(result, this.panelHandle.dailyLabel, duelId);
-    }
-
-    if (duelId) {
-      void this.loadVerifySummary(`${apiBase}/api/duel/verify/${duelId}`);
+    if (prevVerifyText && prevVerifyText !== (brainTag || strings.verifyPending)) {
+      this.panelHandle.setVerifyText(prevVerifyText);
     }
   }
 
   shutdown(): void {
     stopAllVoice();
+    this.localeUnsub?.();
+    this.walletUnsub?.();
+    this.localeUnsub = null;
+    this.walletUnsub = null;
     this.panelHandle?.destroy();
     this.panelHandle = null;
   }
 
+  private async trySubmitGlobalScore(): Promise<void> {
+    if (this.scoreSubmitted || !isLeaderboardContractConfigured()) return;
+
+    const address = getWalletAddress();
+    if (!address || !hasNickname(address)) return;
+    if (!this.duelId) {
+      this.panelHandle?.dailyLabel
+        .setAlpha(1)
+        .setText(t().globalScoreSubmitNoDuel)
+        .setColor(COLORS.dust);
+      return;
+    }
+
+    const strings = t();
+    this.panelHandle?.dailyLabel
+      .setAlpha(1)
+      .setText(strings.verifyPending)
+      .setColor(COLORS.dust);
+
+    const res = await submitScoreOnChain(this.result.score, this.duelId);
+    if (res.ok) {
+      this.scoreSubmitted = true;
+      this.panelHandle?.dailyLabel
+        .setText(strings.globalScoreSubmitted)
+        .setColor(COLORS.cyan);
+      playSfx("verify_success");
+      void fetch("/api/global/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: address,
+          score: this.result.score,
+          duelId: this.duelId ?? undefined,
+        }),
+      });
+    } else if (res.reason !== "NOT_CONFIGURED") {
+      this.panelHandle?.dailyLabel
+        .setText(strings.globalScoreSubmitFailed)
+        .setColor(COLORS.ember);
+    }
+  }
+
   private async submitDailyScore(
-    result: DuelResult,
     label: Phaser.GameObjects.Text,
     duelId?: string | null,
   ): Promise<void> {
@@ -174,12 +296,12 @@ export class ResultScene extends Phaser.Scene {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           playerId: address,
-          score: result.score,
+          score: this.result.score,
           seed: daily.seed,
           duelId: duelId ?? undefined,
-          won: result.winner === DuelWinner.PLAYER,
-          timesRead: result.timesRead,
-          xpGain: xpForResult(result),
+          won: this.result.winner === DuelWinner.PLAYER,
+          timesRead: this.result.timesRead,
+          xpGain: xpForResult(this.result),
         }),
       });
       const body = (await res.json()) as { accepted?: boolean; reason?: string };
@@ -208,7 +330,10 @@ export class ResultScene extends Phaser.Scene {
       const total = data.rounds.length;
       const status = data.verified ? strings.verifyOk : strings.verifyPending;
       const tee = data.teeVerified ? " · 0G TEE ✓" : "";
-      if (data.verified) playSfx("verify_success");
+      if (data.verified) {
+        playSfx("verify_success");
+        void this.trySubmitGlobalScore();
+      }
       this.panelHandle?.setVerifyText(
         `${status}${tee}\n${strings.verifyRounds}: ${proofCount}/${total}`,
       );

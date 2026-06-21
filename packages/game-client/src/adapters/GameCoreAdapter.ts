@@ -396,8 +396,12 @@ export class GameCoreAdapter {
     }
   }
 
-  getResult(): DuelResult {
-    return this.controller.getResult();
+  getResult(options?: { dailyStreakDays?: number; surpriseStreak?: number }): DuelResult {
+    return this.controller.getResult(options);
+  }
+
+  getSurpriseStreak(): number {
+    return this.controller.getSurpriseStreak();
   }
 
   getDuelId(): string | null {

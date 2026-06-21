@@ -4,11 +4,10 @@ import {
   DuelPhase,
 } from "../adapters/GameCoreAdapter.js";
 import { shouldUseServerApi, apiBaseUrl } from "../services/apiMode.js";
-import { t } from "../i18n/index.js";
+import { onLanguageChange, t } from "../i18n/index.js";
 import type { DuelEvent, RoundOutcome, ZegonArchetypeId, DuelItemId } from "@zegon/game-core";
 import {
   ActionValidationError,
-  ALL_PLAYER_ACTIONS,
   getEffectiveDeadeyeStreak,
   PlayerAction,
 } from "@zegon/game-core";
@@ -34,12 +33,16 @@ import {
   itemCooldownLabel,
   itemDescription,
   RoundResultToast,
+  type HubButtonHandle,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { buildRoundSummary } from "../ui/roundSummary.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
 import { C, COLORS, FONT, FONT_DISPLAY } from "../ui/theme.js";
 import { gameBridge } from "../game/bridge.js";
+import { getCachedProfile } from "../services/profile.js";
+import { getWalletAddress } from "../services/wallet.js";
+import { persistDuelProgression } from "../services/duelProgression.js";
 import { getPreferences } from "../services/preferences.js";
 import {
   playActionSfx,
@@ -128,7 +131,7 @@ export class DuelScene extends Phaser.Scene {
   private mode: "standard" | "daily" = "standard";
   private showingRoundResult = false;
   private confirmModal: Phaser.GameObjects.Container | null = null;
-  private chromeHandles: { destroy: () => void }[] = [];
+  private chromeHandles: HubButtonHandle[] = [];
   private bootToken = 0;
   private zegonReadingActive = false;
   private readingDotsPhase = 0;
@@ -136,6 +139,7 @@ export class DuelScene extends Phaser.Scene {
   private glitchAmbientOn = false;
   private hoveredAction: PlayerAction | null = null;
   private hoveredItem: DuelItemId | null = null;
+  private localeUnsub: (() => void) | null = null;
 
   constructor() {
     super("DuelScene");
@@ -217,7 +221,7 @@ export class DuelScene extends Phaser.Scene {
 
     this.actionBar = new ActionBar(
       this,
-      [...ALL_PLAYER_ACTIONS],
+      [PlayerAction.FIRE, PlayerAction.DODGE],
       (action) => actionLabel(action, this.adapter?.getEquippedItem()),
       (action) => void this.submitPlayerAction(action),
       12,
@@ -227,7 +231,10 @@ export class DuelScene extends Phaser.Scene {
     this.itemSelector = new ItemSelector(this, {
       labelFor: duelItemLabel,
       descFor: (item) => itemDescription(item, t()),
-      onSelect: (item) => this.adapter?.setEquippedItem(item),
+      onUseItem: (item) => {
+        this.adapter?.setEquippedItem(item);
+        void this.submitPlayerAction(PlayerAction.USE_ITEM);
+      },
       onItemHover: (item, hovering) => this.showItemTooltip(item, hovering),
       depth: 12,
     });
@@ -245,6 +252,28 @@ export class DuelScene extends Phaser.Scene {
         onClick: () => this.showSurrenderConfirm(),
       },
     });
+
+    this.localeUnsub = onLanguageChange(() => this.refreshLocale());
+  }
+
+  private refreshLocale(): void {
+    const strings = t();
+    this.chooseActionText.setText(strings.chooseAction);
+    this.actionBar.refreshLabels((action) =>
+      actionLabel(action, this.adapter?.getEquippedItem()),
+    );
+    this.itemSelector.refreshLabels();
+    if (this.chromeHandles[0]) {
+      this.chromeHandles[0].setLabel(strings.settings);
+    }
+    if (this.chromeHandles[1]) {
+      this.chromeHandles[1].setLabel(strings.duelSurrender);
+    }
+    this.historyLog.setTitle(strings.history);
+    this.updateHud();
+    this.updateDuelTip();
+    this.syncActionHintLine();
+    this.roundResultToast.refreshLocale();
   }
 
   private showSurrenderConfirm(): void {
@@ -353,8 +382,14 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private showRoundResult(outcome: RoundOutcome): void {
-    const summary = buildRoundSummary(outcome, t(), (action) =>
-      actionLabel(action, outcome.itemUsed ?? this.adapter.getEquippedItem()),
+    const deadeyeStreak = getEffectiveDeadeyeStreak(
+      this.adapter.getState().config.modifiers,
+    );
+    const summary = buildRoundSummary(
+      outcome,
+      t(),
+      (action) => actionLabel(action, outcome.itemUsed ?? this.adapter.getEquippedItem()),
+      deadeyeStreak,
     );
     this.showingRoundResult = true;
     playSfx("round_resolve");
@@ -395,6 +430,12 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private onRoundResolved(outcome: RoundOutcome): void {
+    const state = this.adapter.getState();
+    const playerHpNow = this.adapter.getPlayerHp();
+    const zegonHpNow = this.adapter.getZegonHp();
+    const prevPlayerHp = playerHpNow + outcome.playerDamage;
+    const prevZegonHp = zegonHpNow + outcome.zegonDamage;
+
     this.showRoundResult(outcome);
     playRoundOutcomeSfx({
       playerAction: outcome.playerAction,
@@ -414,12 +455,13 @@ export class DuelScene extends Phaser.Scene {
     if (outcome.playerDamage > 0) {
       const anchor = this.combatHud.playerDamageAnchor();
       showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
-      this.cameras.main.flash(180, 179, 18, 43);
-      this.cameras.main.shake(150, 0.005);
+      this.combatHud.playPlayerHit(prevPlayerHp, playerHpNow, state.config.initialPlayerHp);
+      this.arenaView.pulsePlayerHit();
     }
     if (outcome.zegonDamage > 0) {
       const anchor = this.combatHud.zegonDamageAnchor();
       showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.zegonDamage, "zegon");
+      this.combatHud.playZegonHit(prevZegonHp, zegonHpNow, state.config.initialZegonHp);
       this.playZegonHitFlash();
     } else if (
       playerFiredAction(outcome.playerAction) &&
@@ -482,15 +524,28 @@ export class DuelScene extends Phaser.Scene {
     }
 
     if (event.type === "duelEnd") {
+      const address = getWalletAddress();
+      const profile = address ? getCachedProfile(address) : null;
+      const scoreOptions = {
+        dailyStreakDays: profile?.stats?.streakDays ?? 0,
+        surpriseStreak: this.adapter.getSurpriseStreak(),
+      };
+      const result = this.adapter.getResult(scoreOptions);
+      if (address) {
+        void persistDuelProgression(address, result, {
+          surpriseStreak: this.adapter.getSurpriseStreak(),
+        });
+      }
       this.time.delayedCall(800, () => {
         if (!this.scene.isActive()) return;
         this.scene.start("ResultScene", {
-          result: this.adapter.getResult(),
+          result,
           duelId: this.adapter.getDuelId(),
           apiBaseUrl: this.adapter.getApiBaseUrl(),
           mode: this.mode,
           archetype: this.archetypeId,
           brainMode: this.adapter.getBrainMode(),
+          scoreOptions,
         });
       });
     }
@@ -649,6 +704,7 @@ export class DuelScene extends Phaser.Scene {
       zegonMaxHp: state.config.initialZegonHp,
       blindsight,
       readingStreak,
+      deadeyeStreak,
       itemLabel: "",
       itemStatus,
       itemReady: itemCooldown <= 0,
@@ -664,18 +720,26 @@ export class DuelScene extends Phaser.Scene {
     });
 
     this.itemSelector.setCooldown(itemCooldown);
-    this.itemSelector.setInteractive(this.adapter.isAwaitingPlayer() && !this.showingRoundResult);
+    const itemAvailable =
+      this.adapter.isAwaitingPlayer() &&
+      !this.showingRoundResult &&
+      this.adapter.getAvailableActions().includes(PlayerAction.USE_ITEM);
+    this.itemSelector.setInteractive(itemAvailable);
     this.updateDuelTip();
   }
 
   private updateActionButtons(): void {
     if (this.showingRoundResult) {
       this.actionBar.setEnabledMap(false, new Set());
+      this.itemSelector.setInteractive(false);
       return;
     }
     const awaiting = this.adapter.isAwaitingPlayer();
     const available = new Set(this.adapter.getAvailableActions());
     this.actionBar.setEnabledMap(awaiting, available);
+    this.itemSelector.setInteractive(
+      awaiting && available.has(PlayerAction.USE_ITEM),
+    );
   }
 
   private async submitPlayerAction(action: PlayerAction): Promise<void> {
@@ -684,6 +748,7 @@ export class DuelScene extends Phaser.Scene {
     if (!this.adapter.getAvailableActions().includes(action)) return;
 
     this.actionBar.setDimmedAll(true);
+    this.itemSelector.setDimmedAll(true);
     this.hoveredAction = null;
     this.hoveredItem = null;
     this.setActionDescription("", COLORS.dust);
@@ -694,11 +759,14 @@ export class DuelScene extends Phaser.Scene {
       this.statusLineText.setText(formatSubmitError(err)).setColor(COLORS.ember);
     } finally {
       this.actionBar.setDimmedAll(false);
+      this.itemSelector.setDimmedAll(false);
       this.updateActionButtons();
     }
   }
 
   shutdown(): void {
+    this.localeUnsub?.();
+    this.localeUnsub = null;
     this.bootToken++;
     this.setZegonReadingActive(false);
     stopAllVoice();

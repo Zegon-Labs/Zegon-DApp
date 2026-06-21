@@ -57,6 +57,7 @@ export class DuelHistoryLog {
   private readonly anchorY: number;
   private entryTexts: Phaser.GameObjects.Text[] = [];
   private historyTitle: string;
+  private lastRoundLabel = "";
   private scrollOffset = 0;
   private maxScroll = 0;
   private prevLineCount = 0;
@@ -304,6 +305,7 @@ export class DuelHistoryLog {
   update(state: DuelHistoryLogState): void {
     const roundPart = state.roundLabel.trim();
     const titlePart = this.historyTitle.toUpperCase();
+    this.lastRoundLabel = roundPart;
     this.headerText.setText(
       roundPart ? `${roundPart} · ${titlePart}` : titlePart,
     );
@@ -331,6 +333,14 @@ export class DuelHistoryLog {
   /** @deprecated Use update() */
   setLines(lines: string[]): void {
     this.update({ roundLabel: "", roundIndex: 0, lines });
+  }
+
+  setTitle(title: string): void {
+    this.historyTitle = title;
+    const titlePart = title.toUpperCase();
+    this.headerText.setText(
+      this.lastRoundLabel ? `${this.lastRoundLabel} · ${titlePart}` : titlePart,
+    );
   }
 
   destroy(): void {

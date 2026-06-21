@@ -12,6 +12,11 @@ import { computeCommitHash, computeInputHash } from "../services/commit.js";
 import { EXPLORER_BASE, getContractService } from "../services/contract.js";
 import { getLeaderboard, submitScore, type LeaderboardEntry } from "../services/leaderboard.js";
 import {
+  getGlobalLeaderboard,
+  submitGlobalScore,
+  type GlobalLeaderboardEntry,
+} from "../services/globalLeaderboard.js";
+import {
   getProfile,
   getNicknamesForAddresses,
   setProfile,
@@ -481,6 +486,42 @@ export async function handleDailyLeaderboard(): Promise<{
   });
 
   return { date: daily.seed!, entries: enriched };
+}
+
+export async function handleGlobalLeaderboard(): Promise<{
+  entries: Array<GlobalLeaderboardEntry & { nickname?: string; displayName?: string }>;
+}> {
+  const entries = await getGlobalLeaderboard();
+  const walletEntries = entries.filter((e) => isWalletAddress(e.playerId));
+  const nicknames = await getNicknamesForAddresses(walletEntries.map((e) => e.playerId));
+
+  const enriched = walletEntries.slice(0, 10).map((e) => {
+    const key = e.playerId.toLowerCase();
+    const nickname = nicknames[key];
+    return {
+      ...e,
+      nickname,
+      displayName: nickname ?? `${e.playerId.slice(0, 6)}…${e.playerId.slice(-4)}`,
+    };
+  });
+
+  return { entries: enriched };
+}
+
+export async function handleGlobalSubmit(body: {
+  playerId: string;
+  score: number;
+  duelId?: string;
+}): Promise<{ accepted: boolean }> {
+  if (!isWalletAddress(body.playerId)) {
+    return { accepted: false };
+  }
+  const profile = await getProfile(body.playerId);
+  if (!profile) {
+    return { accepted: false };
+  }
+  await submitGlobalScore(body.playerId, body.score, body.duelId);
+  return { accepted: true };
 }
 
 export async function handleGetPlayerProfile(address: string): Promise<{
