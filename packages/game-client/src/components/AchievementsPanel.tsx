@@ -33,13 +33,13 @@ export function AchievementsPanel() {
 
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
-      <div className="hero__panel hero__panel--wide hero__panel--scroll">
+      <div className="hero__panel hero__panel--wide hero__panel--utility hero__panel--utility-scroll">
         <h2 className="hero__panel-title">{strings.achievementsTitle}</h2>
         <p className="settings-hint">{strings.achievementsSubtitle}</p>
         <AchievementsList />
         <button
           type="button"
-          className="btn btn--secondary hero__panel-back"
+          className="utility-sprite-button hero__panel-back"
           onClick={() => {
             playSfx("ui_modal_close");
             gameBridge.navigate({ type: "hub" });

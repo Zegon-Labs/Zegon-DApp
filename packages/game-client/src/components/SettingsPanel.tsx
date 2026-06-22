@@ -174,7 +174,7 @@ export function SettingsPanel({
       role="dialog"
       aria-modal="true"
     >
-      <div className="hero__panel hero__panel--wide hero__panel--scroll">
+      <div className="hero__panel hero__panel--wide hero__panel--scroll hero__panel--settings">
         <div className="hero__panel-header">
           <button
             type="button"
@@ -187,6 +187,7 @@ export function SettingsPanel({
           <h2 className="hero__panel-title">{strings.settingsTitle}</h2>
         </div>
 
+        <div className="settings-scroll-area">
         <SettingsSection title={strings.settingsSectionProfile}>
           {wallet ? (
             <>
@@ -237,16 +238,14 @@ export function SettingsPanel({
           <div className="hero__lang-row">
             <button
               type="button"
-              className="btn btn--menu"
-              style={language === "en" ? { borderColor: "var(--ember)" } : undefined}
+              className={`btn btn--menu${language === "en" ? " lang-active" : ""}`}
               onClick={() => pickLanguage("en")}
             >
               {strings.languageEn}
             </button>
             <button
               type="button"
-              className="btn btn--menu"
-              style={language === "es" ? { borderColor: "var(--ember)" } : undefined}
+              className={`btn btn--menu${language === "es" ? " lang-active" : ""}`}
               onClick={() => pickLanguage("es")}
             >
               {strings.languageEs}
@@ -317,6 +316,7 @@ export function SettingsPanel({
           {strings.back}
         </button>
       </div>
+    </div>
     </div>
   );
 }

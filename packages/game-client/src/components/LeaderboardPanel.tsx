@@ -102,7 +102,7 @@ export function LeaderboardPanel() {
 
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
-      <div className="hero__panel hero__panel--wide">
+      <div className="hero__panel hero__panel--wide hero__panel--utility">
         <h2 className="hero__panel-title">
           {globalMode ? strings.globalLeaderboardTitle : strings.leaderboardTitle}
         </h2>
@@ -112,7 +112,6 @@ export function LeaderboardPanel() {
         <p className="settings-hint" style={{ marginBottom: 14 }}>
           {strings.leaderboardWalletOnly}
         </p>
-
         <div className="leaderboard-table">
           <div className="leaderboard-table__head">
             <span>{strings.leaderboardColRank}</span>
@@ -150,11 +149,11 @@ export function LeaderboardPanel() {
               );
             })
           )}
-        </div>
+          </div>
 
         <button
           type="button"
-          className="btn btn--secondary hero__panel-back"
+          className="utility-sprite-button hero__panel-back"
           onClick={() => gameBridge.navigate({ type: "hub" })}
         >
           {strings.back}

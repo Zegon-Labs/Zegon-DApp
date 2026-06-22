@@ -990,7 +990,7 @@ body:has(.hero) {
   display: block;
   margin-top: 4px;
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--dust);
@@ -1876,13 +1876,261 @@ body:has(.hero) {
   max-height: min(88vh, 720px);
   overflow-y: auto;
 }
-
-.settings-section {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(58,53,80,0.5);
+.hero__panel--utility {
+  max-width: min(94vw, 760px);
+  min-height: min(88vh, 570px);
+  aspect-ratio: 1448 / 1086;
+  padding: 92px 106px 106px;
+  border: none;
+  background: url("/sprites/utility_table.png") center / 100% 100% no-repeat;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  color: var(--bone);
 }
 
+.hero__panel--utility .hero__panel-title {
+  margin-bottom: 18px;
+}
+
+.hero__panel--utility .hero__verify-copy,
+.hero__panel--utility .settings-hint {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+}
+
+.hero__panel--utility .leaderboard-table,
+.hero__panel--utility .achievements-list {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(179,18,43,0.75) transparent;
+}
+
+.hero__panel--utility .leaderboard-table::-webkit-scrollbar,
+.hero__panel--utility .achievements-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.hero__panel--utility .leaderboard-table::-webkit-scrollbar-thumb,
+.hero__panel--utility .achievements-list::-webkit-scrollbar-thumb {
+  background: rgba(179,18,43,0.7);
+}
+
+.hero__panel--utility .hero__panel-back {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  flex: 0 0 auto;
+  margin-top: 18px;
+}
+
+.hero__panel--utility-scroll {
+  max-height: min(90vh, 560px);
+}
+
+@media (max-width: 720px) {
+  .hero__panel--utility {
+    max-width: min(96vw, 560px);
+    min-height: min(88vh, 460px);
+    padding: 74px 62px 82px;
+  }
+}
+
+
+.hero__panel--settings {
+  width: min(94vw, 760px);
+  max-width: min(94vw, 760px);
+  height: min(92vh, 900px);
+  max-height: min(92vh, 900px);
+  padding: 104px 118px 112px;
+  border: none;
+  background: url("/sprites/historial_panel.png") center / 100% 100% no-repeat;
+  box-shadow: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero__panel--settings .hero__panel-header,
+.hero__panel--settings .settings-section,
+.hero__panel--settings .hero__panel-back {
+  position: relative;
+  z-index: 1;
+}
+
+.hero__panel--settings .hero__panel-header {
+  position: relative;
+  flex: 0 0 auto;
+  justify-content: center;
+  min-height: 62px;
+  margin-bottom: 8px;
+}
+
+.hero__panel--settings .hero__panel-header .hero__panel-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: calc(100% - 170px);
+  text-align: center;
+}
+
+.hero__panel--settings .settings-scroll-area {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 18px 28px 30px 0;
+  padding: 0 40px 18px 34px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(179,18,43,0.58) transparent;
+}
+
+.hero__panel--settings .settings-scroll-area::-webkit-scrollbar {
+  width: 3px;
+}
+
+.hero__panel--settings .settings-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(179,18,43,0.58);
+}
+
+.hero__panel--settings .settings-section {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(58,53,80,0.42);
+}
+
+.hero__panel--settings .btn,
+.hero__panel--settings .hero__panel-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 520px);
+  min-height: 104px;
+  height: 104px;
+  padding: 0 56px;
+  border: 0;
+  background: url("/sprites/button_states.png") left center / 200% 100% no-repeat;
+  color: var(--bone);
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  filter: drop-shadow(0 0 8px rgba(179,18,43,0.18));
+  transition: filter 0.16s ease;
+}
+
+.hero__panel--settings .btn:hover,
+.hero__panel--settings .btn:focus-visible,
+.hero__panel--settings .hero__panel-back:hover,
+.hero__panel--settings .hero__panel-back:focus-visible {
+  background-position: right center;
+  filter: drop-shadow(0 0 15px rgba(255,77,46,0.42));
+  outline: none;
+}
+
+.hero__panel--settings .settings-inline-btn {
+  width: min(100%, 430px);
+  min-width: 300px;
+  margin-top: 10px;
+  margin-right: 8px;
+}
+
+.hero__panel--settings .hero__lang-row .btn {
+  width: 100%;
+}
+
+.hero__panel--settings .hero__lang-row .btn.lang-active {
+  background-position: right center;
+  filter: drop-shadow(0 0 8px rgba(179,18,43,0.18));
+}
+
+.hero__panel--settings .hero__lang-row .btn.lang-active:hover,
+.hero__panel--settings .hero__lang-row .btn.lang-active:focus-visible {
+  filter: drop-shadow(0 0 18px rgba(255,77,46,0.55));
+}
+
+.hero__panel--settings .hero__panel-back {
+  width: min(100%, 540px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero__panel--settings .hero__panel-nav-back {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 82px;
+  height: 58px;
+  min-height: unset;
+  padding: 0;
+  border: 0;
+  background: url("/sprites/button_states.png") left center / 200% 100% no-repeat;
+  /* hide the button's own text node — arrow comes from ::before with system font */
+  font-size: 0;
+  color: transparent;
+  filter: drop-shadow(0 0 8px rgba(179,18,43,0.18));
+  transition: filter 0.16s ease;
+  overflow: hidden;
+}
+
+.hero__panel--settings .hero__panel-nav-back::before {
+  content: "←";
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ember);
+}
+
+.hero__panel--settings .hero__panel-nav-back:hover,
+.hero__panel--settings .hero__panel-nav-back:focus-visible {
+  background-position: right center;
+  filter: drop-shadow(0 0 15px rgba(255,77,46,0.42));
+  outline: none;
+}
+
+.hero__panel--settings .settings-slider input[type="range"] {
+  width: calc(100% - 10px);
+}
+
+@media (max-width: 620px) {
+  .hero__panel--settings {
+    width: min(96vw, 620px);
+    height: min(92vh, 820px);
+    padding: 86px 72px 84px;
+  }
+
+  .hero__panel--settings .btn,
+  .hero__panel--settings .hero__panel-back {
+    min-height: 84px;
+    height: 84px;
+    font-size: 12px;
+  }
+
+  .hero__panel--settings .hero__panel-nav-back {
+    left: 8px;
+    width: 70px;
+    height: 50px;
+    min-height: 50px;
+  }
+}
 .settings-section:last-of-type {
   border-bottom: none;
 }
@@ -1899,7 +2147,7 @@ body:has(.hero) {
 .settings-label {
   display: block;
   margin-bottom: 6px;
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--bone);
@@ -1922,7 +2170,7 @@ body:has(.hero) {
 
 .settings-hint {
   margin: 8px 0 0;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--dust);
 }
@@ -1989,6 +2237,10 @@ body:has(.hero) {
   color: var(--dust);
 }
 
+.hero__panel--settings .settings-slider input[type="range"] {
+  width: calc(100% - 10px);
+}
+
 .settings-slider input[type="range"] {
   width: 100%;
   height: 6px;
@@ -2044,10 +2296,39 @@ body:has(.hero) {
   box-shadow: 0 0 8px rgba(179, 18, 43, 0.55);
 }
 
+
+.utility-sprite-button {
+  width: min(100%, 520px);
+  height: 76px;
+  padding: 0 34px;
+  border: 0;
+  background: url("/sprites/button_states.png") left center / 200% 100% no-repeat;
+  color: var(--bone);
+  font-family: var(--font-display);
+  font-size: 17px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  cursor: pointer;
+  filter: drop-shadow(0 0 8px rgba(179,18,43,0.22));
+  transition: filter 0.16s ease, transform 0.16s ease;
+}
+
+.utility-sprite-button:hover,
+.utility-sprite-button:focus-visible {
+  background-position: right center;
+  filter: drop-shadow(0 0 16px rgba(255,77,46,0.48));
+  outline: none;
+}
+
+.utility-sprite-button:active {
+  transform: translateY(0);
+  filter: drop-shadow(0 0 10px rgba(255,77,46,0.34));
+}
 .leaderboard-table {
-  border: 1px solid var(--fog);
-  background: rgba(10,9,17,0.6);
-  margin-bottom: 8px;
+  border: none;
+  background: transparent;
+  margin-bottom: 0;
 }
 
 .leaderboard-table__head,
@@ -2055,7 +2336,7 @@ body:has(.hero) {
   display: grid;
   grid-template-columns: 36px 1fr 56px;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 0;
   align-items: center;
 }
 
@@ -2064,12 +2345,12 @@ body:has(.hero) {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--dust);
-  border-bottom: 1px solid var(--fog);
+  border-bottom: 1px solid rgba(179,18,43,0.32);
 }
 
 .leaderboard-table__row {
   font-size: 17px;
-  border-bottom: 1px solid rgba(58,53,80,0.35);
+  border-bottom: 1px solid rgba(58,53,80,0.22);
 }
 
 .leaderboard-table__row:last-child {
@@ -2077,12 +2358,12 @@ body:has(.hero) {
 }
 
 .leaderboard-table__row--you {
-  background: rgba(179,18,43,0.12);
+  background: rgba(179,18,43,0.1);
 }
 
 .leaderboard-table__you {
   color: var(--ember);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .leaderboard-table__time {
@@ -2150,7 +2431,7 @@ html.zegon-reduced-motion .smoke-particle {
 }
 
 .archetype-card__name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--gold);
 }
@@ -2264,6 +2545,6 @@ html.zegon-reduced-motion .smoke-particle {
 
 .achievements-list strong {
   color: var(--gold);
-  font-size: 14px;
+  font-size: 15px;
 }
 
