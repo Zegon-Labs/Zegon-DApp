@@ -25,6 +25,7 @@ import {
   createHubTutorialModal,
   createLandingBackdrop,
   preloadLandingBackdrop,
+  preloadSideHudPanels,
   type HubButtonHandle,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
@@ -105,6 +106,7 @@ export class TutorialScene extends Phaser.Scene {
 
   preload(): void {
     preloadLandingBackdrop(this);
+    preloadSideHudPanels(this);
   }
 
   create(): void {

@@ -3,6 +3,7 @@ export { BlindsightMeter } from "./blindsightMeter.js";
 export { drawSegmentedMeter as drawHubBlindsightMeter } from "./duelHudDraw.js";
 export { FighterHudBlock, type FighterHudBlockState, type FighterHudBlockOptions } from "./fighterHudBlock.js";
 export { CombatHud, type CombatHudState, type CombatHudOpts } from "./combatHud.js";
+export { SideHudPanel, preloadSideHudPanels, SIDE_BAR_KEY, SIDE_BAR_RIGHT_KEY, PLAYER_PORTRAIT_KEY, ZEGON_PORTRAIT_KEY } from "./sideHudPanel.js";
 export { TopHudBar, preloadTopHudBar, HEADER_BAR_KEY } from "./topHudBar.js";
 export { ActionBar } from "./actionBar.js";
 export { ItemSelector, itemCooldownLabel, itemDescription } from "./itemSelector.js";

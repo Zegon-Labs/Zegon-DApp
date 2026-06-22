@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { BlindsightMeter } from "./blindsightMeter.js";
-import { FighterHudBlock } from "./fighterHudBlock.js";
+import { SideHudPanel } from "./sideHudPanel.js";
 
 export interface CombatHudState {
   playerHp: number;
@@ -25,17 +25,16 @@ export interface CombatHudState {
 }
 
 export interface CombatHudFighterLayout {
-  panelY?: number;
-  panelH?: number;
-  panelW?: number;
-  pad?: number;
-  nameRowH?: number;
-  iconSize?: number;
-  iconGap?: number;
-  /** Explicit x for the player (left) panel. */
+  /** Screen X of player panel left edge. */
   playerPanelX?: number;
-  /** Explicit x for the zegon (right) panel. */
+  /** Screen Y of player panel top edge. */
+  playerPanelY?: number;
+  /** Screen X of zegon panel RIGHT edge (panel extends left from here). */
   zegonPanelX?: number;
+  /** Screen Y of zegon panel top edge. */
+  zegonPanelY?: number;
+  /** Display height of both panels in screen pixels. */
+  panelH?: number;
 }
 
 export interface CombatHudOpts {
@@ -45,63 +44,46 @@ export interface CombatHudOpts {
 
 export class CombatHud {
   readonly container: Phaser.GameObjects.Container;
-  private readonly playerBlock: FighterHudBlock;
-  private readonly zegonBlock: FighterHudBlock;
+  private readonly playerPanel: SideHudPanel;
+  private readonly zegonPanel: SideHudPanel;
   private readonly blindsightMeter: BlindsightMeter | null;
 
-  constructor(scene: Phaser.Scene, depth = 9, fighterLayout?: CombatHudFighterLayout, opts?: CombatHudOpts) {
+  constructor(
+    scene: Phaser.Scene,
+    depth = 9,
+    fighterLayout?: CombatHudFighterLayout,
+    opts?: CombatHudOpts,
+  ) {
     this.container = scene.add.container(0, 0).setDepth(depth);
-    this.playerBlock = new FighterHudBlock(scene, {
-      align: "left",
-      variant: "player",
-      depth,
-      panelY: fighterLayout?.panelY,
-      panelH: fighterLayout?.panelH,
-      panelW: fighterLayout?.panelW,
-      pad: fighterLayout?.pad,
-      nameRowH: fighterLayout?.nameRowH,
-      iconSize: fighterLayout?.iconSize,
-      iconGap: fighterLayout?.iconGap,
-      panelX: fighterLayout?.playerPanelX,
-    });
-    this.zegonBlock = new FighterHudBlock(scene, {
-      align: "right",
-      variant: "zegon",
-      depth,
-      panelY: fighterLayout?.panelY,
-      panelH: fighterLayout?.panelH,
-      panelW: fighterLayout?.panelW,
-      pad: fighterLayout?.pad,
-      nameRowH: fighterLayout?.nameRowH,
-      iconSize: fighterLayout?.iconSize,
-      iconGap: fighterLayout?.iconGap,
-      panelX: fighterLayout?.zegonPanelX,
-    });
-    this.blindsightMeter = opts?.hideBlindsight ? null : new BlindsightMeter(scene, depth);
 
-    this.container.add([
-      this.playerBlock.container,
-      this.zegonBlock.container,
-      ...(this.blindsightMeter ? [this.blindsightMeter.container] : []),
-    ]);
+    const { width, height } = scene.scale;
+    const panelH = fighterLayout?.panelH ?? 110;
+
+    this.playerPanel = new SideHudPanel(scene, {
+      side: "left",
+      x: fighterLayout?.playerPanelX ?? 0,
+      y: fighterLayout?.playerPanelY ?? height - panelH - 104,
+      panelH,
+      depth,
+    });
+
+    this.zegonPanel = new SideHudPanel(scene, {
+      side: "right",
+      x: fighterLayout?.zegonPanelX ?? width,
+      y: fighterLayout?.zegonPanelY ?? 4,
+      panelH,
+      depth,
+    });
+
+    this.blindsightMeter = opts?.hideBlindsight ? null : new BlindsightMeter(scene, depth);
+    if (this.blindsightMeter) {
+      this.container.add([this.blindsightMeter.container]);
+    }
   }
 
   update(state: CombatHudState): void {
-    this.playerBlock.update({
-      name: state.playerLabel,
-      hp: state.playerHp,
-      maxHp: state.playerMaxHp,
-      itemLabel: state.hudItem,
-      itemDetail: state.itemStatus,
-      itemReady: state.itemReady,
-    });
-    this.zegonBlock.update({
-      name: state.zegonLabel,
-      hp: state.zegonHp,
-      maxHp: state.zegonMaxHp,
-      statusLabel: state.zegonStatus,
-      detail: state.hudStatus,
-    });
+    this.playerPanel.update(state.playerHp, state.playerMaxHp);
+    this.zegonPanel.update(state.zegonHp, state.zegonMaxHp);
     this.blindsightMeter?.update(
       state.blindsightLabel,
       state.readingStreak,
@@ -113,11 +95,11 @@ export class CombatHud {
   }
 
   playPlayerHit(previousHp: number, newHp: number, maxHp: number): void {
-    this.playerBlock.playLifeLost(previousHp, newHp, maxHp);
+    this.playerPanel.playHit(previousHp, newHp, maxHp);
   }
 
   playZegonHit(previousHp: number, newHp: number, maxHp: number): void {
-    this.zegonBlock.playLifeLost(previousHp, newHp, maxHp);
+    this.zegonPanel.playHit(previousHp, newHp, maxHp);
   }
 
   refreshLocale(state: CombatHudState): void {
@@ -125,22 +107,16 @@ export class CombatHud {
   }
 
   playerDamageAnchor(): { x: number; y: number } {
-    return {
-      x: this.playerBlock.hpBarCenterX(),
-      y: this.playerBlock.hpBarCenterY(),
-    };
+    return { x: this.playerPanel.hpBarCenterX(), y: this.playerPanel.hpBarCenterY() };
   }
 
   zegonDamageAnchor(): { x: number; y: number } {
-    return {
-      x: this.zegonBlock.hpBarCenterX(),
-      y: this.zegonBlock.hpBarCenterY(),
-    };
+    return { x: this.zegonPanel.hpBarCenterX(), y: this.zegonPanel.hpBarCenterY() };
   }
 
   destroy(): void {
-    this.playerBlock.destroy();
-    this.zegonBlock.destroy();
+    this.playerPanel.destroy();
+    this.zegonPanel.destroy();
     this.blindsightMeter?.destroy();
     this.container.destroy(false);
   }

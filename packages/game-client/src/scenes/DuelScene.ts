@@ -36,6 +36,7 @@ import {
   preloadActionAssets,
   TopHudBar,
   preloadTopHudBar,
+  preloadSideHudPanels,
   type SpriteActionEntry,
   itemDescription,
   itemCooldownLabel,
@@ -43,7 +44,7 @@ import {
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { buildRoundSummary } from "../ui/roundSummary.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
-import { C, COLORS, FONT, FONT_DISPLAY } from "../ui/theme.js";
+import { C, COLORS, FONT_DISPLAY } from "../ui/theme.js";
 import { gameBridge } from "../game/bridge.js";
 import { getCachedProfile } from "../services/profile.js";
 import { getWalletAddress } from "../services/wallet.js";
@@ -167,6 +168,7 @@ export class DuelScene extends Phaser.Scene {
     preloadPlayerHand(this);
     preloadActionAssets(this);
     preloadTopHudBar(this);
+    preloadSideHudPanels(this);
   }
 
   create(): void {
@@ -199,25 +201,23 @@ export class DuelScene extends Phaser.Scene {
     stripGfx.lineStyle(1, C.blood, 0.6);
     stripGfx.strokeRoundedRect(sX, L.bottomStrip.y, sW, L.bottomStrip.h, 3);
 
-    const stripPanelY = L.bottomStrip.y + Math.floor((L.bottomStrip.h - L.bottomStrip.panelH) / 2);
-    const combatHudOpts: CombatHudOpts = { hideBlindsight: true };
-    this.combatHud = new CombatHud(this, 9, {
-      panelY: stripPanelY,
-      panelH: L.bottomStrip.panelH,
-      panelW: L.bottomStrip.panelW,
-      pad: L.bottomStrip.panelPad,
-      nameRowH: L.bottomStrip.nameRowH,
-      iconSize: L.bottomStrip.iconSize,
-      iconGap: L.bottomStrip.iconGap,
-      playerPanelX: 8,
-      zegonPanelX: width - 8 - L.bottomStrip.panelW,
-    }, combatHudOpts);
-
-    // Top HUD bar — replaces standalone logo, BlindsightMeter, and chrome buttons
+    // Top HUD bar — must be created before CombatHud so barDisplayH is known
     this.topHudBar = new TopHudBar(this, {
       onSettings: () => gameBridge.openSettingsOverlay(),
       onSurrender: () => this.showSurrenderConfirm(),
     });
+
+    const PANEL_H = 80;
+    const combatHudOpts: CombatHudOpts = { hideBlindsight: true };
+    this.combatHud = new CombatHud(this, 9, {
+      panelH: PANEL_H,
+      // Player panel: bottom-left, directly above the action strip
+      playerPanelX: 0,
+      playerPanelY: L.bottomStrip.y - PANEL_H - 16,
+      // ZEGON panel: top-right, just below the header bar
+      zegonPanelX: width,
+      zegonPanelY: 7,
+    }, combatHudOpts);
 
     this.historyLog = new DuelHistoryLog(this, strings.history, 12);
     this.roundResultToast = new RoundResultToast(this, 14);

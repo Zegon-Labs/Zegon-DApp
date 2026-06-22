@@ -48,8 +48,8 @@ export class TopHudBar {
     const { width } = scene.scale;
 
     // ── Scale calculations ────────────────────────────────────────────────
-    // X: bar is half the screen width, centered
-    const barDisplayW  = Math.round(width / 2);
+    // X: bar is ~42% of the screen width, centered
+    const barDisplayW  = Math.round(width * 0.31);
     const barLeft      = (width - barDisplayW) / 2;  // left edge of bar on screen
     const scaleX       = barDisplayW / TopHudBar.SRC_W;
 
@@ -67,8 +67,8 @@ export class TopHudBar {
     // Content X positions as proportions of the bar's display width
     const centerX    = width / 2;                                      // bar centre
     const streakCX   = Math.round(barLeft + barDisplayW * 0.20);       // left wing
-    const settingsX  = Math.round(barLeft + barDisplayW * 0.82);       // right wing
-    const surrenderX = Math.round(barLeft + barDisplayW * 0.91);       // right wing
+    const settingsX  = Math.round(barLeft + barDisplayW * 0.72);       // right wing
+    const surrenderX = Math.round(barLeft + barDisplayW * 0.83);       // right wing
 
     // ── Bar background image ──────────────────────────────────────────────
     if (scene.textures.exists(HEADER_BAR_KEY)) {
