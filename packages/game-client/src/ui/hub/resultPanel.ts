@@ -1,12 +1,39 @@
 import Phaser from "phaser";
-import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
-import {
-  createHubAccentMenuButton,
-  createHubMenuButton,
-  type HubButtonHandle,
-} from "./hubButton.js";
+import { COLORS, FONT, FONT_DISPLAY } from "../theme.js";
 import { addHubLogo } from "./landingBackdrop.js";
 
+export const UTILITY_TABLE_KEY = "utility-table";
+export const BUTTON_STATES_KEY = "btn-states";
+
+export function preloadResultPanelAssets(scene: Phaser.Scene): void {
+  if (!scene.textures.exists(UTILITY_TABLE_KEY))
+    scene.load.image(UTILITY_TABLE_KEY, "/sprites/utility_table.png");
+  if (!scene.textures.exists(BUTTON_STATES_KEY))
+    scene.load.spritesheet(BUTTON_STATES_KEY, "/sprites/button_states.png", {
+      frameWidth: 991, frameHeight: 793,
+    });
+}
+
+// ── Layout ──────────────────────────────────────────────────────────────────
+const PANEL_W     = 520;
+// Clearance to land content inside the inner BLACK zone of utility_table.png,
+// past the decorative silver border.
+const INNER_PAD_T = 65;
+const INNER_PAD_B = 60;
+const INNER_PAD_H = 30;
+const INNER_W     = PANEL_W - INNER_PAD_H * 2;   // 460
+
+const BTN_H       = 52;
+const BTN_GAP     = 4;
+// Narrower buttons so the sprite frame decoration is less stretched.
+const BTN_W_FULL  = 400;
+const BTN_W_HALF  = (BTN_W_FULL - BTN_GAP) / 2;  // 198
+
+// Cap at 11 lines to exclude the "Cómo subir" tips section and keep the
+// panel short enough to fit on a 720 px screen.
+const MAX_STATS_LINES = 11;
+
+// ── Interfaces ───────────────────────────────────────────────────────────────
 export interface HubResultPanelButton {
   label: string;
   primary?: boolean;
@@ -30,197 +57,214 @@ export interface HubResultPanelHandle {
   destroy: () => void;
 }
 
-const PANEL_W = 540;
-const PAD = 16;
-const BTN_H = 40;
-const BTN_GAP = 8;
-const INNER_W = PANEL_W - PAD * 2;
-const BTN_COL_W = (INNER_W - BTN_GAP) / 2;
-
-function drawPanelFrame(
-  g: Phaser.GameObjects.Graphics,
-  panelH: number,
+// ── Button helper ────────────────────────────────────────────────────────────
+function addSpriteBtn(
+  scene: Phaser.Scene,
+  container: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  label: string,
+  onClick: () => void,
+  w: number,
+  isPrimary = false,
 ): void {
-  g.clear();
-  g.fillStyle(C.smoke, 0.92);
-  g.fillRoundedRect(-PANEL_W / 2, -panelH / 2, PANEL_W, panelH, 4);
-  g.lineStyle(1, C.fog, 0.95);
-  g.strokeRoundedRect(-PANEL_W / 2, -panelH / 2, PANEL_W, panelH, 4);
-  g.lineStyle(1, C.blood, 0.45);
-  g.strokeRoundedRect(
-    -PANEL_W / 2 + 1,
-    -panelH / 2 + 1,
-    PANEL_W - 2,
-    panelH - 2,
-    4,
-  );
+  const normalFrame = 0;
+  const activeFrame = 1;
+  const startFrame  = isPrimary ? activeFrame : normalFrame;
+  const hasSS = scene.textures.exists(BUTTON_STATES_KEY);
+
+  if (hasSS) {
+    const img = scene.add
+      .image(x, y, BUTTON_STATES_KEY, startFrame)
+      .setOrigin(0.5, 0.5)
+      .setDisplaySize(w, BTN_H)
+      .setInteractive({ useHandCursor: true });
+    img
+      .on("pointerover",  () => img.setFrame(activeFrame))
+      .on("pointerout",   () => img.setFrame(startFrame))
+      .on("pointerdown",  onClick);
+    container.add(img);
+  }
+
+  const lbl = scene.add
+    .text(x, y, label, {
+      fontFamily: FONT_DISPLAY,
+      fontSize: "11px",
+      color: isPrimary ? COLORS.ember : "#cccccc",
+      letterSpacing: 2,
+    })
+    .setOrigin(0.5, 0.5)
+    .setResolution(2);
+
+  if (!hasSS) lbl.setInteractive({ useHandCursor: true }).on("pointerdown", onClick);
+  container.add(lbl);
 }
 
-/** Wide rectangular result panel — dynamic height, no overlapping sections. */
+// ── Factory ──────────────────────────────────────────────────────────────────
 export function createHubResultPanel(
   scene: Phaser.Scene,
   centerX: number,
   centerY: number,
   options: HubResultPanelOptions,
 ): HubResultPanelHandle {
-  const handles: HubButtonHandle[] = [];
-  const measureY = PAD;
-  let contentH = measureY;
+  // Trim stats to core lines (removes tips section that would overflow the frame)
+  const rawLines = options.statsText.split("\n");
+  const trimmedLines = rawLines.slice(0, MAX_STATS_LINES);
+  while (trimmedLines.length && trimmedLines[trimmedLines.length - 1] === "") trimmedLines.pop();
+  const statsShort = trimmedLines.join("\n");
 
-  contentH += 52;
-  contentH += 34;
-
-  const statsMeasure = scene.add.text(0, 0, options.statsText, {
-    fontFamily: FONT,
-    fontSize: "13px",
-    lineSpacing: 4,
-    wordWrap: { width: INNER_W },
+  // Measure dynamic content heights using the exact same params as the real objects
+  const statsMeasure = scene.add.text(0, 0, statsShort, {
+    fontFamily: FONT, fontSize: "12px", lineSpacing: 0,
+    align: "left", wordWrap: { width: INNER_W },
   });
-  const statsBlockH = statsMeasure.height + 12;
+  const statsH = statsMeasure.height;
   statsMeasure.destroy();
-  contentH += statsBlockH;
 
   let walletHintH = 0;
   if (options.walletHint) {
-    const hintMeasure = scene.add.text(0, 0, options.walletHint, {
-      fontFamily: FONT,
-      fontSize: "12px",
-      wordWrap: { width: INNER_W - 16 },
+    const hm = scene.add.text(0, 0, options.walletHint, {
+      fontFamily: FONT, fontSize: "12px", align: "center",
+      wordWrap: { width: INNER_W - 20 },
     });
-    walletHintH = hintMeasure.height + 16;
-    hintMeasure.destroy();
-    contentH += walletHintH + 10;
+    walletHintH = hm.height;
+    hm.destroy();
   }
 
-  const verifyCardH = 56;
-  contentH += verifyCardH + 22;
+  const LOGO_H   = 20;
+  const WINNER_H = 28;
+  const VERIFY_H = 20;
 
-  const primaryBtns = options.buttons.filter((b) => b.primary);
+  const primaryBtns   = options.buttons.filter((b) =>  b.primary);
   const secondaryBtns = options.buttons.filter((b) => !b.primary);
+
+  // Compute frame height from measured content
+  let contentH = INNER_PAD_T;
+  contentH += LOGO_H + 36;   // lower GANASTE/PERDISTE
+  contentH += WINNER_H + 10; // +10: lower stats block
+  contentH += statsH + 10;
+  if (options.walletHint) contentH += walletHintH + 5; // compact wallet↔verify gap
+  contentH += VERIFY_H + 8;
   contentH += primaryBtns.length * (BTN_H + BTN_GAP);
   contentH += Math.ceil(secondaryBtns.length / 2) * (BTN_H + BTN_GAP);
-  contentH += PAD;
+  contentH += INNER_PAD_B;
 
-  const panelH = contentH;
-  const topY = -panelH / 2;
+  // +50 buffer: VT323 at 12 px may render ~4–5 px taller/line than the
+  // fallback monospace used during the synchronous measure above.
+  // 11 lines × ~4 px ≈ 44 px — the 50 px covers that variance.
+  const panelH = Math.min(contentH + 50, 690);
+  const topY   = -panelH / 2;
 
+  // ── Container ─────────────────────────────────────────────────────────────
   const container = scene.add.container(centerX, centerY).setDepth(10);
-  const panelGfx = scene.add.graphics();
-  drawPanelFrame(panelGfx, panelH);
-  container.add(panelGfx);
 
-  let y = topY + PAD;
-
-  const logo = addHubLogo(scene, 0, y, 132, 11);
-  container.add(logo);
-  y += 52;
-
-  container.add(
-    scene.add.text(0, y, options.winnerLabel, {
-      fontFamily: FONT_DISPLAY,
-      fontSize: "24px",
-      color: options.winnerColor,
-      letterSpacing: 3,
-    }).setOrigin(0.5, 0),
-  );
-  y += 34;
-
-  const statsText = scene.add.text(-INNER_W / 2, y, options.statsText, {
-    fontFamily: FONT,
-    fontSize: "13px",
-    color: COLORS.bone,
-    align: "left",
-    lineSpacing: 4,
-    wordWrap: { width: INNER_W },
-  }).setOrigin(0, 0);
-  container.add(statsText);
-  y += statsText.height + 12;
-
-  if (options.walletHint) {
-    const hintBg = scene.add.graphics();
-    hintBg.fillStyle(C.ash, 0.95);
-    hintBg.fillRoundedRect(-INNER_W / 2, y, INNER_W, walletHintH - 4, 3);
-    hintBg.lineStyle(1, C.blood, 0.55);
-    hintBg.strokeRoundedRect(-INNER_W / 2, y, INNER_W, walletHintH - 4, 3);
-    container.add(hintBg);
-
+  if (scene.textures.exists(UTILITY_TABLE_KEY)) {
     container.add(
-      scene.add.text(0, y + (walletHintH - 4) / 2, options.walletHint, {
-        fontFamily: FONT,
-        fontSize: "12px",
-        color: COLORS.ember,
-        align: "center",
-        wordWrap: { width: INNER_W - 20 },
-      }).setOrigin(0.5, 0.5),
+      scene.add
+        .image(0, 0, UTILITY_TABLE_KEY)
+        .setOrigin(0.5, 0.5)
+        .setDisplaySize(PANEL_W, panelH),
     );
-    y += walletHintH + 6;
   }
 
-  const verifyGfx = scene.add.graphics();
-  verifyGfx.fillStyle(C.ash, 0.92);
-  verifyGfx.fillRoundedRect(-INNER_W / 2, y, INNER_W, verifyCardH, 3);
-  verifyGfx.lineStyle(1, C.blood, 0.35);
-  verifyGfx.strokeRoundedRect(-INNER_W / 2, y, INNER_W, verifyCardH, 3);
-  container.add(verifyGfx);
+  // Cursor starts inside the inner black zone (past the decorative border)
+  let y = topY + INNER_PAD_T;
 
-  const verifyLabel = scene.add.text(0, y + verifyCardH / 2, options.verifyPlaceholder ?? "…", {
-    fontFamily: FONT,
-    fontSize: "12px",
-    color: COLORS.cyan,
-    align: "center",
-    wordWrap: { width: INNER_W - 20 },
-    lineSpacing: 3,
-  }).setOrigin(0.5, 0.5);
+  // Logo
+  container.add(addHubLogo(scene, 0, y, 100, 11));
+  y += LOGO_H + 36;
+
+  // Winner label
+  container.add(
+    scene.add
+      .text(0, y, options.winnerLabel, {
+        fontFamily: FONT_DISPLAY,
+        fontSize: "24px",
+        color: options.winnerColor,
+        letterSpacing: 3,
+      })
+      .setOrigin(0.5, 0)
+      .setResolution(2),
+  );
+  y += WINNER_H + 10;
+
+  // Stats block
+  const statsText = scene.add
+    .text(-INNER_W / 2 + 48, y, statsShort, {
+      fontFamily: FONT,
+      fontSize: "12px",
+      color: COLORS.bone,
+      align: "left",
+      lineSpacing: 0,
+      wordWrap: { width: INNER_W },
+    })
+    .setOrigin(0, 0)
+    .setResolution(2);
+  container.add(statsText);
+  y += statsText.height + 10;
+
+  // Wallet hint
+  if (options.walletHint) {
+    container.add(
+      scene.add
+        .text(0, y + walletHintH / 2, options.walletHint, {
+          fontFamily: FONT,
+          fontSize: "12px",
+          color: COLORS.ember,
+          align: "center",
+          wordWrap: { width: INNER_W - 20 },
+        })
+        .setOrigin(0.5, 0.5)
+        .setResolution(2),
+    );
+    y += walletHintH + 5;
+  }
+
+  // Verify label (ember = red, not cyan)
+  const verifyLabel = scene.add
+    .text(0, y + VERIFY_H / 2, options.verifyPlaceholder ?? "…", {
+      fontFamily: FONT,
+      fontSize: "12px",
+      color: COLORS.ember,
+      align: "center",
+      wordWrap: { width: INNER_W - 20 },
+      lineSpacing: 2,
+    })
+    .setOrigin(0.5, 0.5)
+    .setResolution(2);
   container.add(verifyLabel);
 
-  const dailyLabel = scene.add.text(0, y + verifyCardH + 6, "", {
-    fontFamily: FONT,
-    fontSize: "11px",
-    color: COLORS.dust,
-    align: "center",
-    wordWrap: { width: INNER_W },
-  }).setOrigin(0.5, 0).setAlpha(0);
+  const dailyLabel = scene.add
+    .text(0, y + VERIFY_H + 4, "", {
+      fontFamily: FONT,
+      fontSize: "11px",
+      color: COLORS.dust,
+      align: "center",
+      wordWrap: { width: INNER_W },
+    })
+    .setOrigin(0.5, 0)
+    .setAlpha(0)
+    .setResolution(2);
   container.add(dailyLabel);
 
-  y += verifyCardH + 14;
+  y += VERIFY_H + 8;
 
+  // Primary buttons (full width, centered)
   for (const btn of primaryBtns) {
-    const cy = y + BTN_H / 2;
-    const handle = createHubAccentMenuButton(scene, 0, cy, btn.label, btn.onClick, INNER_W);
-    container.add(handle.container);
-    handles.push(handle);
+    addSpriteBtn(scene, container, 0, y + BTN_H / 2, btn.label, btn.onClick, BTN_W_FULL, true);
     y += BTN_H + BTN_GAP;
   }
 
+  // Secondary buttons (2-column grid)
   for (let i = 0; i < secondaryBtns.length; i += 2) {
-    const left = secondaryBtns[i]!;
+    const left  = secondaryBtns[i]!;
     const right = secondaryBtns[i + 1];
-    const cy = y + BTN_H / 2;
-
+    const cy    = y + BTN_H / 2;
     if (right) {
-      const leftHandle = createHubMenuButton(
-        scene,
-        -BTN_COL_W / 2 - BTN_GAP / 2,
-        cy,
-        left.label,
-        left.onClick,
-        BTN_COL_W,
-      );
-      const rightHandle = createHubMenuButton(
-        scene,
-        BTN_COL_W / 2 + BTN_GAP / 2,
-        cy,
-        right.label,
-        right.onClick,
-        BTN_COL_W,
-      );
-      container.add(leftHandle.container);
-      container.add(rightHandle.container);
-      handles.push(leftHandle, rightHandle);
+      addSpriteBtn(scene, container, -(BTN_W_HALF / 2 + BTN_GAP / 2), cy, left.label,  left.onClick,  BTN_W_HALF);
+      addSpriteBtn(scene, container,  (BTN_W_HALF / 2 + BTN_GAP / 2), cy, right.label, right.onClick, BTN_W_HALF);
     } else {
-      const handle = createHubMenuButton(scene, 0, cy, left.label, left.onClick, INNER_W);
-      container.add(handle.container);
-      handles.push(handle);
+      addSpriteBtn(scene, container, 0, cy, left.label, left.onClick, BTN_W_FULL);
     }
     y += BTN_H + BTN_GAP;
   }
@@ -229,10 +273,7 @@ export function createHubResultPanel(
     container,
     verifyLabel,
     dailyLabel,
-    setVerifyText: (text: string) => verifyLabel.setText(text),
-    destroy: () => {
-      for (const h of handles) h.destroy();
-      container.destroy(true);
-    },
+    setVerifyText: (text) => verifyLabel.setText(text),
+    destroy: () => container.destroy(true),
   };
 }

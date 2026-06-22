@@ -14,6 +14,7 @@ import {
   createHubResultPanel,
   createLandingBackdrop,
   preloadLandingBackdrop,
+  preloadResultPanelAssets,
 } from "../ui/hub/index.js";
 import { drawScanlines } from "../ui/components.js";
 import { C, COLORS } from "../ui/theme.js";
@@ -53,6 +54,7 @@ export class ResultScene extends Phaser.Scene {
 
   preload(): void {
     preloadLandingBackdrop(this);
+    preloadResultPanelAssets(this);
   }
 
   create(data: {
