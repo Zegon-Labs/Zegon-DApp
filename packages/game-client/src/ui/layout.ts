@@ -70,10 +70,10 @@ export const DUEL_LAYOUT = {
     centerY: 670,
 
     // Texts just above the strip (origin 0.5,0 — top of text)
-    statusY: 530,
-    chooseActionY: 552,
-    duelTipY: 578,
-    actionDescY: 598,
+    statusY: 514,
+    chooseActionY: 534,
+    duelTipY: 560,
+    actionDescY: 582,
 
     // Life panel dimensions (same style as other HUD panels)
     panelW: 194,

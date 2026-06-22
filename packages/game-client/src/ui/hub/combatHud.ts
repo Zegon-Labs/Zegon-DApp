@@ -38,13 +38,18 @@ export interface CombatHudFighterLayout {
   zegonPanelX?: number;
 }
 
+export interface CombatHudOpts {
+  /** When true, skip creating the BlindsightMeter panel (streak lives in TopHudBar). */
+  hideBlindsight?: boolean;
+}
+
 export class CombatHud {
   readonly container: Phaser.GameObjects.Container;
   private readonly playerBlock: FighterHudBlock;
   private readonly zegonBlock: FighterHudBlock;
-  private readonly blindsightMeter: BlindsightMeter;
+  private readonly blindsightMeter: BlindsightMeter | null;
 
-  constructor(scene: Phaser.Scene, depth = 9, fighterLayout?: CombatHudFighterLayout) {
+  constructor(scene: Phaser.Scene, depth = 9, fighterLayout?: CombatHudFighterLayout, opts?: CombatHudOpts) {
     this.container = scene.add.container(0, 0).setDepth(depth);
     this.playerBlock = new FighterHudBlock(scene, {
       align: "left",
@@ -72,12 +77,12 @@ export class CombatHud {
       iconGap: fighterLayout?.iconGap,
       panelX: fighterLayout?.zegonPanelX,
     });
-    this.blindsightMeter = new BlindsightMeter(scene, depth);
+    this.blindsightMeter = opts?.hideBlindsight ? null : new BlindsightMeter(scene, depth);
 
     this.container.add([
       this.playerBlock.container,
       this.zegonBlock.container,
-      this.blindsightMeter.container,
+      ...(this.blindsightMeter ? [this.blindsightMeter.container] : []),
     ]);
   }
 
@@ -97,7 +102,7 @@ export class CombatHud {
       statusLabel: state.zegonStatus,
       detail: state.hudStatus,
     });
-    this.blindsightMeter.update(
+    this.blindsightMeter?.update(
       state.blindsightLabel,
       state.readingStreak,
       state.deadeyeStreak,
@@ -136,7 +141,7 @@ export class CombatHud {
   destroy(): void {
     this.playerBlock.destroy();
     this.zegonBlock.destroy();
-    this.blindsightMeter.destroy();
+    this.blindsightMeter?.destroy();
     this.container.destroy(false);
   }
 }

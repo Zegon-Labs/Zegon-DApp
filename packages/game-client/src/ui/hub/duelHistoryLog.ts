@@ -79,7 +79,7 @@ export class DuelHistoryLog {
     scene: Phaser.Scene,
     historyTitle: string,
     depth = 12,
-    layout = L.history,
+    layout: { x: number; y: number; w: number; visibleRows?: number; pipGap?: number; pipSize?: number } = L.history,
   ) {
     this.scene = scene;
     this.historyTitle = historyTitle;

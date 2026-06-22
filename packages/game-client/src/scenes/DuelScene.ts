@@ -23,10 +23,9 @@ import {
 import {
   ArenaView,
   CombatHud,
-  createHubGameChrome,
+  type CombatHudOpts,
   createHubConfirmModal,
   createLandingBackdrop,
-  addHubLogo,
   DuelHistoryLog,
   preloadHistoryPanel,
   preloadLandingBackdrop,
@@ -35,8 +34,9 @@ import {
   preloadPlayerHand,
   SpriteActionBar,
   preloadActionAssets,
+  TopHudBar,
+  preloadTopHudBar,
   type SpriteActionEntry,
-  type HubButtonHandle,
   itemDescription,
   itemCooldownLabel,
 } from "../ui/hub/index.js";
@@ -135,7 +135,7 @@ export class DuelScene extends Phaser.Scene {
   private mode: "standard" | "daily" = "standard";
   private showingRoundResult = false;
   private confirmModal: Phaser.GameObjects.Container | null = null;
-  private chromeHandles: HubButtonHandle[] = [];
+  private topHudBar!: TopHudBar;
   private bootToken = 0;
   private zegonReadingActive = false;
   private readingDotsPhase = 0;
@@ -166,6 +166,7 @@ export class DuelScene extends Phaser.Scene {
     preloadHistoryPanel(this);
     preloadPlayerHand(this);
     preloadActionAssets(this);
+    preloadTopHudBar(this);
   }
 
   create(): void {
@@ -199,6 +200,7 @@ export class DuelScene extends Phaser.Scene {
     stripGfx.strokeRoundedRect(sX, L.bottomStrip.y, sW, L.bottomStrip.h, 3);
 
     const stripPanelY = L.bottomStrip.y + Math.floor((L.bottomStrip.h - L.bottomStrip.panelH) / 2);
+    const combatHudOpts: CombatHudOpts = { hideBlindsight: true };
     this.combatHud = new CombatHud(this, 9, {
       panelY: stripPanelY,
       panelH: L.bottomStrip.panelH,
@@ -209,43 +211,47 @@ export class DuelScene extends Phaser.Scene {
       iconGap: L.bottomStrip.iconGap,
       playerPanelX: 8,
       zegonPanelX: width - 8 - L.bottomStrip.panelW,
-    });
+    }, combatHudOpts);
 
-    addHubLogo(this, width / 2, L.header.logoY, L.header.logoMaxW, 11);
+    // Top HUD bar — replaces standalone logo, BlindsightMeter, and chrome buttons
+    this.topHudBar = new TopHudBar(this, {
+      onSettings: () => gameBridge.openSettingsOverlay(),
+      onSurrender: () => this.showSurrenderConfirm(),
+    });
 
     this.historyLog = new DuelHistoryLog(this, strings.history, 12);
     this.roundResultToast = new RoundResultToast(this, 14);
 
     this.statusLineText = this.add.text(width / 2, L.bottomStrip.statusY, "", {
-      fontFamily: FONT,
-      fontSize: "15px",
+      fontFamily: FONT_DISPLAY,
+      fontSize: "16px",
       color: COLORS.dust,
       letterSpacing: 1,
-    }).setOrigin(0.5, 0).setDepth(11);
+    }).setOrigin(0.5, 0).setResolution(2).setDepth(11);
 
     this.chooseActionText = this.add.text(width / 2, L.bottomStrip.chooseActionY, strings.chooseAction, {
       fontFamily: FONT_DISPLAY,
-      fontSize: "18px",
+      fontSize: "20px",
       color: COLORS.bone,
       letterSpacing: 2,
-    }).setOrigin(0.5, 0).setDepth(11);
+    }).setOrigin(0.5, 0).setResolution(2).setDepth(11);
 
     this.duelTipText = this.add.text(width / 2, L.bottomStrip.duelTipY, strings.duelTipDefault, {
-      fontFamily: FONT,
-      fontSize: "13px",
+      fontFamily: FONT_DISPLAY,
+      fontSize: "14px",
       color: COLORS.ember,
       align: "center",
       wordWrap: { width: width * 0.72 },
-    }).setOrigin(0.5, 0).setDepth(11).setAlpha(0.9);
+    }).setOrigin(0.5, 0).setResolution(2).setDepth(11).setAlpha(0.9);
 
     this.actionDescText = this.add.text(width / 2, L.bottomStrip.actionDescY, strings.actionTooltipHint, {
-      fontFamily: FONT,
+      fontFamily: FONT_DISPLAY,
       fontSize: "14px",
       color: COLORS.dust,
       align: "center",
       wordWrap: { width: width * 0.78 },
       lineSpacing: 4,
-    }).setOrigin(0.5, 0).setDepth(11).setAlpha(0.65);
+    }).setOrigin(0.5, 0).setResolution(2).setDepth(11).setAlpha(0.65);
 
     this.adapter = new GameCoreAdapter({
       brainMode: shouldUseServerApi() ? "api" : "dummy",
@@ -279,18 +285,6 @@ export class DuelScene extends Phaser.Scene {
 
     void this.bootDuel();
 
-    this.chromeHandles = createHubGameChrome(this, {
-      duelStack: true,
-      settings: {
-        label: strings.settings,
-        onClick: () => gameBridge.openSettingsOverlay(),
-      },
-      surrender: {
-        label: strings.duelSurrender,
-        onClick: () => this.showSurrenderConfirm(),
-      },
-    });
-
     this.localeUnsub = onLanguageChange(() => this.refreshLocale());
   }
 
@@ -304,12 +298,6 @@ export class DuelScene extends Phaser.Scene {
       strings.itemMirror,
       strings.itemPlate,
     ]);
-    if (this.chromeHandles[0]) {
-      this.chromeHandles[0].setLabel(strings.settings);
-    }
-    if (this.chromeHandles[1]) {
-      this.chromeHandles[1].setLabel(strings.duelSurrender);
-    }
     this.historyLog.setTitle(strings.history);
     this.updateHud();
     this.updateDuelTip();
@@ -760,6 +748,8 @@ export class DuelScene extends Phaser.Scene {
       zegonStatus: deadeyeNear ? strings.deadeyeNear : undefined,
     });
 
+    this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
+
     this.updateDuelTip();
   }
 
@@ -809,10 +799,7 @@ export class DuelScene extends Phaser.Scene {
     this.cameras.main.setZoom(1);
     this.confirmModal?.destroy(true);
     this.confirmModal = null;
-    for (const handle of this.chromeHandles) {
-      handle.destroy();
-    }
-    this.chromeHandles = [];
+    this.topHudBar?.destroy();
     this.adapter?.destroy();
     this.combatHud?.destroy();
     this.spriteActionBar?.destroy();
