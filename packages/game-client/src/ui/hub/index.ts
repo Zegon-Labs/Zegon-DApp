@@ -5,7 +5,7 @@ export { FighterHudBlock, type FighterHudBlockState, type FighterHudBlockOptions
 export { CombatHud, type CombatHudState } from "./combatHud.js";
 export { ActionBar } from "./actionBar.js";
 export { ItemSelector, itemCooldownLabel, itemDescription } from "./itemSelector.js";
-export { DuelHistoryLog } from "./duelHistoryLog.js";
+export { DuelHistoryLog, preloadHistoryPanel, HISTORY_PANEL_KEY } from "./duelHistoryLog.js";
 export { RoundResultToast } from "./roundResultToast.js";
 export { ArenaView } from "./arenaView.js";
 export { PlayerHandSprite, preloadPlayerHand, PLAYER_HAND_KEY } from "./playerHandSprite.js";

@@ -28,6 +28,7 @@ import {
   createLandingBackdrop,
   addHubLogo,
   DuelHistoryLog,
+  preloadHistoryPanel,
   preloadLandingBackdrop,
   RoundResultToast,
   PlayerHandSprite,
@@ -162,6 +163,7 @@ export class DuelScene extends Phaser.Scene {
 
   preload(): void {
     preloadLandingBackdrop(this);
+    preloadHistoryPanel(this);
     preloadPlayerHand(this);
     preloadActionAssets(this);
   }

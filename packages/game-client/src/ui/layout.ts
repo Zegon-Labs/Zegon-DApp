@@ -12,7 +12,7 @@ export const DUEL_LAYOUT = {
   prompt: { y: 84, w: 660, h: 66 },
   taunt: { y: 162, maxW: 750 },
 
-  history: { x: 24, y: 18, w: 240, visibleRows: 6, pipGap: 5, pipSize: 8 },
+  history: { x: 0, y: 2, w: 240, visibleRows: 6, pipGap: 5, pipSize: 8 },
 
   blindsight: {
     panelW: 220,

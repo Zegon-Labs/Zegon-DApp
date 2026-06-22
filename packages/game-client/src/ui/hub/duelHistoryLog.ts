@@ -1,29 +1,24 @@
 import Phaser from "phaser";
 import { DUEL_LAYOUT as L } from "../layout.js";
 import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
-import { paintDuelFrameCorners } from "./duelHudDraw.js";
+
+export const HISTORY_PANEL_KEY = "history-panel";
+const HISTORY_PANEL_PATH = "/sprites/historial_panel.png";
+const HISTORY_PANEL_SRC_W = 1086;
+const HISTORY_PANEL_SRC_H = 1448;
 
 const ROW_H = 22;
-const PAD = 14;
-const HEADER_H = 50;
-const BODY_TOP = HEADER_H + 4;
+const PAD = 48;
+const HEADER_H = 78;
+const BODY_TOP = HEADER_H + 8;
+const HEADER_TEXT_Y = 52;
 const PIP_SLOTS = 9;
 const SCROLLBAR_W = 5;
 const SCROLLBAR_GAP = 6;
-const THUMB_MIN_H = 18;
 
-function paintHistoryPanel(
-  g: Phaser.GameObjects.Graphics,
-  w: number,
-  h: number,
-): void {
-  g.clear();
-  g.fillStyle(C.ash, 0.96);
-  g.fillRoundedRect(0, 0, w, h, 4);
-  g.lineStyle(2, C.blood, 0.9);
-  g.strokeRoundedRect(0, 0, w, h, 4);
-  g.lineStyle(1, C.ember, 0.22);
-  g.strokeRoundedRect(2, 2, w - 4, h - 4, 3);
+export function preloadHistoryPanel(scene: Phaser.Scene): void {
+  if (scene.textures.exists(HISTORY_PANEL_KEY)) return;
+  scene.load.image(HISTORY_PANEL_KEY, HISTORY_PANEL_PATH);
 }
 
 export interface DuelHistoryLogState {
@@ -36,8 +31,7 @@ export interface DuelHistoryLogState {
 export class DuelHistoryLog {
   readonly container: Phaser.GameObjects.Container;
   private readonly scene: Phaser.Scene;
-  private readonly panelGfx: Phaser.GameObjects.Graphics;
-  private readonly cornerGfx: Phaser.GameObjects.Graphics;
+  private readonly panelImage: Phaser.GameObjects.Image;
   private readonly headerBg: Phaser.GameObjects.Graphics;
   private readonly headerDivider: Phaser.GameObjects.Graphics;
   private readonly pipsGfx: Phaser.GameObjects.Graphics;
@@ -52,7 +46,6 @@ export class DuelHistoryLog {
   private readonly contentW: number;
   private readonly viewH: number;
   private readonly bodyTop = BODY_TOP;
-  private readonly scrollbarX: number;
   private readonly anchorX: number;
   private readonly anchorY: number;
   private entryTexts: Phaser.GameObjects.Text[] = [];
@@ -94,15 +87,19 @@ export class DuelHistoryLog {
     this.anchorX = layout.x;
     this.anchorY = layout.y;
     const visibleRows = layout.visibleRows ?? 6;
-    this.panelH = BODY_TOP + visibleRows * ROW_H + PAD;
+    const decorativeH = Math.round(
+      this.panelW * (HISTORY_PANEL_SRC_H / HISTORY_PANEL_SRC_W),
+    );
+    this.panelH = Math.max(BODY_TOP + visibleRows * ROW_H + PAD, decorativeH);
     this.viewH = this.panelH - this.bodyTop - PAD;
     this.contentW = this.panelW - PAD * 2 - SCROLLBAR_GAP - SCROLLBAR_W;
-    this.scrollbarX = this.panelW - PAD - SCROLLBAR_W;
 
     this.container = scene.add.container(layout.x, layout.y).setDepth(depth);
 
-    this.panelGfx = scene.add.graphics();
-    this.cornerGfx = scene.add.graphics();
+    this.panelImage = scene.add
+      .image(0, 0, HISTORY_PANEL_KEY)
+      .setOrigin(0, 0)
+      .setDisplaySize(this.panelW, this.panelH);
     this.headerBg = scene.add.graphics();
     this.headerDivider = scene.add.graphics();
     this.pipsGfx = scene.add.graphics();
@@ -115,7 +112,7 @@ export class DuelHistoryLog {
     this.geometryMask = this.maskShape.createGeometryMask();
     this.bodyPanel.setMask(this.geometryMask);
 
-    this.headerText = scene.add.text(PAD, 10, "", {
+    this.headerText = scene.add.text(PAD, HEADER_TEXT_Y, "", {
       fontFamily: FONT_DISPLAY,
       fontSize: "14px",
       color: COLORS.ember,
@@ -162,8 +159,7 @@ export class DuelHistoryLog {
     scene.input.on("wheel", this.wheelHandler);
 
     this.container.add([
-      this.panelGfx,
-      this.cornerGfx,
+      this.panelImage,
       this.bodyPanel,
       this.scrollbarGfx,
       this.headerBg,
@@ -200,17 +196,12 @@ export class DuelHistoryLog {
   }
 
   private redrawPanel(): void {
-    paintHistoryPanel(this.panelGfx, this.panelW, this.panelH);
-    this.cornerGfx.clear();
-    paintDuelFrameCorners(this.cornerGfx, 0, 0, this.panelW, this.panelH, 9);
-
     this.headerBg.clear();
-    this.headerBg.fillStyle(C.ash, 1);
-    this.headerBg.fillRoundedRect(1, 1, this.panelW - 2, HEADER_H + 2, 3);
+    this.headerBg.fillStyle(C.ash, 0);
 
     this.headerDivider.clear();
-    this.headerDivider.lineStyle(1, C.blood, 0.55);
-    this.headerDivider.lineBetween(PAD, HEADER_H, this.panelW - PAD, HEADER_H);
+    this.headerDivider.lineStyle(1, C.blood, 0.42);
+    this.headerDivider.lineBetween(PAD, HEADER_H, this.panelW - PAD - 8, HEADER_H);
   }
 
   private scrollBy(delta: number): void {
@@ -222,44 +213,7 @@ export class DuelHistoryLog {
   }
 
   private drawScrollbar(): void {
-    const g = this.scrollbarGfx;
-    g.clear();
-
-    const trackX = this.scrollbarX;
-    const trackY = this.bodyTop;
-    const trackH = this.viewH;
-
-    g.fillStyle(C.blood, 0.18);
-    g.fillRect(trackX, trackY, SCROLLBAR_W, trackH);
-    g.lineStyle(1, C.blood, 0.45);
-    g.strokeRect(trackX, trackY, SCROLLBAR_W, trackH);
-
-    if (this.maxScroll <= 0) {
-      g.fillStyle(C.ember, 0.35);
-      g.fillRect(trackX + 1, trackY + 1, SCROLLBAR_W - 2, trackH - 2);
-      return;
-    }
-
-    const thumbH = Math.max(
-      THUMB_MIN_H,
-      Math.round((this.viewH / (this.viewH + this.maxScroll)) * trackH),
-    );
-    const travel = trackH - thumbH;
-    const thumbY = trackY + (this.scrollOffset / this.maxScroll) * travel;
-
-    g.fillStyle(C.ember, 0.95);
-    g.fillRect(trackX + 1, thumbY, SCROLLBAR_W - 2, thumbH);
-    g.lineStyle(1, C.blood, 1);
-    g.strokeRect(trackX + 0.5, thumbY + 0.5, SCROLLBAR_W - 1, thumbH - 1);
-
-    g.lineStyle(1, C.blood, 0.7);
-    g.lineBetween(trackX + 1, thumbY + 4, trackX + SCROLLBAR_W - 2, thumbY + 4);
-    g.lineBetween(
-      trackX + 1,
-      thumbY + thumbH - 5,
-      trackX + SCROLLBAR_W - 2,
-      thumbY + thumbH - 5,
-    );
+    this.scrollbarGfx.clear();
   }
 
   private drawPips(roundIndex: number): void {
@@ -269,7 +223,7 @@ export class DuelHistoryLog {
     const pipGap = L.history.pipGap;
     const filledCount = Math.min(roundIndex + 1, PIP_SLOTS);
     const currentSlot = roundIndex < PIP_SLOTS ? roundIndex : PIP_SLOTS - 1;
-    const y = HEADER_H - pipSize - 6;
+    const y = HEADER_H - pipSize - 2;
 
     for (let i = 0; i < PIP_SLOTS; i++) {
       const cx = PAD + i * (pipSize + pipGap) + pipSize / 2;
