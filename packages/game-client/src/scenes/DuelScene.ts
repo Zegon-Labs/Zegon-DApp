@@ -5,9 +5,10 @@ import {
 } from "../adapters/GameCoreAdapter.js";
 import { shouldUseServerApi, apiBaseUrl } from "../services/apiMode.js";
 import { onLanguageChange, t } from "../i18n/index.js";
-import type { DuelEvent, RoundOutcome, ZegonArchetypeId, DuelItemId } from "@zegon/game-core";
+import type { DuelEvent, RoundOutcome, ZegonArchetypeId } from "@zegon/game-core";
 import {
   ActionValidationError,
+  DuelItemId,
   getEffectiveDeadeyeStreak,
   PlayerAction,
 } from "@zegon/game-core";
@@ -20,7 +21,6 @@ import {
   scanlinePulseAlpha,
 } from "../ui/components.js";
 import {
-  ActionBar,
   ArenaView,
   CombatHud,
   createHubGameChrome,
@@ -29,13 +29,15 @@ import {
   addHubLogo,
   DuelHistoryLog,
   preloadLandingBackdrop,
-  ItemSelector,
-  itemCooldownLabel,
-  itemDescription,
   RoundResultToast,
   PlayerHandSprite,
   preloadPlayerHand,
+  SpriteActionBar,
+  preloadActionAssets,
+  type SpriteActionEntry,
   type HubButtonHandle,
+  itemDescription,
+  itemCooldownLabel,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { buildRoundSummary } from "../ui/roundSummary.js";
@@ -116,8 +118,7 @@ export class DuelScene extends Phaser.Scene {
   private adapter!: GameCoreAdapter;
   private arenaView!: ArenaView;
   private combatHud!: CombatHud;
-  private actionBar!: ActionBar;
-  private itemSelector!: ItemSelector;
+  private spriteActionBar!: SpriteActionBar;
   private glitchOverlay!: Phaser.GameObjects.Container;
   private scanlines!: Phaser.GameObjects.Graphics;
   private blinkOverlay!: Phaser.GameObjects.Rectangle;
@@ -162,6 +163,7 @@ export class DuelScene extends Phaser.Scene {
   preload(): void {
     preloadLandingBackdrop(this);
     preloadPlayerHand(this);
+    preloadActionAssets(this);
   }
 
   create(): void {
@@ -249,38 +251,28 @@ export class DuelScene extends Phaser.Scene {
       onEvent: (event) => this.handleEvent(event),
     });
 
-    this.actionBar = new ActionBar(
-      this,
-      [PlayerAction.FIRE, PlayerAction.DODGE],
-      (action) => actionLabel(action, this.adapter?.getEquippedItem()),
-      (action) => void this.submitPlayerAction(action),
-      12,
-      (action, hovering) => this.showActionTooltip(action, hovering),
-      {
-        xFirst: L.bottomStrip.buttonXFirst,
-        y: L.bottomStrip.centerY,
-        btnW: L.bottomStrip.buttonW,
-        btnH: L.bottomStrip.buttonH,
-        gap: L.bottomStrip.buttonGap,
+    const strings2 = t();
+    const actionEntries: SpriteActionEntry[] = [
+      { label: strings2.actionFire,   action: PlayerAction.FIRE },
+      { label: strings2.actionDodge,  action: PlayerAction.DODGE },
+      { label: strings2.itemSmoke,    action: PlayerAction.USE_ITEM, item: DuelItemId.SMOKE  },
+      { label: strings2.itemMirror,   action: PlayerAction.USE_ITEM, item: DuelItemId.MIRROR },
+      { label: strings2.itemPlate,    action: PlayerAction.USE_ITEM, item: DuelItemId.PLATE  },
+    ];
+    this.spriteActionBar = new SpriteActionBar(this, {
+      entries: actionEntries,
+      onAction: (action, item) => {
+        if (item) this.adapter?.setEquippedItem(item);
+        void this.submitPlayerAction(action);
       },
-    );
-
-    this.itemSelector = new ItemSelector(this, {
-      labelFor: duelItemLabel,
-      descFor: (item) => itemDescription(item, t()),
-      onUseItem: (item) => {
-        this.adapter?.setEquippedItem(item);
-        void this.submitPlayerAction(PlayerAction.USE_ITEM);
+      onHover: (action, item, hovering) => {
+        if (item) {
+          this.showItemTooltip(item, hovering);
+        } else {
+          this.showActionTooltip(action, hovering);
+        }
       },
-      onItemHover: (item, hovering) => this.showItemTooltip(item, hovering),
       depth: 12,
-      layoutHint: {
-        xFirst: L.bottomStrip.itemXFirst,
-        y: L.bottomStrip.centerY,
-        chipW: L.bottomStrip.itemW,
-        chipH: L.bottomStrip.itemH,
-        gap: L.bottomStrip.buttonGap,
-      },
     });
 
     void this.bootDuel();
@@ -303,10 +295,13 @@ export class DuelScene extends Phaser.Scene {
   private refreshLocale(): void {
     const strings = t();
     this.chooseActionText.setText(strings.chooseAction);
-    this.actionBar.refreshLabels((action) =>
-      actionLabel(action, this.adapter?.getEquippedItem()),
-    );
-    this.itemSelector.refreshLabels();
+    this.spriteActionBar.refreshLabels([
+      actionLabel(PlayerAction.FIRE,     this.adapter?.getEquippedItem()),
+      actionLabel(PlayerAction.DODGE,    this.adapter?.getEquippedItem()),
+      strings.itemSmoke,
+      strings.itemMirror,
+      strings.itemPlate,
+    ]);
     if (this.chromeHandles[0]) {
       this.chromeHandles[0].setLabel(strings.settings);
     }
@@ -354,7 +349,7 @@ export class DuelScene extends Phaser.Scene {
     } catch (err) {
       if (token !== this.bootToken) return;
       this.statusLineText.setText(formatSubmitError(err)).setColor(COLORS.ember);
-      this.actionBar.setEnabledMap(false, new Set());
+      this.spriteActionBar.setEnabledMap(false, new Set());
     }
   }
 
@@ -444,7 +439,7 @@ export class DuelScene extends Phaser.Scene {
     });
     this.hoveredAction = null;
     this.hoveredItem = null;
-    this.actionBar.resetHoverAll();
+    this.spriteActionBar.resetHoverAll();
     this.actionDescText.setAlpha(0.2);
     this.updateActionButtons();
   }
@@ -763,27 +758,17 @@ export class DuelScene extends Phaser.Scene {
       zegonStatus: deadeyeNear ? strings.deadeyeNear : undefined,
     });
 
-    this.itemSelector.setCooldown(itemCooldown);
-    const itemAvailable =
-      this.adapter.isAwaitingPlayer() &&
-      !this.showingRoundResult &&
-      this.adapter.getAvailableActions().includes(PlayerAction.USE_ITEM);
-    this.itemSelector.setInteractive(itemAvailable);
     this.updateDuelTip();
   }
 
   private updateActionButtons(): void {
     if (this.showingRoundResult) {
-      this.actionBar.setEnabledMap(false, new Set());
-      this.itemSelector.setInteractive(false);
+      this.spriteActionBar.setEnabledMap(false, new Set());
       return;
     }
     const awaiting = this.adapter.isAwaitingPlayer();
     const available = new Set(this.adapter.getAvailableActions());
-    this.actionBar.setEnabledMap(awaiting, available);
-    this.itemSelector.setInteractive(
-      awaiting && available.has(PlayerAction.USE_ITEM),
-    );
+    this.spriteActionBar.setEnabledMap(awaiting, available);
   }
 
   private async submitPlayerAction(action: PlayerAction): Promise<void> {
@@ -791,8 +776,7 @@ export class DuelScene extends Phaser.Scene {
     if (!this.adapter.isAwaitingPlayer()) return;
     if (!this.adapter.getAvailableActions().includes(action)) return;
 
-    this.actionBar.setDimmedAll(true);
-    this.itemSelector.setDimmedAll(true);
+    this.spriteActionBar.setDimmedAll(true);
     this.hoveredAction = null;
     this.hoveredItem = null;
     this.setActionDescription("", COLORS.dust);
@@ -805,8 +789,7 @@ export class DuelScene extends Phaser.Scene {
     } catch (err) {
       this.statusLineText.setText(formatSubmitError(err)).setColor(COLORS.ember);
     } finally {
-      this.actionBar.setDimmedAll(false);
-      this.itemSelector.setDimmedAll(false);
+      this.spriteActionBar.setDimmedAll(false);
       this.updateActionButtons();
     }
   }
@@ -830,8 +813,7 @@ export class DuelScene extends Phaser.Scene {
     this.chromeHandles = [];
     this.adapter?.destroy();
     this.combatHud?.destroy();
-    this.actionBar?.destroy();
-    this.itemSelector?.destroy();
+    this.spriteActionBar?.destroy();
     this.arenaView?.destroy();
     this.playerHandSprite?.destroy();
     this.historyLog?.destroy();
