@@ -227,6 +227,39 @@ describe("resolveRound", () => {
     expect(outcome.deadeyeConsumed).toBe(true);
   });
 
+  it("DEADEYE stays active when surprised without an item", () => {
+    const outcome = resolveRound(
+      { ...baseCtx, readingStreak: 2, isDeadeye: true },
+      PlayerAction.FIRE,
+      {
+        predictedPlayerMove: PlayerAction.DODGE,
+        zegonMove: ZegonAction.DODGE,
+        confidence: 0.5,
+        taunt: "test",
+      },
+    );
+    expect(outcome.predictionCorrect).toBe(false);
+    expect(outcome.readingStreakAfter).toBe(0);
+    expect(outcome.deadeyeConsumed).toBe(false);
+    expect(outcome.deadeyeStillActive).toBe(true);
+    expect(outcome.blindsightAfter).toBe(100);
+  });
+
+  it("non-DEADEYE read hit only removes one life", () => {
+    const outcome = resolveRound(
+      baseCtx,
+      PlayerAction.FIRE,
+      {
+        predictedPlayerMove: PlayerAction.FIRE,
+        zegonMove: ZegonAction.FIRE,
+        confidence: 0.9,
+        taunt: "test",
+      },
+    );
+    expect(outcome.playerDamage).toBe(20);
+    expect(outcome.wasDeadeye).toBe(false);
+  });
+
   it("triggers deadeye after two consecutive reads", () => {
     const outcome = resolveRound(
       { ...baseCtx, readingStreak: 1 },

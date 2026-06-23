@@ -29,6 +29,8 @@ export interface LocaleStrings {
   actionDescFire: string;
   actionDescDodge: string;
   actionDescUseItem: string;
+  actionUseItemShort: string;
+  itemCooldownNote: string;
   itemSmoke: string;
   itemMirror: string;
   itemPlate: string;
@@ -84,6 +86,7 @@ export interface LocaleStrings {
   roundSummaryBothDodged: string;
   roundSummaryDeadeyeOn: string;
   roundSummaryDeadeyeUsed: string;
+  roundSummaryDeadeyeStillActive: string;
   roundSummaryStreak: string;
   roundSummaryDragHint: string;
   errorItemCooldown: string;
@@ -159,6 +162,7 @@ export interface LocaleStrings {
   dailyStakeFailed: string;
   dailyPoolNotConfigured: string;
   dailyPlay: string;
+  dailyWalletRequired: string;
   achievementsTitle: string;
   achievementsMenu: string;
   achievementsSubtitle: string;
@@ -272,9 +276,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     actionFire: "SHOOT",
     actionDodge: "DODGE",
     actionUseItem: "USE ITEM",
-    actionDescFire: "Shoot · hits if ZEGON mispredicted.",
-    actionDescDodge: "Dodge · blocks ZEGON's shot.",
+    actionDescFire: "Shoot · hits if ZEGON mispredicted · −1 life (not lethal unless DEADEYE).",
+    actionDescDodge: "Dodge · blocks normal shots · useless if DEADEYE reads you.",
     actionDescUseItem: "Use item · tap HUMO, ESPEJO, or PLACA.",
+    actionUseItemShort: "USE ITEM",
     itemSmoke: "SMOKE",
     itemMirror: "MIRROR",
     itemPlate: "PLATE",
@@ -283,9 +288,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     itemDescSmoke: "Vanishes from ZEGON's read · resets streak · cancels DEADEYE.",
     itemDescMirror: "If ZEGON read you and shoots · reflects damage (lethal on DEADEYE).",
     itemDescPlate: "Blocks ZEGON's shot · cancels DEADEYE · does not break the read.",
+    itemCooldownNote: "Recharges every {n} rounds.",
     duelTipDefault: "Tip · Alternate SHOOT and DODGE so ZEGON can't read you.",
     duelTipStreak1: "Tip · ZEGON read you once. Change your move now!",
-    duelTipDeadeye: "Tip · DEADEYE! Dodge won't help — use an item or surprise.",
+    duelTipDeadeye: "Tip · DEADEYE active! Dodge won't save you — use an item or shoot first.",
     duelTipRepeat: "Tip · Same move twice — ZEGON will predict you. Vary!",
     duelTipItemReady: "Tip · Item ready. Tap HUMO, ESPEJO, or PLACA.",
     zegonPlayed: "ZEGON played",
@@ -331,6 +337,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryBothDodged: "Both dodged — no damage",
     roundSummaryDeadeyeOn: "DEADEYE activated · next shot is lethal",
     roundSummaryDeadeyeUsed: "DEADEYE spent",
+    roundSummaryDeadeyeStillActive: "DEADEYE still active · only an item cancels it",
     roundSummaryStreak: "Read streak",
     roundSummaryDragHint: "← swipe to continue →",
     errorItemCooldown: "Item on cooldown.",
@@ -436,6 +443,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     dailyStakeFailed: "Stake failed · check wallet & balance",
     dailyPoolNotConfigured: "Daily pool not configured yet",
     dailyPlay: "Play daily duel",
+    dailyWalletRequired: "Connect wallet to play the daily duel",
     achievementsTitle: "Achievements",
     achievementsMenu: "ACHIEVEMENTS",
     achievementsSubtitle: "Unlock badges by playing duels, daily mode, and on-chain verification.",
@@ -531,9 +539,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     actionFire: "DISPARAR",
     actionDodge: "ESQUIVAR",
     actionUseItem: "USAR OBJETO",
-    actionDescFire: "Dispará · pegás si ZEGON predijo mal.",
-    actionDescDodge: "Esquivá · bloquea el disparo de ZEGON.",
+    actionDescFire: "Dispará · pegás si ZEGON predijo mal · −1 vida (no letal salvo DEADEYE).",
+    actionDescDodge: "Esquivá · bloquea disparos normales · no sirve si DEADEYE te leyó.",
     actionDescUseItem: "Usá un objeto · tocá HUMO, ESPEJO o PLACA.",
+    actionUseItemShort: "USAR OBJETO",
     itemSmoke: "HUMO",
     itemMirror: "ESPEJO",
     itemPlate: "PLACA",
@@ -542,9 +551,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     itemDescSmoke: "Desaparecés de la lectura · reinicia racha · cancela DEADEYE.",
     itemDescMirror: "Si ZEGON te leyó y dispara · refleja el daño (letal en DEADEYE).",
     itemDescPlate: "Bloquea el disparo · cancela DEADEYE · no rompe la lectura.",
+    itemCooldownNote: "Se recarga cada {n} rondas.",
     duelTipDefault: "Consejo · Alterná DISPARAR y ESQUIVAR para que no te lea.",
     duelTipStreak1: "Consejo · ZEGON te leyó una vez. ¡Cambiá de jugada!",
-    duelTipDeadeye: "Consejo · ¡DEADEYE! Esquivar no sirve — usá un objeto o sorprendelo.",
+    duelTipDeadeye: "Consejo · ¡DEADEYE activo! Esquivar no salva — usá un objeto o dispará primero.",
     duelTipRepeat: "Consejo · Repetiste la misma jugada. ¡Variá!",
     duelTipItemReady: "Consejo · Objeto listo. Tocá HUMO, ESPEJO o PLACA.",
     zegonPlayed: "ZEGON jugó",
@@ -590,6 +600,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryBothDodged: "Ambos esquivaron — sin daño",
     roundSummaryDeadeyeOn: "¡DEADEYE activado · próximo disparo letal!",
     roundSummaryDeadeyeUsed: "DEADEYE consumido",
+    roundSummaryDeadeyeStillActive: "DEADEYE sigue activo · solo un objeto lo cancela",
     roundSummaryStreak: "Racha de lectura",
     roundSummaryDragHint: "← deslizá para continuar →",
     errorItemCooldown: "Objeto en enfriamiento.",
@@ -695,6 +706,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     dailyStakeFailed: "Falló la apuesta · revisá wallet y saldo",
     dailyPoolNotConfigured: "Pool diario aún no configurado",
     dailyPlay: "Jugar duelo diario",
+    dailyWalletRequired: "Conectá wallet para jugar el duelo diario",
     achievementsTitle: "Logros",
     achievementsMenu: "LOGROS",
     achievementsSubtitle: "Desbloqueá insignias jugando duelos, el modo diario y verificación on-chain.",

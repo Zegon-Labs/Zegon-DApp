@@ -4,9 +4,9 @@ import { DUEL_LAYOUT as L } from "../layout.js";
 import type { RoundSummaryLine, RoundSummaryLineRole } from "../roundSummary.js";
 import { COLORS, FONT, FONT_DISPLAY } from "../theme.js";
 
-const LINE_STEP = 22;
 const DISMISS_DRAG_PX = 72;
 const SWAY_PX = 11;
+const LINE_GAP = 6;
 
 function lineStyle(role: RoundSummaryLineRole): {
   fontSize: string;
@@ -74,11 +74,12 @@ export class RoundResultToast {
     this.dragging = false;
 
     const scene = this.container.scene;
+    let y = 0;
 
     lines.forEach((line, index) => {
       const style = lineStyle(line.role);
       const lineText = scene.add
-        .text(0, index * LINE_STEP, line.text, {
+        .text(0, y, line.text, {
           fontFamily: FONT_DISPLAY,
           fontSize: style.fontSize,
           color: style.color,
@@ -92,6 +93,7 @@ export class RoundResultToast {
 
       this.container.add(lineText);
       this.lineTexts.push(lineText);
+      y += lineText.height + LINE_GAP;
 
       const tween = scene.tweens.add({
         targets: lineText,
@@ -104,7 +106,8 @@ export class RoundResultToast {
       this.entryTweens.push(tween);
     });
 
-    const hitH = Math.max(lines.length * LINE_STEP + 20, 72);
+    const contentH = Math.max(y, 72);
+    const hitH = contentH + 20;
     this.dragHintText = scene.add
       .text(-this.maxW / 2, hitH + 8, t().roundSummaryDragHint, {
         fontFamily: FONT,

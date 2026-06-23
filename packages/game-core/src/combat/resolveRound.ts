@@ -194,16 +194,22 @@ export function resolveRound(
     plateBlocked,
   );
 
+  const deadeyeStillActive = ctx.isDeadeye && !deadeyeConsumed;
+
   const deadeyeTriggered =
     !ctx.isDeadeye &&
     readingStreakAfter >= deadeyeStreak &&
     predictionCorrect &&
     !usedSmoke;
 
-  const blindsightBefore = readingStreakToDisplay(ctx.readingStreak, deadeyeStreak);
+  const blindsightBefore = deadeyeStillActive || ctx.isDeadeye
+    ? 100
+    : readingStreakToDisplay(ctx.readingStreak, deadeyeStreak);
   const blindsightAfter = deadeyeConsumed
     ? 0
-    : readingStreakToDisplay(readingStreakAfter, deadeyeStreak);
+    : deadeyeStillActive || deadeyeTriggered
+      ? 100
+      : readingStreakToDisplay(readingStreakAfter, deadeyeStreak);
 
   const itemCooldownAfter =
     playerAction === PlayerAction.USE_ITEM
@@ -230,6 +236,8 @@ export function resolveRound(
     readingStreakAfter,
     deadeyeTriggered,
     deadeyeConsumed,
+    wasDeadeye: ctx.isDeadeye,
+    deadeyeStillActive,
     ammoAfter: ctx.ammo,
     itemCooldownAfter,
     itemUsed: usedItem,

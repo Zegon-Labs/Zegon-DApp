@@ -1040,6 +1040,16 @@ body:has(.hero) {
   background: rgba(33,30,46,0.8);
 }
 
+.btn--secondary-locked {
+  opacity: 0.72;
+  border-color: rgba(139, 26, 26, 0.45);
+}
+
+.btn--secondary-locked:hover {
+  border-color: var(--ember);
+  background: rgba(33,30,46,0.8);
+}
+
 .btn__icon {
   color: var(--dust);
   flex-shrink: 0;

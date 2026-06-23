@@ -100,6 +100,10 @@ export interface RoundOutcome {
   readingStreakAfter: number;
   deadeyeTriggered: boolean;
   deadeyeConsumed: boolean;
+  /** DEADEYE was active entering this round. */
+  wasDeadeye: boolean;
+  /** DEADEYE remains after resolution (streak may be 0). */
+  deadeyeStillActive: boolean;
   ammoAfter: number;
   itemCooldownAfter: number;
   itemUsed?: DuelItemId;

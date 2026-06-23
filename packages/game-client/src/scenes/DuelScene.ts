@@ -10,6 +10,7 @@ import {
   ActionValidationError,
   DuelItemId,
   getEffectiveDeadeyeStreak,
+  ITEM,
   PlayerAction,
 } from "@zegon/game-core";
 import {
@@ -39,10 +40,9 @@ import {
   TopHudBar,
   preloadTopHudBar,
   type SpriteActionEntry,
-  itemDescription,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
-import { buildRoundSummary } from "../ui/roundSummary.js";
+import { buildRoundSummary, type ActionLabelRole } from "../ui/roundSummary.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
 import { C, COLORS, FONT_DISPLAY } from "../ui/theme.js";
 import { gameBridge } from "../game/bridge.js";
@@ -89,18 +89,6 @@ function actionLabel(action: PlayerAction | string, equippedItem?: DuelItemId): 
   return String(action);
 }
 
-function actionDescription(action: PlayerAction, equippedItem?: DuelItemId): string {
-  const strings = t();
-  if (action === PlayerAction.USE_ITEM && equippedItem) {
-    return `${strings.actionDescUseItem} · ${duelItemLabel(equippedItem)}`;
-  }
-  return {
-    [PlayerAction.FIRE]: strings.actionDescFire,
-    [PlayerAction.DODGE]: strings.actionDescDodge,
-    [PlayerAction.USE_ITEM]: strings.actionDescUseItem,
-  }[action];
-}
-
 function playerFiredAction(action: string): boolean {
   return action === PlayerAction.FIRE || action === "FIRE";
 }
@@ -130,8 +118,6 @@ export class DuelScene extends Phaser.Scene {
   private statusLineText!: Phaser.GameObjects.Text;
   private chooseActionText!: Phaser.GameObjects.Text;
   private roundResultToast!: RoundResultToast;
-  private actionDescText!: Phaser.GameObjects.Text;
-  private duelTipText!: Phaser.GameObjects.Text;
   private mode: "standard" | "daily" = "standard";
   private showingRoundResult = false;
   private confirmModal: Phaser.GameObjects.Container | null = null;
@@ -142,8 +128,6 @@ export class DuelScene extends Phaser.Scene {
   private readingDotsPhase = 0;
   private readingDotsElapsed = 0;
   private glitchAmbientOn = false;
-  private hoveredAction: PlayerAction | null = null;
-  private hoveredItem: DuelItemId | null = null;
   private localeUnsub: (() => void) | null = null;
   private playerHandSprite!: PlayerHandSprite;
 
@@ -220,23 +204,6 @@ export class DuelScene extends Phaser.Scene {
       letterSpacing: 2,
     }).setOrigin(0.5, 0).setResolution(2).setDepth(11);
 
-    this.duelTipText = this.add.text(width / 2, L.bottomStrip.duelTipY, strings.duelTipDefault, {
-      fontFamily: FONT_DISPLAY,
-      fontSize: "14px",
-      color: COLORS.ember,
-      align: "center",
-      wordWrap: { width: width * 0.72 },
-    }).setOrigin(0.5, 0).setResolution(2).setDepth(11).setAlpha(0.9);
-
-    this.actionDescText = this.add.text(width / 2, L.bottomStrip.actionDescY, strings.actionTooltipHint, {
-      fontFamily: FONT_DISPLAY,
-      fontSize: "14px",
-      color: COLORS.dust,
-      align: "center",
-      wordWrap: { width: width * 0.78 },
-      lineSpacing: 4,
-    }).setOrigin(0.5, 0).setResolution(2).setDepth(11).setAlpha(0.65);
-
     this.adapter = new GameCoreAdapter({
       brainMode: shouldUseServerApi() ? "api" : "dummy",
       apiBaseUrl: apiBaseUrl(),
@@ -244,25 +211,19 @@ export class DuelScene extends Phaser.Scene {
     });
 
     const strings2 = t();
+    const initialHelp = this.buildActionHelpTexts();
     const actionEntries: SpriteActionEntry[] = [
-      { label: strings2.actionFire,   action: PlayerAction.FIRE },
-      { label: strings2.actionDodge,  action: PlayerAction.DODGE },
-      { label: strings2.itemSmoke,    action: PlayerAction.USE_ITEM, item: DuelItemId.SMOKE  },
-      { label: strings2.itemMirror,   action: PlayerAction.USE_ITEM, item: DuelItemId.MIRROR },
-      { label: strings2.itemPlate,    action: PlayerAction.USE_ITEM, item: DuelItemId.PLATE  },
+      { label: strings2.actionFire,   action: PlayerAction.FIRE,     helpText: initialHelp[0] },
+      { label: strings2.actionDodge,  action: PlayerAction.DODGE,    helpText: initialHelp[1] },
+      { label: strings2.itemSmoke,    action: PlayerAction.USE_ITEM, item: DuelItemId.SMOKE,  helpText: initialHelp[2] },
+      { label: strings2.itemMirror,   action: PlayerAction.USE_ITEM, item: DuelItemId.MIRROR, helpText: initialHelp[3] },
+      { label: strings2.itemPlate,    action: PlayerAction.USE_ITEM, item: DuelItemId.PLATE,  helpText: initialHelp[4] },
     ];
     this.spriteActionBar = new SpriteActionBar(this, {
       entries: actionEntries,
       onAction: (action, item) => {
         if (item) this.adapter?.setEquippedItem(item);
         void this.submitPlayerAction(action);
-      },
-      onHover: (action, item, hovering) => {
-        if (item) {
-          this.showItemTooltip(item, hovering);
-        } else {
-          this.showActionTooltip(action, hovering);
-        }
       },
       depth: 12,
     });
@@ -284,9 +245,49 @@ export class DuelScene extends Phaser.Scene {
     ]);
     this.historyLog.setTitle(strings.history);
     this.updateHud();
-    this.updateDuelTip();
-    this.syncActionHintLine();
+    this.updateActionBarHelp();
     this.roundResultToast.refreshLocale();
+  }
+
+  private computeDuelTip(): string {
+    if (!this.adapter) return t().duelTipDefault;
+    const strings = t();
+    const state = this.adapter.getState();
+    const streak = this.adapter.getReadingStreak();
+    const history = state.playerHistory;
+    const last = history[history.length - 1];
+    const prev = history[history.length - 2];
+
+    if (state.isDeadeye) return strings.duelTipDeadeye;
+    if (last != null && last === prev) return strings.duelTipRepeat;
+    if (streak >= 1) return strings.duelTipStreak1;
+    if (this.adapter.getItemCooldown() <= 0 && this.adapter.isAwaitingPlayer()) {
+      return strings.duelTipItemReady;
+    }
+    return strings.duelTipDefault;
+  }
+
+  private buildActionHelpTexts(): string[] {
+    const strings = t();
+    const tip = this.computeDuelTip();
+    const tipBlock = `\n\n${tip}`;
+    const itemTip =
+      this.adapter?.getItemCooldown() <= 0 && this.adapter?.isAwaitingPlayer()
+        ? `\n\n${strings.duelTipItemReady}`
+        : "";
+    const cooldown = `\n\n${strings.itemCooldownNote.replace("{n}", String(ITEM.COOLDOWN_ROUNDS))}`;
+
+    return [
+      `${strings.actionDescFire}${tipBlock}`,
+      `${strings.actionDescDodge}${tipBlock}`,
+      `${strings.itemDescSmoke}${cooldown}${itemTip}`,
+      `${strings.itemDescMirror}${cooldown}${itemTip}`,
+      `${strings.itemDescPlate}${cooldown}${itemTip}`,
+    ];
+  }
+
+  private updateActionBarHelp(): void {
+    this.spriteActionBar?.refreshHelpTexts(this.buildActionHelpTexts());
   }
 
   private showSurrenderConfirm(): void {
@@ -327,73 +328,6 @@ export class DuelScene extends Phaser.Scene {
     }
   }
 
-  private showActionTooltip(action: PlayerAction, visible: boolean): void {
-    this.hoveredAction = visible ? action : null;
-    if (visible) this.hoveredItem = null;
-    this.syncActionHintLine();
-  }
-
-  private showItemTooltip(item: DuelItemId, visible: boolean): void {
-    this.hoveredItem = visible ? item : null;
-    if (visible) this.hoveredAction = null;
-    this.syncActionHintLine();
-  }
-
-  private setActionDescription(text: string, color: string = COLORS.blood): void {
-    this.actionDescText.setText(text).setColor(color).setAlpha(text ? 1 : 0);
-  }
-
-  private updateDuelTip(): void {
-    if (!this.adapter) return;
-    const strings = t();
-    const state = this.adapter.getState();
-    const streak = this.adapter.getReadingStreak();
-    const history = state.playerHistory;
-    const last = history[history.length - 1];
-    const prev = history[history.length - 2];
-
-    let tip = strings.duelTipDefault;
-    if (state.isDeadeye) {
-      tip = strings.duelTipDeadeye;
-    } else if (last != null && last === prev) {
-      tip = strings.duelTipRepeat;
-    } else if (streak >= 1) {
-      tip = strings.duelTipStreak1;
-    } else if (this.adapter.getItemCooldown() <= 0 && this.adapter.isAwaitingPlayer()) {
-      tip = strings.duelTipItemReady;
-    }
-
-    this.duelTipText.setText(tip);
-  }
-
-  private syncActionHintLine(): void {
-    const equipped = this.adapter?.getEquippedItem();
-    if (this.hoveredAction) {
-      this.setActionDescription(
-        `${actionLabel(this.hoveredAction, equipped)} — ${actionDescription(this.hoveredAction, equipped)}`,
-        COLORS.blood,
-      );
-      return;
-    }
-
-    if (this.hoveredItem) {
-      const strings = t();
-      this.setActionDescription(
-        `${duelItemLabel(this.hoveredItem)} — ${itemDescription(this.hoveredItem, strings)}`,
-        COLORS.blood,
-      );
-      return;
-    }
-
-    if (this.adapter?.isAwaitingPlayer() && !this.showingRoundResult) {
-      this.setActionDescription(t().actionTooltipHint, COLORS.dust);
-      this.actionDescText.setAlpha(0.65);
-      return;
-    }
-
-    this.setActionDescription("", COLORS.dust);
-  }
-
   private showRoundResult(outcome: RoundOutcome): void {
     const deadeyeStreak = getEffectiveDeadeyeStreak(
       this.adapter.getState().config.modifiers,
@@ -401,20 +335,22 @@ export class DuelScene extends Phaser.Scene {
     const summary = buildRoundSummary(
       outcome,
       t(),
-      (action) => actionLabel(action, outcome.itemUsed ?? this.adapter.getEquippedItem()),
+      (action, role: ActionLabelRole) => {
+        const strings = t();
+        if (role === "predicted" && (action === PlayerAction.USE_ITEM || action === "USE_ITEM")) {
+          return strings.actionUseItemShort;
+        }
+        return actionLabel(action, outcome.itemUsed ?? this.adapter.getEquippedItem());
+      },
       deadeyeStreak,
     );
     this.showingRoundResult = true;
     playSfx("round_resolve");
     this.roundResultToast.show(summary.lines, () => {
       this.showingRoundResult = false;
-      this.syncActionHintLine();
       this.updateActionButtons();
     });
-    this.hoveredAction = null;
-    this.hoveredItem = null;
     this.spriteActionBar.resetHoverAll();
-    this.actionDescText.setAlpha(0.2);
     this.updateActionButtons();
   }
 
@@ -506,7 +442,6 @@ export class DuelScene extends Phaser.Scene {
         startSfxLoop("zegon_thinking", { volume: 0.32 });
         playThinkingVoice();
         this.chooseActionText.setAlpha(0.35);
-        this.actionDescText.setAlpha(0);
         if (!this.showingRoundResult) {
           this.roundResultToast.hide();
         }
@@ -520,7 +455,7 @@ export class DuelScene extends Phaser.Scene {
         }
         this.statusLineText.setText(strings.lockedIn).setColor(COLORS.dust);
         this.chooseActionText.setAlpha(1);
-        this.syncActionHintLine();
+        this.updateActionBarHelp();
       } else if (phase === DuelPhase.DEADEYE) {
         stopSfxLoop("zegon_thinking");
         this.setZegonReadingActive(false);
@@ -722,7 +657,7 @@ export class DuelScene extends Phaser.Scene {
     });
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
-    this.updateDuelTip();
+    this.updateActionBarHelp();
   }
 
   private updateActionButtons(): void {
@@ -741,9 +676,6 @@ export class DuelScene extends Phaser.Scene {
     if (!this.adapter.getAvailableActions().includes(action)) return;
 
     this.spriteActionBar.setDimmedAll(true);
-    this.hoveredAction = null;
-    this.hoveredItem = null;
-    this.setActionDescription("", COLORS.dust);
     playActionSfx(action);
     if (action === PlayerAction.FIRE) {
       this.playerHandSprite.playFire();

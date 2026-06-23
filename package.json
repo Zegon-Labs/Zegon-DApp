@@ -5,7 +5,7 @@
     "dev": "pnpm --parallel --filter @zegon/game-server --filter @zegon/game-client dev",
     "dev:client": "pnpm --filter @zegon/game-client dev",
     "dev:og": "pnpm --filter @zegon/game-client dev",
-    "dev:server": "pnpm --filter @zegon/game-server dev",
+    "dev:server": "pnpm --filter @zegon/game-core build && pnpm --filter @zegon/game-server dev",
     "dev:full": "pnpm --parallel --filter @zegon/game-server --filter @zegon/game-client dev",
     "build": "pnpm -r build",
     "vercel-build": "pnpm --filter @zegon/game-core build && pnpm --filter @zegon/game-server build && pnpm --filter @zegon/game-client build",

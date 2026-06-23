@@ -3,7 +3,9 @@ import type { LocaleStrings } from "../i18n/index.js";
 import { COLORS } from "./theme.js";
 import { damageToLives } from "./damageLives.js";
 
-type ActionLabelFn = (action: string) => string;
+export type ActionLabelRole = "predicted" | "zegon" | "player";
+
+export type ActionLabelFn = (action: string, role: ActionLabelRole) => string;
 
 export type RoundSummaryLineRole = "headline" | "outcome" | "delta" | "damage" | "note";
 
@@ -44,9 +46,9 @@ export function buildRoundSummary(
   labelAction: ActionLabelFn,
   deadeyeStreak = 2,
 ): RoundSummaryResult {
-  const predicted = labelAction(outcome.zegonDecision.predictedPlayerMove);
-  const zegonMove = labelAction(outcome.zegonDecision.zegonMove);
-  const playerMove = labelAction(outcome.playerAction);
+  const predicted = labelAction(outcome.zegonDecision.predictedPlayerMove, "predicted");
+  const zegonMove = labelAction(outcome.zegonDecision.zegonMove, "zegon");
+  const playerMove = labelAction(outcome.playerAction, "player");
 
   const lines: RoundSummaryLine[] = [
     {
@@ -75,15 +77,22 @@ export function buildRoundSummary(
     });
   }
 
-  lines.push({
-    text: `${strings.roundSummaryStreak}: ${outcome.readingStreakAfter}/${deadeyeStreak}`,
-    role: "delta",
-  });
+  if (outcome.deadeyeStillActive) {
+    lines.push({
+      text: strings.roundSummaryDeadeyeStillActive,
+      role: "note",
+    });
+  } else {
+    lines.push({
+      text: `${strings.roundSummaryStreak}: ${outcome.readingStreakAfter}/${deadeyeStreak}`,
+      role: "delta",
+    });
+  }
 
   if (outcome.playerDamage > 0) {
     const lives = damageToLives(outcome.playerDamage);
     const lifeWord = lives === 1 ? strings.lifeSingular : strings.lifePlural;
-    const lethal = lives >= 5;
+    const lethal = outcome.wasDeadeye && outcome.playerDamage > 20;
     lines.push({
       text: lethal
         ? strings.roundSummaryYouLostAllLives

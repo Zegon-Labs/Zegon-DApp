@@ -10,6 +10,7 @@ export * from "./state/duelStateMachine.js";
 export * from "./state/duelController.js";
 export * from "./ai/IZegonBrain.js";
 export * from "./ai/dummyZegonBrain.js";
+export * from "./ai/zegonTactics.js";
 export * from "./modes/dailySeed.js";
 export * from "./modes/challenge.js";
 export * from "./modes/zegonArchetypes.js";

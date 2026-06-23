@@ -1,12 +1,11 @@
 import {
   ALL_PLAYER_ACTIONS,
-  ALL_ZEGON_ACTIONS,
   PlayerAction,
   RoundContext,
-  ZegonAction,
   ZegonDecision,
 } from "../types/index.js";
 import { IZegonBrain } from "./IZegonBrain.js";
+import { createRoundRng, pickZegonMove } from "./zegonTactics.js";
 
 export type BrainLocale = "en" | "es";
 
@@ -51,22 +50,6 @@ function pickRandom<T>(arr: readonly T[], rng: () => number): T {
   return arr[Math.floor(rng() * arr.length)]!;
 }
 
-function createRng(seed?: string): () => number {
-  if (!seed) {
-    return Math.random;
-  }
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
-  }
-  return () => {
-    h = Math.imul(h ^ (h >>> 16), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
-  };
-}
-
 function detectPattern(
   history: readonly PlayerAction[],
   windowSize = 5,
@@ -99,24 +82,6 @@ function detectPattern(
   return { action: best, frequency: bestCount / window.length };
 }
 
-function counterMove(
-  predicted: PlayerAction,
-  rng: () => number,
-  dodgeBias = 0,
-): ZegonAction {
-  if (predicted === PlayerAction.FIRE) {
-    const dodgeChance = 0.45 + dodgeBias;
-    return rng() < dodgeChance ? ZegonAction.DODGE : ZegonAction.FIRE;
-  }
-  if (predicted === PlayerAction.DODGE) {
-    return ZegonAction.FIRE;
-  }
-  if (predicted === PlayerAction.USE_ITEM) {
-    return ZegonAction.FIRE;
-  }
-  return pickRandom(ALL_ZEGON_ACTIONS, rng);
-}
-
 function confidenceFromFrequency(frequency: number): number {
   return Math.min(1, Math.max(0.2, frequency));
 }
@@ -137,38 +102,35 @@ function tauntForConfidence(
 }
 
 export class DummyZegonBrain implements IZegonBrain {
-  private rng: () => number;
+  private baseSeed?: string;
   private readonly locale: BrainLocale;
 
   constructor(seed?: string, locale: BrainLocale = "en") {
-    this.rng = createRng(seed);
+    this.baseSeed = seed;
     this.locale = locale;
   }
 
   setSeed(seed?: string): void {
-    this.rng = createRng(seed);
+    this.baseSeed = seed;
   }
 
   async decide(ctx: RoundContext): Promise<ZegonDecision> {
+    const rng = createRoundRng(this.baseSeed, ctx);
     const pattern = detectPattern(ctx.playerHistory);
 
     let predicted: PlayerAction;
     let confidence: number;
 
     if (!pattern || ctx.playerHistory.length < 2) {
-      predicted = pickRandom(ALL_PLAYER_ACTIONS, this.rng);
-      confidence = 0.2 + this.rng() * 0.2;
+      predicted = pickRandom(ALL_PLAYER_ACTIONS, rng);
+      confidence = 0.2 + rng() * 0.2;
     } else {
       predicted = pattern.action;
       confidence = confidenceFromFrequency(pattern.frequency);
     }
 
-    const dodgeBias = ctx.modifiers?.zegonDodgeBias ?? 0;
-    let zegonMove = counterMove(predicted, this.rng, dodgeBias);
-    if (ctx.archetype === "gambler" && this.rng() < 0.38) {
-      zegonMove = pickRandom(ALL_ZEGON_ACTIONS, this.rng);
-    }
-    const taunt = tauntForConfidence(confidence, this.rng, this.locale);
+    const zegonMove = pickZegonMove(predicted, ctx, rng);
+    const taunt = tauntForConfidence(confidence, rng, this.locale);
 
     return {
       predictedPlayerMove: predicted,

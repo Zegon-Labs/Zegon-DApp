@@ -4,13 +4,16 @@ import {
   RoundContext,
   ZegonDecision,
   ALL_PLAYER_ACTIONS,
-  ALL_ZEGON_ACTIONS,
+  createRoundRng,
+  normalizePlayerAction,
+  pickZegonMove,
 } from "@zegon/game-core";
 import { createHash } from "node:crypto";
 
 const SYSTEM_PROMPT = `You are ZEGON, a blind gunslinger AI. You CANNOT see the opponent's current move.
-You receive ONLY their action history. Predict their NEXT action from patterns and choose your counter-move.
-Return ONLY JSON: {"predicted_player_move","zegon_move","confidence","taunt"}`;
+You receive ONLY their action history. Predict their NEXT action from patterns.
+Return ONLY JSON: {"predicted_player_move":"FIRE"|"DODGE"|"USE_ITEM","confidence":0.0-1.0,"taunt":"..."}
+Use uppercase action names. Do not include zegon_move — the server picks your counter-move.`;
 
 function buildUserPrompt(ctx: RoundContext): string {
   return JSON.stringify({
@@ -26,17 +29,21 @@ function buildUserPrompt(ctx: RoundContext): string {
   });
 }
 
-function parseDecision(raw: string): ZegonDecision | null {
+function parseDecision(raw: string, ctx: RoundContext, rngSeed?: string): ZegonDecision | null {
   try {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     const json = JSON.parse(jsonMatch?.[0] ?? raw) as Record<string, unknown>;
-    const predicted = json.predicted_player_move as PlayerAction;
-    const move = json.zegon_move as ZegonDecision["zegonMove"];
-    if (!ALL_PLAYER_ACTIONS.includes(predicted)) return null;
-    if (!ALL_ZEGON_ACTIONS.includes(move)) return null;
+    const predicted =
+      normalizePlayerAction(json.predicted_player_move) ??
+      normalizePlayerAction(json.predictedPlayerMove);
+    if (!predicted || !ALL_PLAYER_ACTIONS.includes(predicted)) return null;
+
+    const rng = createRoundRng(rngSeed, ctx);
+    const zegonMove = pickZegonMove(predicted, ctx, rng);
+
     return {
       predictedPlayerMove: predicted,
-      zegonMove: move,
+      zegonMove,
       confidence: Number(json.confidence) || 0.5,
       taunt: String(json.taunt || "The blind sees patterns."),
     };
@@ -186,7 +193,8 @@ export class OGComputeService {
       );
 
       const assistantText = extractAssistantContent(body);
-      const decision = parseDecision(assistantText);
+      const rngSeed = process.env.OG_MODEL ?? "glm-5-fp8";
+      const decision = parseDecision(assistantText, ctx, rngSeed);
       if (!decision) {
         throw new Error("Invalid TEE response JSON");
       }

@@ -45,7 +45,7 @@ export const DUEL_LAYOUT = {
     nameRowH: 26,
   },
 
-  roundToast: { x: 1180, y: 292, maxW: 260 },
+  roundToast: { x: 1180, y: 292, maxW: 300 },
 
   /** Top-right chrome — stacked hub buttons below blindsight panel. */
   chrome: {
@@ -69,11 +69,9 @@ export const DUEL_LAYOUT = {
     h: 100,
     centerY: 670,
 
-    // Texts just above the strip (origin 0.5,0 — top of text)
-    statusY: 514,
-    chooseActionY: 534,
-    duelTipY: 560,
-    actionDescY: 582,
+    // Texts above the strip — clear of player hand / revolver
+    statusY: 432,
+    chooseActionY: 458,
 
     // Life panel dimensions (same style as other HUD panels)
     panelW: 194,

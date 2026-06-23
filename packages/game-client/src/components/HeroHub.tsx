@@ -118,7 +118,32 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     }
   }
 
-  function startDaily() {
+  async function ensureWalletConnected(): Promise<string | null> {
+    if (wallet) return wallet;
+    if (!hasEthereumProvider()) {
+      notify.error(strings.walletNoProvider);
+      return null;
+    }
+    notify.info(strings.dailyWalletRequired);
+    try {
+      const address = await connectWallet();
+      setWallet(address);
+      notify.success(strings.walletConnected, truncateAddress(address));
+      if (!hasNickname(address)) {
+        const remote = await fetchProfile(address);
+        if (!remote?.nickname) onNeedsProfile?.(address);
+      }
+      return address;
+    } catch {
+      notify.error(strings.walletNoProvider);
+      return null;
+    }
+  }
+
+  async function startDaily() {
+    const address = await ensureWalletConnected();
+    if (!address) return;
+
     if (poolInfo?.configured && !staked) {
       notify.info(strings.dailyStakeRequired);
       return;
@@ -198,8 +223,9 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
               </button>
             )}
             {staked && <p className="daily-card__staked">{strings.dailyStakedBadge}</p>}
-            <button type="button" className="btn btn--secondary" onClick={startDaily}>
-              <span>{strings.dailyPlay}</span>
+            <button type="button" className={`btn btn--secondary${wallet ? "" : " btn--secondary-locked"}`} onClick={() => void startDaily()}>
+              {!wallet && <LockIcon />}
+              <span>{wallet ? strings.dailyPlay : strings.connectWallet}</span>
             </button>
           </div>
 
