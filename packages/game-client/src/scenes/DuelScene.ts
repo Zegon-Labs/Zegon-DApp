@@ -22,14 +22,13 @@ import {
 } from "../ui/components.js";
 import {
   ArenaView,
-  CombatHud,
-  type CombatHudOpts,
   createHubConfirmModal,
   createLandingBackdrop,
   DuelHistoryLog,
   preloadHistoryPanel,
   preloadLandingBackdrop,
   preloadResultPanelAssets,
+  preloadZegonDamagePortrait,
   RoundResultToast,
   PlayerHandSprite,
   preloadPlayerHand,
@@ -37,10 +36,8 @@ import {
   preloadActionAssets,
   TopHudBar,
   preloadTopHudBar,
-  preloadSideHudPanels,
   type SpriteActionEntry,
   itemDescription,
-  itemCooldownLabel,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { buildRoundSummary } from "../ui/roundSummary.js";
@@ -120,7 +117,6 @@ function formatSubmitError(err: unknown): string {
 export class DuelScene extends Phaser.Scene {
   private adapter!: GameCoreAdapter;
   private arenaView!: ArenaView;
-  private combatHud!: CombatHud;
   private spriteActionBar!: SpriteActionBar;
   private glitchOverlay!: Phaser.GameObjects.Container;
   private scanlines!: Phaser.GameObjects.Graphics;
@@ -169,7 +165,7 @@ export class DuelScene extends Phaser.Scene {
     preloadPlayerHand(this);
     preloadActionAssets(this);
     preloadTopHudBar(this);
-    preloadSideHudPanels(this);
+    preloadZegonDamagePortrait(this);
     preloadResultPanelAssets(this);
   }
 
@@ -203,23 +199,10 @@ export class DuelScene extends Phaser.Scene {
     stripGfx.lineStyle(1, C.blood, 0.6);
     stripGfx.strokeRoundedRect(sX, L.bottomStrip.y, sW, L.bottomStrip.h, 3);
 
-    // Top HUD bar — must be created before CombatHud so barDisplayH is known
     this.topHudBar = new TopHudBar(this, {
       onSettings: () => gameBridge.openSettingsOverlay(),
       onSurrender: () => this.showSurrenderConfirm(),
     });
-
-    const PANEL_H = 80;
-    const combatHudOpts: CombatHudOpts = { hideBlindsight: true };
-    this.combatHud = new CombatHud(this, 9, {
-      panelH: PANEL_H,
-      // Player panel: bottom-left, directly above the action strip
-      playerPanelX: 0,
-      playerPanelY: L.bottomStrip.y - PANEL_H - 16,
-      // ZEGON panel: top-right, just below the header bar
-      zegonPanelX: width,
-      zegonPanelY: 7,
-    }, combatHudOpts);
 
     this.historyLog = new DuelHistoryLog(this, strings.history, 12);
     this.roundResultToast = new RoundResultToast(this, 14);
@@ -461,12 +444,6 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private onRoundResolved(outcome: RoundOutcome): void {
-    const state = this.adapter.getState();
-    const playerHpNow = this.adapter.getPlayerHp();
-    const zegonHpNow = this.adapter.getZegonHp();
-    const prevPlayerHp = playerHpNow + outcome.playerDamage;
-    const prevZegonHp = zegonHpNow + outcome.zegonDamage;
-
     this.showRoundResult(outcome);
     playRoundOutcomeSfx({
       playerAction: outcome.playerAction,
@@ -484,15 +461,11 @@ export class DuelScene extends Phaser.Scene {
       this.triggerBlindsightSurge(outcome.blindsightDelta);
     }
     if (outcome.playerDamage > 0) {
-      const anchor = this.combatHud.playerDamageAnchor();
-      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
-      this.combatHud.playPlayerHit(prevPlayerHp, playerHpNow, state.config.initialPlayerHp);
+      showFloatingDamage(this, this.scale.width * 0.20, L.bottomStrip.y - 30, outcome.playerDamage, "player");
       this.arenaView.pulsePlayerHit();
     }
     if (outcome.zegonDamage > 0) {
-      const anchor = this.combatHud.zegonDamageAnchor();
-      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.zegonDamage, "zegon");
-      this.combatHud.playZegonHit(prevZegonHp, zegonHpNow, state.config.initialZegonHp);
+      showFloatingDamage(this, this.scale.width / 2, L.bottomStrip.arenaY - 20, outcome.zegonDamage, "zegon");
       this.playZegonHitFlash();
     } else if (
       playerFiredAction(outcome.playerAction) &&
@@ -702,17 +675,8 @@ export class DuelScene extends Phaser.Scene {
   private updateHud(): void {
     const strings = t();
     const state = this.adapter.getState();
-    const blindsight = this.adapter.getBlindsight();
     const readingStreak = this.adapter.getReadingStreak();
-    const itemCooldown = this.adapter.getItemCooldown();
     const equipped = this.adapter.getEquippedItem();
-    const taunt = this.adapter.getPendingTaunt();
-    const usingApi = shouldUseServerApi();
-    const brainTag = usingApi
-      ? this.adapter.getBrainMode() === "tee"
-        ? "0G TEE"
-        : "0G FALLBACK"
-      : "LOCAL";
 
     const lines = state.roundLogs.map((log, i) =>
       `R${i + 1} ${actionLabel(log.playerAction, log.itemUsed ?? equipped)}`.toUpperCase(),
@@ -724,35 +688,6 @@ export class DuelScene extends Phaser.Scene {
     });
 
     const deadeyeStreak = getEffectiveDeadeyeStreak(state.config.modifiers);
-    const deadeyeNear = readingStreak >= deadeyeStreak - 1;
-
-    const itemStatus = itemCooldownLabel(
-      itemCooldown,
-      strings.itemCooldownReady,
-      (n) => strings.itemCooldownIn.replace("{n}", String(n)),
-    );
-
-    this.combatHud.update({
-      playerHp: this.adapter.getPlayerHp(),
-      zegonHp: this.adapter.getZegonHp(),
-      playerMaxHp: state.config.initialPlayerHp,
-      zegonMaxHp: state.config.initialZegonHp,
-      blindsight,
-      readingStreak,
-      deadeyeStreak,
-      itemLabel: "",
-      itemStatus,
-      itemReady: itemCooldown <= 0,
-      itemCooldown,
-      playerLabel: strings.hudYou,
-      zegonLabel: strings.hudZegon,
-      hudItem: strings.hudItem,
-      hudStatus: strings.hudStatus,
-      blindsightLabel: `${strings.hudBlindsight}  ${readingStreak}/${deadeyeStreak}`,
-      blindsightFlavor: taunt ? `"${taunt}"` : strings.blindsightFlavor,
-      nextMoveHint: brainTag,
-      zegonStatus: deadeyeNear ? strings.deadeyeNear : undefined,
-    });
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
 
@@ -807,7 +742,6 @@ export class DuelScene extends Phaser.Scene {
     this.confirmModal = null;
     this.topHudBar?.destroy();
     this.adapter?.destroy();
-    this.combatHud?.destroy();
     this.spriteActionBar?.destroy();
     this.arenaView?.destroy();
     this.playerHandSprite?.destroy();

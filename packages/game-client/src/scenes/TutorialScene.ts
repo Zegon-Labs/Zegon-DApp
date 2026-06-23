@@ -25,6 +25,7 @@ import {
   createHubTutorialModal,
   createLandingBackdrop,
   preloadLandingBackdrop,
+  preloadResultPanelAssets,
   preloadSideHudPanels,
   type HubButtonHandle,
 } from "../ui/hub/index.js";
@@ -107,6 +108,7 @@ export class TutorialScene extends Phaser.Scene {
   preload(): void {
     preloadLandingBackdrop(this);
     preloadSideHudPanels(this);
+    preloadResultPanelAssets(this);
   }
 
   create(): void {

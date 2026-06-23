@@ -24,22 +24,24 @@ export function createHubTutorialModal(
   options: HubTutorialModalOptions,
 ): Phaser.GameObjects.Container {
   const { width, height } = scene.scale;
-  const depth     = options.depth ?? 120;
-  const PANEL_W   = options.maxWidth ?? 480;
-  const INNER_PAD_T = 65;  // clears utility_table's top silver border
-  const INNER_PAD_B = 55;
-  const INNER_PAD_H = 30;
-  const INNER_W   = PANEL_W - INNER_PAD_H * 2;
-  const BTN_H     = 52;
-  const BTN_W     = 400;
+  const depth   = options.depth ?? 120;
+  const PANEL_W = options.maxWidth ?? 660;
+  // INNER_W is fixed independently of PANEL_W so the text wrap width stays
+  // constant regardless of how wide the frame grows.
+  const INNER_W = 400;
+  const BTN_H   = 52;
+  const BTN_W   = 400;
+  // VT323 renders taller than the fallback monospace used during the sync
+  // measure. VTX_BUF pads panelH so the frame has enough height; VTX_GAP is
+  // the actual y-advance after body — smaller so the button sits higher up.
+  const VTX_BUF = 70;
+  const VTX_GAP = 45;
   const BADGE_H   = options.badge ? 18 : 0;
   const BADGE_GAP = options.badge ? 8  : 0;
-  const TITLE_H   = options.title ? 34 : 0;
-  const TITLE_GAP = options.title ? 12 : 0;
   const cx = options.centerX ?? width  / 2;
   const cy = options.centerY ?? height / 2 - 10;
 
-  // Measure body height before building the panel so panelH is exact.
+  // Measure body and title with sync text objects (fallback monospace).
   const measureBody = scene.add.text(0, 0, options.body, {
     fontFamily: FONT, fontSize: "16px",
     wordWrap: { width: INNER_W }, lineSpacing: 4,
@@ -47,9 +49,30 @@ export function createHubTutorialModal(
   const bodyH = measureBody.height;
   measureBody.destroy();
 
+  // Measure title dynamically — some titles wrap to 2 lines at this width.
+  let titleH = 0;
+  if (options.title) {
+    const mt = scene.add.text(0, 0, options.title, {
+      fontFamily: FONT_DISPLAY, fontSize: "28px",
+      wordWrap: { width: INNER_W }, letterSpacing: 2,
+    }).setVisible(false);
+    titleH = mt.height;
+    mt.destroy();
+  }
+  const TITLE_GAP = options.title ? 12 : 0;
+
+  // Two-pass panel height so INNER_PAD_T/B scale with the panel.
+  // utility_table's silver border is ~10.8 % from top and ~10.0 % from bottom
+  // (calibrated from the result panel at ~600 px height).
+  const rawH = Math.min(
+    65 + BADGE_H + BADGE_GAP + titleH + TITLE_GAP + bodyH + VTX_BUF + BTN_H + 55,
+    740,
+  );
+  const INNER_PAD_T = Math.max(55, Math.round(rawH * 0.108));
+  const INNER_PAD_B = Math.max(50, Math.round(rawH * 0.100));
   const panelH = Math.min(
-    INNER_PAD_T + BADGE_H + BADGE_GAP + TITLE_H + TITLE_GAP + bodyH + 20 + BTN_H + INNER_PAD_B,
-    660,
+    INNER_PAD_T + BADGE_H + BADGE_GAP + titleH + TITLE_GAP + bodyH + VTX_BUF + BTN_H + INNER_PAD_B,
+    740,
   );
 
   const root = scene.add.container(0, 0).setDepth(depth);
@@ -76,7 +99,7 @@ export function createHubTutorialModal(
   // ── Badge (e.g. "TIP · Lección 1/9") ─────────────────────────────────────
   if (options.badge) {
     panel.add(
-      scene.add.text(-INNER_W / 2, y, options.badge, {
+      scene.add.text(-INNER_W / 2 + 36, y + 16, options.badge, {
         fontFamily: FONT, fontSize: "14px",
         color: COLORS.dust, letterSpacing: 1,
       }).setOrigin(0, 0).setResolution(2),
@@ -87,13 +110,13 @@ export function createHubTutorialModal(
   // ── Title ─────────────────────────────────────────────────────────────────
   if (options.title) {
     panel.add(
-      scene.add.text(0, y + TITLE_H / 2, options.title, {
+      scene.add.text(0, y + titleH / 2, options.title, {
         fontFamily: FONT_DISPLAY, fontSize: "28px",
         color: COLORS.ember, align: "center",
         wordWrap: { width: INNER_W }, letterSpacing: 2,
       }).setOrigin(0.5, 0.5).setResolution(2),
     );
-    y += TITLE_H + TITLE_GAP;
+    y += titleH + TITLE_GAP;
   }
 
   // ── Body ──────────────────────────────────────────────────────────────────
@@ -104,7 +127,9 @@ export function createHubTutorialModal(
       wordWrap: { width: INNER_W }, lineSpacing: 4,
     }).setOrigin(0.5, 0).setResolution(2),
   );
-  y += bodyH + 20;
+  // Advance y by VTX_BUF (not a small fixed gap) so the button lands at the
+  // same position as the bottom of the black zone computed in panelH above.
+  y += bodyH + VTX_GAP;
 
   // ── Button ────────────────────────────────────────────────────────────────
   let dismissing = false;
@@ -126,10 +151,7 @@ export function createHubTutorialModal(
       .setOrigin(0.5, 0.5)
       .setDisplaySize(BTN_W, BTN_H)
       .setInteractive({ useHandCursor: true });
-    img
-      .on("pointerover",  () => img.setFrame(1))
-      .on("pointerout",   () => img.setFrame(1))
-      .on("pointerdown",  onDismiss);
+    img.on("pointerdown", onDismiss);
     panel.add(img);
   }
   panel.add(
