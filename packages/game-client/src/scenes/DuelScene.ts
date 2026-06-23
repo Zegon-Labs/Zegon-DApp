@@ -29,6 +29,7 @@ import {
   DuelHistoryLog,
   preloadHistoryPanel,
   preloadLandingBackdrop,
+  preloadResultPanelAssets,
   RoundResultToast,
   PlayerHandSprite,
   preloadPlayerHand,
@@ -169,6 +170,7 @@ export class DuelScene extends Phaser.Scene {
     preloadActionAssets(this);
     preloadTopHudBar(this);
     preloadSideHudPanels(this);
+    preloadResultPanelAssets(this);
   }
 
   create(): void {

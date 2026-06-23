@@ -1,7 +1,8 @@
 import Phaser from "phaser";
 import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
-import { createHubPrimaryButton, createHubSecondaryButton } from "./hubButton.js";
+import { createHubPrimaryButton } from "./hubButton.js";
 import { createHubPanelGraphics } from "./hubPanel.js";
+import { UTILITY_TABLE_KEY, BUTTON_STATES_KEY } from "./resultPanel.js";
 import { DUEL_LAYOUT as L, practiceStripCenterY } from "../layout.js";
 
 export interface HubTutorialModalOptions {
@@ -145,59 +146,79 @@ export function createHubConfirmModal(
   options: HubConfirmModalOptions,
 ): Phaser.GameObjects.Container {
   const { width, height } = scene.scale;
-  const depth = options.depth ?? 140;
-  const maxW = 460;
-  const padX = 22;
-  const padY = 18;
+  const depth  = options.depth ?? 140;
+  const PANEL_W  = 480;
+  const INNER_PAD_H = 30;
+  const INNER_W  = PANEL_W - INNER_PAD_H * 2;  // 420
+  const INNER_PAD_T = 65;   // clears utility_table's top silver border
+  const INNER_PAD_B = 55;
+  const BTN_H   = 52;
+  const BTN_GAP = 8;
+  const BTN_W   = 400;
   const cx = width / 2;
-  const cy = height / 2 - 10;
+  const cy = height / 2;
 
-  const root = scene.add.container(0, 0).setDepth(depth);
-
-  const dim = scene.add.rectangle(width / 2, height / 2, width, height, 0x030205, 0.82);
-  dim.setInteractive({ useHandCursor: false });
-  root.add(dim);
-
+  // Measure body height with the actual font/wrap settings
   const measureBody = scene.add.text(0, 0, options.body, {
-    fontFamily: FONT,
-    fontSize: "24px",
-    color: COLORS.bone,
-    wordWrap: { width: maxW - padX * 2 },
-    lineSpacing: 8,
+    fontFamily: FONT, fontSize: "16px",
+    wordWrap: { width: INNER_W }, lineSpacing: 4,
   }).setVisible(false);
-
-  const titleH = 33;
-  const bodyH = measureBody.height;
-  const btnH = 48;
-  const btnGap = 10;
-  const panelH = padY + titleH + 10 + bodyH + 14 + btnH + btnGap + btnH + padY;
+  const bodyH   = measureBody.height;
+  const TITLE_H = 34;
   measureBody.destroy();
 
+  const panelH = Math.min(
+    INNER_PAD_T + TITLE_H + 16 + bodyH + 20 + BTN_H + BTN_GAP + BTN_H + INNER_PAD_B,
+    600,
+  );
+
+  const root  = scene.add.container(0, 0).setDepth(depth);
+  const dim   = scene.add
+    .rectangle(width / 2, height / 2, width, height, 0x030205, 0.82)
+    .setInteractive({ useHandCursor: false });
+  root.add(dim);
+
   const panel = scene.add.container(cx, cy);
-  panel.add(createHubPanelGraphics(scene, maxW, panelH));
 
+  // ── Background: utility_table ─────────────────────────────────────────────
+  if (scene.textures.exists(UTILITY_TABLE_KEY)) {
+    panel.add(
+      scene.add.image(0, 0, UTILITY_TABLE_KEY)
+        .setOrigin(0.5, 0.5)
+        .setDisplaySize(PANEL_W, panelH),
+    );
+  }
+
+  const topY = -panelH / 2;
+  let y = topY + INNER_PAD_T;
+
+  // ── Title ─────────────────────────────────────────────────────────────────
   panel.add(
-    scene.add.text(0, -panelH / 2 + padY + titleH / 2, options.title, {
+    scene.add.text(0, y + TITLE_H / 2, options.title, {
       fontFamily: FONT_DISPLAY,
-      fontSize: "33px",
-      color: COLORS.ember,
-      align: "center",
-      wordWrap: { width: maxW - padX * 2 },
+      fontSize:   "28px",
+      color:      COLORS.ember,
+      align:      "center",
       letterSpacing: 2,
-    }).setOrigin(0.5, 0.5),
+    }).setOrigin(0.5, 0.5).setResolution(2),
   );
+  y += TITLE_H + 16;
 
+  // ── Body ──────────────────────────────────────────────────────────────────
   panel.add(
-    scene.add.text(-maxW / 2 + padX, -panelH / 2 + padY + titleH + 10, options.body, {
+    scene.add.text(0, y, options.body, {
       fontFamily: FONT,
-      fontSize: "24px",
-      color: COLORS.bone,
-      wordWrap: { width: maxW - padX * 2 },
-      lineSpacing: 8,
-    }).setOrigin(0, 0),
+      fontSize:   "16px",
+      color:      COLORS.bone,
+      align:      "center",
+      wordWrap:   { width: INNER_W },
+      lineSpacing: 4,
+    }).setOrigin(0.5, 0).setResolution(2),
   );
+  y += bodyH + 20;
 
-  const btnW = maxW - padX * 2;
+  // ── Buttons ───────────────────────────────────────────────────────────────
+  const hasSS = scene.textures.exists(BUTTON_STATES_KEY);
   let dismissing = false;
 
   const dismiss = (then: () => void): void => {
@@ -205,41 +226,52 @@ export function createHubConfirmModal(
     dismissing = true;
     scene.tweens.add({
       targets: panel,
-      alpha: 0,
-      scaleX: 0.94,
-      scaleY: 0.94,
-      y: cy + 12,
-      duration: 220,
-      ease: "Sine.In",
-      onComplete: () => {
-        root.destroy(true);
-        then();
-      },
+      alpha: 0, scaleX: 0.94, scaleY: 0.94, y: cy + 12,
+      duration: 220, ease: "Sine.In",
+      onComplete: () => { root.destroy(true); then(); },
     });
   };
 
-  const confirmBtn = createHubPrimaryButton(scene, options.confirmLabel, () => {
-    dismiss(options.onConfirm);
-  }, btnW);
-  confirmBtn.container.setPosition(0, panelH / 2 - padY - btnH - btnGap - btnH / 2);
-  panel.add(confirmBtn.container);
+  const addBtn = (
+    btnY: number, label: string, isPrimary: boolean, onClick: () => void,
+  ): void => {
+    if (hasSS) {
+      const startFrame = isPrimary ? 1 : 0;
+      const img = scene.add
+        .image(0, btnY, BUTTON_STATES_KEY, startFrame)
+        .setOrigin(0.5, 0.5)
+        .setDisplaySize(BTN_W, BTN_H)
+        .setInteractive({ useHandCursor: true });
+      img
+        .on("pointerover",  () => img.setFrame(1))
+        .on("pointerout",   () => img.setFrame(startFrame))
+        .on("pointerdown",  onClick);
+      panel.add(img);
+    }
+    panel.add(
+      scene.add.text(0, btnY, label, {
+        fontFamily: FONT_DISPLAY,
+        fontSize:   "11px",
+        color:      isPrimary ? COLORS.ember : "#cccccc",
+        letterSpacing: 2,
+      }).setOrigin(0.5, 0.5).setResolution(2),
+    );
+    if (!hasSS) {
+      const hit = scene.add.rectangle(0, btnY, BTN_W, BTN_H, 0x000000, 0)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerdown", onClick);
+      panel.add(hit);
+    }
+  };
 
-  const cancelBtn = createHubSecondaryButton(scene, options.cancelLabel, () => {
-    dismiss(options.onCancel);
-  }, btnW);
-  cancelBtn.container.setPosition(0, panelH / 2 - padY - btnH / 2);
-  panel.add(cancelBtn.container);
+  addBtn(y + BTN_H / 2, options.confirmLabel, true,  () => dismiss(options.onConfirm));
+  addBtn(y + BTN_H + BTN_GAP + BTN_H / 2, options.cancelLabel, false, () => dismiss(options.onCancel));
 
   root.add(panel);
-  panel.setAlpha(0);
-  panel.setScale(0.92);
+  panel.setAlpha(0).setScale(0.92);
   scene.tweens.add({
-    targets: panel,
-    alpha: 1,
-    scaleX: 1,
-    scaleY: 1,
-    duration: 320,
-    ease: "Back.out",
+    targets: panel, alpha: 1, scaleX: 1, scaleY: 1,
+    duration: 320, ease: "Back.out",
   });
 
   return root;
