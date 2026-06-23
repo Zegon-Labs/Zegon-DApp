@@ -22,12 +22,14 @@ import {
 } from "../ui/components.js";
 import {
   ArenaView,
+  CombatHud,
   createHubConfirmModal,
   createLandingBackdrop,
   DuelHistoryLog,
   preloadHistoryPanel,
   preloadLandingBackdrop,
   preloadResultPanelAssets,
+  preloadSideHudPanels,
   preloadZegonDamagePortrait,
   RoundResultToast,
   PlayerHandSprite,
@@ -134,6 +136,7 @@ export class DuelScene extends Phaser.Scene {
   private showingRoundResult = false;
   private confirmModal: Phaser.GameObjects.Container | null = null;
   private topHudBar!: TopHudBar;
+  private combatHud!: CombatHud;
   private bootToken = 0;
   private zegonReadingActive = false;
   private readingDotsPhase = 0;
@@ -165,6 +168,7 @@ export class DuelScene extends Phaser.Scene {
     preloadPlayerHand(this);
     preloadActionAssets(this);
     preloadTopHudBar(this);
+    preloadSideHudPanels(this);
     preloadZegonDamagePortrait(this);
     preloadResultPanelAssets(this);
   }
@@ -191,13 +195,8 @@ export class DuelScene extends Phaser.Scene {
     // Player hand + revolver — first-person overlay above arena, below strip.
     this.playerHandSprite = new PlayerHandSprite(this, 6);
 
-    // Unified bottom action strip — life panels + buttons live inside this band.
-    const stripGfx = this.add.graphics().setDepth(8);
-    const sX = 4, sW = width - 8;
-    stripGfx.fillStyle(C.ash, 0.82);
-    stripGfx.fillRoundedRect(sX, L.bottomStrip.y, sW, L.bottomStrip.h, 3);
-    stripGfx.lineStyle(1, C.blood, 0.6);
-    stripGfx.strokeRoundedRect(sX, L.bottomStrip.y, sW, L.bottomStrip.h, 3);
+
+    this.combatHud = new CombatHud(this, 9, undefined, { hideBlindsight: true });
 
     this.topHudBar = new TopHudBar(this, {
       onSettings: () => gameBridge.openSettingsOverlay(),
@@ -444,6 +443,12 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private onRoundResolved(outcome: RoundOutcome): void {
+    const state = this.adapter.getState();
+    const playerHpNow = this.adapter.getPlayerHp();
+    const zegonHpNow = this.adapter.getZegonHp();
+    const prevPlayerHp = playerHpNow + outcome.playerDamage;
+    const prevZegonHp = zegonHpNow + outcome.zegonDamage;
+
     this.showRoundResult(outcome);
     playRoundOutcomeSfx({
       playerAction: outcome.playerAction,
@@ -461,11 +466,15 @@ export class DuelScene extends Phaser.Scene {
       this.triggerBlindsightSurge(outcome.blindsightDelta);
     }
     if (outcome.playerDamage > 0) {
-      showFloatingDamage(this, this.scale.width * 0.20, L.bottomStrip.y - 30, outcome.playerDamage, "player");
+      const anchor = this.combatHud.playerDamageAnchor();
+      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
+      this.combatHud.playPlayerHit(prevPlayerHp, playerHpNow, state.config.initialPlayerHp);
       this.arenaView.pulsePlayerHit();
     }
     if (outcome.zegonDamage > 0) {
-      showFloatingDamage(this, this.scale.width / 2, L.bottomStrip.arenaY - 20, outcome.zegonDamage, "zegon");
+      const anchor = this.combatHud.zegonDamageAnchor();
+      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.zegonDamage, "zegon");
+      this.combatHud.playZegonHit(prevZegonHp, zegonHpNow, state.config.initialZegonHp);
       this.playZegonHitFlash();
     } else if (
       playerFiredAction(outcome.playerAction) &&
@@ -675,6 +684,7 @@ export class DuelScene extends Phaser.Scene {
   private updateHud(): void {
     const strings = t();
     const state = this.adapter.getState();
+    const blindsight = this.adapter.getBlindsight();
     const readingStreak = this.adapter.getReadingStreak();
     const equipped = this.adapter.getEquippedItem();
 
@@ -689,8 +699,29 @@ export class DuelScene extends Phaser.Scene {
 
     const deadeyeStreak = getEffectiveDeadeyeStreak(state.config.modifiers);
 
-    this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
+    const itemCooldown = this.adapter.getItemCooldown();
+    this.combatHud.update({
+      playerHp: this.adapter.getPlayerHp(),
+      zegonHp: this.adapter.getZegonHp(),
+      playerMaxHp: state.config.initialPlayerHp,
+      zegonMaxHp: state.config.initialZegonHp,
+      blindsight,
+      readingStreak,
+      deadeyeStreak,
+      itemLabel: "",
+      itemStatus: "",
+      itemReady: itemCooldown <= 0,
+      itemCooldown,
+      playerLabel: strings.hudYou,
+      zegonLabel: strings.hudZegon,
+      hudItem: strings.hudItem,
+      hudStatus: strings.hudStatus,
+      blindsightLabel: `${strings.hudBlindsight}  ${readingStreak}/${deadeyeStreak}`,
+      blindsightFlavor: strings.blindsightFlavor,
+      nextMoveHint: "",
+    });
 
+    this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
     this.updateDuelTip();
   }
 
@@ -741,6 +772,7 @@ export class DuelScene extends Phaser.Scene {
     this.confirmModal?.destroy(true);
     this.confirmModal = null;
     this.topHudBar?.destroy();
+    this.combatHud?.destroy();
     this.adapter?.destroy();
     this.spriteActionBar?.destroy();
     this.arenaView?.destroy();

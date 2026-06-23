@@ -31,9 +31,11 @@ export {
 } from "./hubButton.js";
 export {
   createHubTutorialModal,
+  preloadTutorialPanelAssets,
   createHubConfirmModal,
   createHubPracticeStrip,
   createHubPromptBar,
+  RACHA_PANEL_KEY,
   type HubTutorialModalOptions,
   type HubConfirmModalOptions,
 } from "./tutorialModal.js";

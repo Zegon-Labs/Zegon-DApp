@@ -1,9 +1,17 @@
 import Phaser from "phaser";
 import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
-import { createHubPrimaryButton } from "./hubButton.js";
+import { playUiClick, playUiHover } from "../../services/sfx.js";
 import { createHubPanelGraphics } from "./hubPanel.js";
 import { UTILITY_TABLE_KEY, BUTTON_STATES_KEY } from "./resultPanel.js";
 import { DUEL_LAYOUT as L, practiceStripCenterY } from "../layout.js";
+
+export const RACHA_PANEL_KEY = "racha-panel";
+
+export function preloadTutorialPanelAssets(scene: Phaser.Scene): void {
+  if (!scene.textures.exists(RACHA_PANEL_KEY)) {
+    scene.load.image(RACHA_PANEL_KEY, "/sprites/racha_panel.png");
+  }
+}
 
 export interface HubTutorialModalOptions {
   title?: string;
@@ -325,46 +333,69 @@ export function createHubPracticeStrip(
   depth = 55,
 ): Phaser.GameObjects.Container {
   const { width } = scene.scale;
-  const maxW = Math.min(780, width - 48);
-  const padX = 20;
-  const padY = 14;
+  const panelW = Math.min(820, width - 80);
+  const panelH = Math.round(panelW * (627 / 2508));
+  const innerPadX = Math.round(panelW * 0.12);
+  const rightPadX = Math.round(panelW * 0.15);
+  const innerPadTop = Math.round(panelH * 0.33);
+  const buttonW = 170;
+  const buttonH = 62;
+  const buttonGap = 24;
+  const textW = panelW - innerPadX - rightPadX - buttonW - buttonGap;
   const cx = width / 2;
 
   const root = scene.add.container(0, 0).setDepth(depth);
   const measureBody = scene.add.text(0, 0, options.body, {
     fontFamily: FONT,
-    fontSize: "22px",
+    fontSize: "21px",
     color: COLORS.bone,
-    wordWrap: { width: maxW - padX * 2 - 180 },
+    wordWrap: { width: textW },
     lineSpacing: 6,
   }).setVisible(false);
-
-  const panelH = Math.max(96, measureBody.height + padY * 2 + 12);
+  const bodyH = measureBody.height;
   measureBody.destroy();
+
   const cy = practiceStripCenterY(panelH);
-
   const panel = scene.add.container(cx, cy);
-  panel.add(createHubPanelGraphics(scene, maxW, panelH));
+
+  if (scene.textures.exists(RACHA_PANEL_KEY)) {
+    panel.add(
+      scene.add.image(0, 0, RACHA_PANEL_KEY)
+        .setOrigin(0.5, 0.5)
+        .setDisplaySize(panelW, panelH),
+    );
+  } else {
+    panel.add(createHubPanelGraphics(scene, panelW, panelH));
+  }
+
+  const textX = -panelW / 2 + innerPadX;
+  const badgeY = -panelH / 2 + innerPadTop;
+  const bodyY = Math.min(badgeY + 34, panelH / 2 - innerPadTop - bodyH - 4);
 
   panel.add(
-    scene.add.text(-maxW / 2 + padX, -panelH / 2 + padY, options.badge, {
+    scene.add.text(textX, badgeY, options.badge, {
       fontFamily: FONT,
-      fontSize: "17px",
+      fontSize: "16px",
       color: COLORS.dust,
-    }).setOrigin(0, 0),
+      wordWrap: { width: textW },
+    }).setOrigin(0, 0).setResolution(2),
   );
 
   panel.add(
-    scene.add.text(-maxW / 2 + padX, -panelH / 2 + padY + 20, options.body, {
+    scene.add.text(textX, bodyY, options.body, {
       fontFamily: FONT,
-      fontSize: "22px",
+      fontSize: "21px",
       color: COLORS.bone,
-      wordWrap: { width: maxW - padX * 2 - 190 },
+      wordWrap: { width: textW },
       lineSpacing: 6,
-    }).setOrigin(0, 0),
+    }).setOrigin(0, 0).setResolution(2),
   );
 
-  const btn = createHubPrimaryButton(scene, options.buttonLabel, () => {
+  let dismissing = false;
+  const dismiss = (): void => {
+    if (dismissing) return;
+    dismissing = true;
+    playUiClick();
     scene.tweens.add({
       targets: panel,
       alpha: 0,
@@ -375,9 +406,41 @@ export function createHubPracticeStrip(
         options.onDismiss();
       },
     });
-  }, 120);
-  btn.container.setPosition(maxW / 2 - padX - 62, 0);
-  panel.add(btn.container);
+  };
+
+  const btnX = panelW / 2 - rightPadX - buttonW / 2;
+  if (scene.textures.exists(BUTTON_STATES_KEY)) {
+    const btn = scene.add
+      .sprite(btnX, 0, BUTTON_STATES_KEY, 0)
+      .setOrigin(0.5, 0.5)
+      .setDisplaySize(buttonW, buttonH)
+      .setInteractive({ useHandCursor: true });
+    btn
+      .on("pointerover", () => {
+        if (dismissing) return;
+        playUiHover();
+        btn.setFrame(1);
+      })
+      .on("pointerout", () => btn.setFrame(0))
+      .on("pointerdown", dismiss);
+    panel.add(btn);
+  } else {
+    const hit = scene.add.rectangle(btnX, 0, buttonW, buttonH, C.blood, 0.45)
+      .setStrokeStyle(2, C.ember, 0.8)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", dismiss);
+    panel.add(hit);
+  }
+
+  panel.add(
+    scene.add.text(btnX, 0, options.buttonLabel, {
+      fontFamily: FONT_DISPLAY,
+      fontSize: "24px",
+      color: COLORS.bone,
+      letterSpacing: 1,
+      align: "center",
+    }).setOrigin(0.5, 0.5).setResolution(2),
+  );
 
   root.add(panel);
   panel.setAlpha(0);
