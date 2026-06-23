@@ -1,10 +1,46 @@
 import Phaser from "phaser";
 import { DUEL_LAYOUT as L, chromeButtonCenterX } from "../layout.js";
+import { playUiClick, playUiHover } from "../../services/sfx.js";
 import {
   createHubSecondaryButton,
   type HubButtonHandle,
 } from "./hubButton.js";
 
+
+function createSettingsGear(
+  scene: Phaser.Scene,
+  label: string,
+  onClick: () => void,
+): HubButtonHandle {
+  const text = scene.add.text(0, 0, label, {
+    fontFamily: "Arial, sans-serif",
+    fontSize: "30px",
+    color: "#ff4d2e",
+  }).setOrigin(0.5, 0.5).setResolution(2);
+
+  const hit = scene.add.rectangle(0, 0, 44, 44, 0x000000, 0)
+    .setInteractive({ useHandCursor: true });
+
+  const container = scene.add.container(0, 0, [hit, text]);
+  hit
+    .on("pointerover", () => {
+      playUiHover();
+      text.setColor("#ff3333");
+    })
+    .on("pointerout", () => text.setColor("#ff4d2e"))
+    .on("pointerdown", () => {
+      playUiClick();
+      onClick();
+    });
+
+  return {
+    container,
+    setLabel(next: string) {
+      text.setText(next);
+    },
+    destroy: () => container.destroy(true),
+  };
+}
 export interface HubGameChromeOptions {
   skip?: { label: string; onClick: () => void };
   settings?: {
@@ -50,12 +86,7 @@ export function createHubGameChrome(
     let y = L.chrome.panelY + L.chrome.buttonH / 2;
 
     if (options.settings) {
-      const btn = createHubSecondaryButton(
-        scene,
-        options.settings.label,
-        options.settings.onClick,
-        L.chrome.buttonW,
-      );
+      const btn = createSettingsGear(scene, options.settings.label, options.settings.onClick);
       btn.container.setPosition(cx, y).setDepth(depth);
       handles.push(btn);
       y += L.chrome.buttonH + L.chrome.buttonGap;
@@ -82,12 +113,7 @@ export function createHubGameChrome(
       settingsCorner === "top-right"
         ? width - L.chrome.marginX - 80
         : L.chrome.marginX + 80;
-    const btn = createHubSecondaryButton(
-      scene,
-      options.settings.label,
-      options.settings.onClick,
-      160,
-    );
+    const btn = createSettingsGear(scene, options.settings.label, options.settings.onClick);
     btn.container
       .setPosition(cx, (options.settings.y ?? L.chrome.skipY) + L.chrome.buttonH / 2)
       .setDepth(depth);

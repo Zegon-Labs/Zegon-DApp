@@ -1682,6 +1682,29 @@ html.zegon-reduced-motion .hero__footer-built:hover {
   border-color: var(--blood);
   background: rgba(179,18,43,0.12);
 }
+.hero__settings-gear {
+  align-self: center;
+  justify-self: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ember);
+  font-family: Arial, sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+  text-shadow: 0 0 8px rgba(255, 77, 46, 0.55);
+}
+
+.hero__settings-gear:hover,
+.hero__settings-gear:focus-visible {
+  color: var(--blood);
+  background: transparent;
+  outline: none;
+  text-shadow: 0 0 12px rgba(255, 77, 46, 0.85);
+}
 
 .btn--tutorial {
   margin-bottom: 10px;

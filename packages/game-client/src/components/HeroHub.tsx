@@ -236,10 +236,12 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             </button>
             <button
               type="button"
-              className="btn btn--menu"
+              className="hero__settings-gear"
+              aria-label={strings.settings}
+              title={strings.settings}
               onClick={() => gameBridge.navigate({ type: "settings" })}
             >
-              {strings.settings}
+              {"\u2699"}
             </button>
           </div>
 

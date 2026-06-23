@@ -10,6 +10,7 @@ import {
 } from "../services/wallet.js";
 import { isTutorialDone } from "../tutorial/steps.js";
 import { createHubAccentMenuButton, createHubMenuButton, addHubLogo, preloadHubLogo } from "../ui/hub/index.js";
+import { playUiClick, playUiHover } from "../services/sfx.js";
 import { createSmallButton, drawScanlines } from "../ui/components.js";
 import { titleButtonY, TITLE_LAYOUT } from "../ui/layout.js";
 import { C, COLORS, FONT } from "../ui/theme.js";
@@ -64,9 +65,21 @@ export class TitleScene extends Phaser.Scene {
       this.scene.start("LeaderboardScene");
     });
 
-    createHubMenuButton(this, width / 2, titleButtonY(4), strings.settings, () => {
-      this.scene.start("SettingsScene");
-    });
+    const settingsGear = this.add.text(width / 2, titleButtonY(4), "\u2699", {
+      fontFamily: "Arial, sans-serif",
+      fontSize: "34px",
+      color: COLORS.ember,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    settingsGear
+      .on("pointerover", () => {
+        playUiHover();
+        settingsGear.setColor(COLORS.blood);
+      })
+      .on("pointerout", () => settingsGear.setColor(COLORS.ember))
+      .on("pointerdown", () => {
+        playUiClick();
+        this.scene.start("SettingsScene");
+      });
 
     this.add.text(width / 2, TITLE_LAYOUT.footerY, strings.hubFooter, {
       fontFamily: FONT,

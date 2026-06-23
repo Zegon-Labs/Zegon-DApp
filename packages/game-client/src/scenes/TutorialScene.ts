@@ -182,7 +182,7 @@ export class TutorialScene extends Phaser.Scene {
         },
       },
       settings: {
-        label: strings.settings,
+        label: "\u2699",
         onClick: () => gameBridge.openSettingsOverlay(),
       },
     });
@@ -358,7 +358,7 @@ export class TutorialScene extends Phaser.Scene {
       this.chromeHandles[0].setLabel(strings.tutorialSkip);
     }
     if (this.chromeHandles[1]) {
-      this.chromeHandles[1].setLabel(strings.settings);
+      this.chromeHandles[1].setLabel("\u2699");
     }
     this.updateHud();
   }

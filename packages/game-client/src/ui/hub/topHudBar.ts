@@ -130,7 +130,7 @@ export class TopHudBar {
 
     // ── RIGHT WING: Settings ⚙ and Surrender ⚑ ───────────────────────────
     const settingsBtn = scene.add
-      .text(settingsX, wingCenterY, "⚙", {
+      .text(settingsX, wingCenterY, "\u2699", {
         fontFamily: "Arial, sans-serif", fontSize: "22px", color: "#cc0000",
       })
       .setOrigin(0.5, 0.5)
