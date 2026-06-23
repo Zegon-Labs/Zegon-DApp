@@ -24,107 +24,126 @@ export function createHubTutorialModal(
   options: HubTutorialModalOptions,
 ): Phaser.GameObjects.Container {
   const { width, height } = scene.scale;
-  const depth = options.depth ?? 120;
-  const maxW = options.maxWidth ?? 480;
-  const padX = 22;
-  const padY = 18;
-  const cx = options.centerX ?? width / 2;
+  const depth     = options.depth ?? 120;
+  const PANEL_W   = options.maxWidth ?? 480;
+  const INNER_PAD_T = 65;  // clears utility_table's top silver border
+  const INNER_PAD_B = 55;
+  const INNER_PAD_H = 30;
+  const INNER_W   = PANEL_W - INNER_PAD_H * 2;
+  const BTN_H     = 52;
+  const BTN_W     = 400;
+  const BADGE_H   = options.badge ? 18 : 0;
+  const BADGE_GAP = options.badge ? 8  : 0;
+  const TITLE_H   = options.title ? 34 : 0;
+  const TITLE_GAP = options.title ? 12 : 0;
+  const cx = options.centerX ?? width  / 2;
   const cy = options.centerY ?? height / 2 - 10;
 
-  const root = scene.add.container(0, 0).setDepth(depth);
-
-  const dim = scene.add.rectangle(width / 2, height / 2, width, height, 0x030205, 0.78);
-  dim.setInteractive({ useHandCursor: false });
-  root.add(dim);
-
+  // Measure body height before building the panel so panelH is exact.
   const measureBody = scene.add.text(0, 0, options.body, {
-    fontFamily: FONT,
-    fontSize: "24px",
-    color: COLORS.bone,
-    wordWrap: { width: maxW - padX * 2 },
-    lineSpacing: 8,
+    fontFamily: FONT, fontSize: "16px",
+    wordWrap: { width: INNER_W }, lineSpacing: 4,
   }).setVisible(false);
-
-  const badgeH = options.badge ? 16 : 0;
-  const titleH = options.title ? 28 : 0;
   const bodyH = measureBody.height;
-  const btnH = 44;
-  const gap = 10;
-  const panelH =
-    padY + badgeH + (badgeH ? gap : 0) + titleH + (titleH ? gap : 0) + bodyH + gap + btnH + padY;
   measureBody.destroy();
 
+  const panelH = Math.min(
+    INNER_PAD_T + BADGE_H + BADGE_GAP + TITLE_H + TITLE_GAP + bodyH + 20 + BTN_H + INNER_PAD_B,
+    660,
+  );
+
+  const root = scene.add.container(0, 0).setDepth(depth);
+  const dim  = scene.add
+    .rectangle(width / 2, height / 2, width, height, 0x030205, 0.78)
+    .setInteractive({ useHandCursor: false });
+  root.add(dim);
+
   const panel = scene.add.container(cx, cy);
-  const panelGfx = createHubPanelGraphics(scene, maxW, panelH);
-  panel.add(panelGfx);
 
-  let y = -panelH / 2 + padY;
+  // ── Background: utility_table ─────────────────────────────────────────────
+  if (scene.textures.exists(UTILITY_TABLE_KEY)) {
+    panel.add(
+      scene.add.image(0, 0, UTILITY_TABLE_KEY)
+        .setOrigin(0.5, 0.5)
+        .setDisplaySize(PANEL_W, panelH),
+    );
+  } else {
+    panel.add(createHubPanelGraphics(scene, PANEL_W, panelH));
+  }
 
+  let y = -panelH / 2 + INNER_PAD_T;
+
+  // ── Badge (e.g. "TIP · Lección 1/9") ─────────────────────────────────────
   if (options.badge) {
-    const badge = scene.add.text(-maxW / 2 + padX, y, options.badge, {
-      fontFamily: FONT,
-      fontSize: "18px",
-      color: COLORS.dust,
-      letterSpacing: 1,
-    }).setOrigin(0, 0);
-    panel.add(badge);
-    y += badgeH + gap;
+    panel.add(
+      scene.add.text(-INNER_W / 2, y, options.badge, {
+        fontFamily: FONT, fontSize: "14px",
+        color: COLORS.dust, letterSpacing: 1,
+      }).setOrigin(0, 0).setResolution(2),
+    );
+    y += BADGE_H + BADGE_GAP;
   }
 
+  // ── Title ─────────────────────────────────────────────────────────────────
   if (options.title) {
-    const title = scene.add.text(0, y + titleH / 2, options.title, {
-      fontFamily: FONT_DISPLAY,
-      fontSize: "33px",
-      color: COLORS.ember,
-      align: "center",
-      wordWrap: { width: maxW - padX * 2 },
-      letterSpacing: 2,
-    }).setOrigin(0.5, 0.5);
-    panel.add(title);
-    y += titleH + gap;
+    panel.add(
+      scene.add.text(0, y + TITLE_H / 2, options.title, {
+        fontFamily: FONT_DISPLAY, fontSize: "28px",
+        color: COLORS.ember, align: "center",
+        wordWrap: { width: INNER_W }, letterSpacing: 2,
+      }).setOrigin(0.5, 0.5).setResolution(2),
+    );
+    y += TITLE_H + TITLE_GAP;
   }
 
-  const body = scene.add.text(-maxW / 2 + padX, y, options.body, {
-    fontFamily: FONT,
-    fontSize: "24px",
-    color: COLORS.bone,
-    wordWrap: { width: maxW - padX * 2 },
-    lineSpacing: 8,
-  }).setOrigin(0, 0);
-  panel.add(body);
+  // ── Body ──────────────────────────────────────────────────────────────────
+  panel.add(
+    scene.add.text(0, y, options.body, {
+      fontFamily: FONT, fontSize: "16px",
+      color: COLORS.bone, align: "center",
+      wordWrap: { width: INNER_W }, lineSpacing: 4,
+    }).setOrigin(0.5, 0).setResolution(2),
+  );
+  y += bodyH + 20;
 
+  // ── Button ────────────────────────────────────────────────────────────────
   let dismissing = false;
-  const btn = createHubPrimaryButton(scene, options.buttonLabel, () => {
+  const onDismiss = (): void => {
     if (dismissing) return;
     dismissing = true;
     scene.tweens.add({
       targets: panel,
-      alpha: 0,
-      scaleX: 0.94,
-      scaleY: 0.94,
-      y: cy + 12,
-      duration: 220,
-      ease: "Sine.In",
-      onComplete: () => {
-        root.destroy(true);
-        options.onDismiss();
-      },
+      alpha: 0, scaleX: 0.94, scaleY: 0.94, y: cy + 12,
+      duration: 220, ease: "Sine.In",
+      onComplete: () => { root.destroy(true); options.onDismiss(); },
     });
-  }, Math.min(200, maxW - padX * 2));
-  btn.container.setPosition(0, panelH / 2 - padY - btnH / 2);
-  panel.add(btn.container);
+  };
+
+  const btnY = y + BTN_H / 2;
+  if (scene.textures.exists(BUTTON_STATES_KEY)) {
+    const img = scene.add
+      .image(0, btnY, BUTTON_STATES_KEY, 1)
+      .setOrigin(0.5, 0.5)
+      .setDisplaySize(BTN_W, BTN_H)
+      .setInteractive({ useHandCursor: true });
+    img
+      .on("pointerover",  () => img.setFrame(1))
+      .on("pointerout",   () => img.setFrame(1))
+      .on("pointerdown",  onDismiss);
+    panel.add(img);
+  }
+  panel.add(
+    scene.add.text(0, btnY, options.buttonLabel, {
+      fontFamily: FONT_DISPLAY, fontSize: "11px",
+      color: COLORS.ember, letterSpacing: 2,
+    }).setOrigin(0.5, 0.5).setResolution(2),
+  );
 
   root.add(panel);
-
-  panel.setAlpha(0);
-  panel.setScale(0.92);
+  panel.setAlpha(0).setScale(0.92);
   scene.tweens.add({
-    targets: panel,
-    alpha: 1,
-    scaleX: 1,
-    scaleY: 1,
-    duration: 320,
-    ease: "Back.out",
+    targets: panel, alpha: 1, scaleX: 1, scaleY: 1,
+    duration: 320, ease: "Back.out",
   });
 
   return root;
