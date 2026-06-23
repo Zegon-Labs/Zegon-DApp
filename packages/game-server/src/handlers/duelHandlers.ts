@@ -8,6 +8,7 @@ import {
   buildChallengeUrl,
   createDailyDuel,
   DEFAULT_DUEL_CONFIG,
+  withUniqueDuelSeed,
 } from "@zegon/game-core";
 import { computeCommitHash, computeInputHash } from "../services/commit.js";
 import { EXPLORER_BASE, getContractService } from "../services/contract.js";
@@ -162,16 +163,17 @@ export async function handleStartDuel(body: {
 }): Promise<{ duelId: string; sessionToken: string }> {
   const duelId = generateDuelId();
   const mode = body.config?.mode ?? "standard";
+  const baseConfig: DuelConfig =
+    mode === "daily"
+      ? { ...createDailyDuel(), ...body.config, mode: "daily" }
+      : {
+          ...DEFAULT_DUEL_CONFIG,
+          ...body.config,
+          mode: "standard",
+        };
   const session: DuelSession = {
     id: duelId,
-    config:
-      mode === "daily"
-        ? { ...createDailyDuel(), ...body.config, mode: "daily" }
-        : {
-            ...DEFAULT_DUEL_CONFIG,
-            ...body.config,
-            mode: "standard",
-          },
+    config: withUniqueDuelSeed(baseConfig, duelId),
     roundIndex: 0,
     logs: [],
     createdAt: Date.now(),
@@ -233,7 +235,7 @@ export async function handleRoundCommit(body: {
   if (useOG) {
     try {
       const og = getOGComputeService();
-      const result = await og.infer(body.context);
+      const result = await og.infer(body.context, session.config.seed);
       decision = result.decision;
       attestationHash = result.attestationHash;
       attestation = result.attestation;

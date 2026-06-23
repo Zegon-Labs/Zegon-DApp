@@ -10,6 +10,7 @@ import {
   DuelState,
   DuelWinner,
   DummyZegonBrain,
+  DEFAULT_DUEL_CONFIG,
   IZegonBrain,
   DuelItemId,
   PlayerAction,
@@ -21,7 +22,15 @@ import {
   decodeChallenge,
   createStandardDuelWithArchetype,
   type ZegonArchetypeId,
+  withUniqueDuelSeed,
 } from "@zegon/game-core";
+
+function localDuelNonce(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID().slice(0, 8);
+  }
+  return String(Date.now());
+}
 
 export type BrainMode = "dummy" | "api";
 
@@ -217,6 +226,15 @@ export class GameCoreAdapter {
           (options?.archetypeId ?? "reader") as ZegonArchetypeId,
         ),
       };
+    }
+
+    const useApi = this.brainMode === "api" && !this.offline && mode !== "tutorial";
+    if (!useApi && mode !== "tutorial") {
+      const base = mergedConfig as DuelConfig;
+      mergedConfig = withUniqueDuelSeed(
+        { ...DEFAULT_DUEL_CONFIG, ...base, mode: base.mode ?? mode } as DuelConfig,
+        localDuelNonce(),
+      );
     }
 
     this.controller.resetForNewDuel(mergedConfig);

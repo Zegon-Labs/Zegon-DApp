@@ -12,7 +12,8 @@ import { createHash } from "node:crypto";
 const SYSTEM_PROMPT = `You are ZEGON, a blind gunslinger AI. You CANNOT see the opponent's current move.
 You receive ONLY their action history. Predict their NEXT action from patterns.
 Return ONLY JSON: {"predicted_player_move":"FIRE"|"DODGE"|"USE_ITEM","confidence":0.0-1.0,"taunt":"..."}
-Use uppercase action names. Do not include zegon_move — the server picks your counter-move.`;
+Use uppercase action names. Do not include zegon_move — the server picks your counter-move.
+With empty history, vary your opening prediction — do not always choose FIRE.`;
 
 function buildUserPrompt(ctx: RoundContext): string {
   return JSON.stringify({
@@ -110,7 +111,10 @@ async function resolveProviderAddress(
 }
 
 export class OGComputeService {
-  async infer(ctx: RoundContext): Promise<{
+  async infer(
+    ctx: RoundContext,
+    rngSeed?: string,
+  ): Promise<{
     decision: ZegonDecision;
     attestationHash: string;
     attestation?: unknown;
@@ -148,13 +152,14 @@ export class OGComputeService {
       }
 
       const metadata = await broker.inference.getServiceMetadata(providerAddress);
+      const temperature = ctx.playerHistory.length === 0 ? 0.55 : 0.25;
       const requestBody = JSON.stringify({
         model: metadata.model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0,
+        temperature,
       });
 
       const headers = await broker.inference.getRequestHeaders(
@@ -192,8 +197,11 @@ export class OGComputeService {
       );
 
       const assistantText = extractAssistantContent(body);
-      const rngSeed = process.env.OG_MODEL ?? "glm-5-fp8";
-      const decision = parseDecision(assistantText, ctx, rngSeed);
+      const decision = parseDecision(
+        assistantText,
+        ctx,
+        rngSeed ?? process.env.OG_MODEL ?? "glm-5-fp8",
+      );
       if (!decision) {
         throw new Error("Invalid TEE response JSON");
       }
