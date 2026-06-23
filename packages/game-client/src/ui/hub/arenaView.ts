@@ -1,13 +1,23 @@
 import Phaser from "phaser";
 import { LANDING_CHARACTER_KEY } from "./landingBackdrop.js";
+import { ZegonDamagePortrait, ZEGON_DAMAGE_KEY } from "./zegonDamagePortrait.js";
 import { DUEL_LAYOUT as L } from "../layout.js";
 import { C } from "../theme.js";
 
 export class ArenaView {
   readonly container: Phaser.GameObjects.Container;
-  private character: Phaser.GameObjects.Image | null = null;
+
+  // Exactly one of these is non-null depending on which texture was available.
+  private damagePortrait: ZegonDamagePortrait | null = null;
+  private staticCharacter: Phaser.GameObjects.Image | null = null;
+
   private playerOverlay: Phaser.GameObjects.Rectangle | null = null;
   private zegonOverlay: Phaser.GameObjects.Rectangle | null = null;
+
+  /** The visible Phaser Image regardless of which branch is active. */
+  private get charImage(): Phaser.GameObjects.Image | null {
+    return this.damagePortrait?.visibleImage ?? this.staticCharacter;
+  }
 
   constructor(
     scene: Phaser.Scene,
@@ -15,6 +25,8 @@ export class ArenaView {
     opts?: { y?: number; characterMaxH?: number },
   ) {
     const { width } = scene.scale;
+    // Container holds the ADD-blend overlays; drawn at depth so overlays are
+    // always above the damage portrait (which lives at depth - 1).
     this.container = scene.add.container(0, 0).setDepth(depth);
 
     const arenaY = opts?.y ?? L.arena.y;
@@ -30,58 +42,78 @@ export class ArenaView {
       .setBlendMode(Phaser.BlendModes.ADD);
     this.container.add([this.playerOverlay, this.zegonOverlay]);
 
-    if (scene.textures.exists(LANDING_CHARACTER_KEY)) {
-      this.character = scene.add.image(width / 2, arenaY, LANDING_CHARACTER_KEY);
-      const scale = maxH / this.character.height;
-      this.character.setScale(scale).setAlpha(0.96);
-      this.container.add(this.character);
+    if (scene.textures.exists(ZEGON_DAMAGE_KEY)) {
+      // Scale up 1.3× vs the static character so the figure fills more of the
+      // arena. depth - 1 ensures the ADD-blend overlays always render on top.
+      this.damagePortrait = new ZegonDamagePortrait(
+        scene, width / 2, arenaY + 55, width, maxH * 1.8, depth - 1, 1.0,
+      );
+    } else if (scene.textures.exists(LANDING_CHARACTER_KEY)) {
+      this.staticCharacter = scene.add.image(width / 2, arenaY, LANDING_CHARACTER_KEY);
+      const scale = maxH / this.staticCharacter.height;
+      this.staticCharacter.setScale(scale).setAlpha(0.96);
+      this.container.add(this.staticCharacter);
     }
   }
 
-  update(blindsight: number, deadeye = false): void {
-    if (!this.character) return;
+  update(blindsight: number, deadeye = false, zegonHp?: number, zegonMaxHp?: number): void {
+    const img = this.charImage;
+    if (!img) return;
+
     const pulse = 0.94 + (blindsight / 100) * 0.06;
-    this.character.setAlpha(pulse);
-    if (deadeye || blindsight >= 80) {
-      this.character.setTint(0xff8866);
+    if (this.damagePortrait) {
+      this.damagePortrait.setAlpha(pulse);
+      if (zegonHp !== undefined && zegonMaxHp !== undefined) {
+        this.damagePortrait.updateHp(zegonHp, zegonMaxHp);
+      }
     } else {
-      this.character.clearTint();
+      img.setAlpha(pulse);
+    }
+
+    if (deadeye || blindsight >= 80) {
+      this.damagePortrait ? this.damagePortrait.setTint(0xff8866) : img.setTint(0xff8866);
+    } else {
+      this.damagePortrait ? this.damagePortrait.clearTint() : img.clearTint();
     }
   }
 
   pulseHit(): void {
-    if (!this.character) return;
-    const baseScale = this.character.scale;
-    this.character.setTint(0xb3122b);
-    this.character.scene.tweens.add({
-      targets: this.character,
+    const img = this.charImage;
+    if (!img) return;
+    const baseScale = img.scale;
+    this.damagePortrait ? this.damagePortrait.setTint(0xb3122b) : img.setTint(0xb3122b);
+    img.scene.tweens.add({
+      targets: img,
       scale: baseScale * 1.06,
       duration: 90,
       yoyo: true,
       ease: "Quad.Out",
     });
     this.flashOverlay(this.zegonOverlay, 0.45);
-    this.character.scene.time.delayedCall(260, () => {
-      if (this.character?.active) this.character.clearTint();
+    img.scene.time.delayedCall(260, () => {
+      if (img.active) {
+        this.damagePortrait ? this.damagePortrait.clearTint() : img.clearTint();
+      }
     });
   }
 
   pulsePlayerHit(): void {
-    if (!this.character) return;
-    const baseX = this.character.x;
-    const baseScale = this.character.scaleX;
-    this.character.scene.tweens.add({
-      targets: this.character,
-      x: baseX + 14,
+    const img = this.charImage;
+    if (!img) return;
+    const baseScale = img.scaleX;
+    // Scale-squeeze only — no x-drift so the character stays centered.
+    // The camera shake below provides the positional hit feedback.
+    img.scene.tweens.add({
+      targets: img,
       scaleX: baseScale * 0.96,
-      scaleY: this.character.scaleY * 0.96,
+      scaleY: img.scaleY * 0.96,
       duration: 70,
       yoyo: true,
       ease: "Quad.Out",
     });
     this.flashOverlay(this.playerOverlay, 0.55);
-    this.character.scene.cameras.main.flash(160, 179, 18, 43, false, undefined, 0.35);
-    this.character.scene.cameras.main.shake(220, 0.012);
+    img.scene.cameras.main.flash(160, 179, 18, 43, false, undefined, 0.35);
+    img.scene.cameras.main.shake(220, 0.012);
   }
 
   private flashOverlay(
@@ -99,6 +131,7 @@ export class ArenaView {
   }
 
   destroy(): void {
+    this.damagePortrait?.destroy();
     this.container.destroy(true);
   }
 }

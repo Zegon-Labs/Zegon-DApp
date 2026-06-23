@@ -686,10 +686,14 @@ export class DuelScene extends Phaser.Scene {
 
   private updateArena(): void {
     const blindsight = this.adapter.getBlindsight();
-    const deadeyeStreak = getEffectiveDeadeyeStreak(
-      this.adapter.getState().config.modifiers,
+    const state = this.adapter.getState();
+    const deadeyeStreak = getEffectiveDeadeyeStreak(state.config.modifiers);
+    this.arenaView.update(
+      blindsight,
+      this.adapter.getReadingStreak() >= deadeyeStreak,
+      this.adapter.getZegonHp(),
+      state.config.initialZegonHp,
     );
-    this.arenaView.update(blindsight, this.adapter.getReadingStreak() >= deadeyeStreak);
     this.syncGlitchOverlay(blindsight / 100);
   }
 

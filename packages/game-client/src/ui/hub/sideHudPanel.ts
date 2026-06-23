@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { C } from "../theme.js";
+import { preloadZegonDamagePortrait } from "./zegonDamagePortrait.js";
 
 // ── Asset keys ─────────────────────────────────────────────────────────────
 export const SIDE_BAR_KEY        = "side-bar";
@@ -16,6 +17,7 @@ export function preloadSideHudPanels(scene: Phaser.Scene): void {
     scene.load.image(PLAYER_PORTRAIT_KEY, "/sprites/figura_sin_fondo_v2.png");
   if (!scene.textures.exists(ZEGON_PORTRAIT_KEY))
     scene.load.image(ZEGON_PORTRAIT_KEY, "/sprites/zegon_caracter.png");
+  preloadZegonDamagePortrait(scene);
 }
 
 // ── Source layout (pixel-analysed, both PNGs 3072 × 512) ──────────────────
@@ -93,7 +95,6 @@ export class SideHudPanel {
       : opts.x - SRC_W * scaleX;  // = width - PANEL_DISPLAY_W
 
     // ── Portrait ─────────────────────────────────────────────────────────────
-    const portraitKey  = opts.side === "left" ? PLAYER_PORTRAIT_KEY : ZEGON_PORTRAIT_KEY;
     const zoneASrcX    = opts.side === "left" ? 0          : R_ZONE_A_X;
     const zoneASrcW    = opts.side === "left" ? L_ZONE_A_W : R_ZONE_A_W;
     const zoneALeft    = imgLeft + zoneASrcX  * scaleX;
@@ -101,6 +102,7 @@ export class SideHudPanel {
     const zoneACX      = zoneALeft + zoneAScreenW / 2;
     const zoneACY      = opts.y + panelH / 2;
 
+    const portraitKey = opts.side === "left" ? PLAYER_PORTRAIT_KEY : ZEGON_PORTRAIT_KEY;
     if (scene.textures.exists(portraitKey)) {
       const portrait = scene.add
         .image(zoneACX, zoneACY, portraitKey)
