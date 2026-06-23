@@ -167,7 +167,6 @@ export class GameCoreAdapter {
     } else if (this.brainMode === "api" && !this.offline) {
       this.apiBrain = new ApiZegonBrain(this.apiBaseUrl, (token) => {
         this._sessionToken = token;
-        if (this._duelId) saveDuelSessionToken(this._duelId, token);
       }, (meta) => {
         this._brainMode = meta.brainMode;
         if (meta.commitTxHash) {
@@ -361,6 +360,7 @@ export class GameCoreAdapter {
       if (data.sessionToken) {
         this._sessionToken = data.sessionToken;
         this.apiBrain?.setSessionToken(data.sessionToken);
+        saveDuelSessionToken(this._duelId, data.sessionToken);
       }
       this.controller.setPendingDecision(data.decision);
     }
@@ -384,7 +384,7 @@ export class GameCoreAdapter {
       `${this._duelId}-${result.score}`.padEnd(64, "0").slice(0, 64);
 
     try {
-      await fetch(`${this.apiBaseUrl}/api/duel/record`, {
+      const res = await fetch(`${this.apiBaseUrl}/api/duel/record`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -394,6 +394,14 @@ export class GameCoreAdapter {
           sessionToken: this._sessionToken ?? undefined,
         }),
       });
+      if (res.ok) {
+        const data = (await res.json()) as { sessionToken?: string };
+        if (data.sessionToken) {
+          this._sessionToken = data.sessionToken;
+          this.apiBrain?.setSessionToken(data.sessionToken);
+          saveDuelSessionToken(this._duelId, data.sessionToken);
+        }
+      }
     } catch {
       // Non-fatal for local play
     }

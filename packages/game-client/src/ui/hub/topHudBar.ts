@@ -14,7 +14,9 @@ export function preloadTopHudBar(scene: Phaser.Scene): void {
 
 export interface TopHudBarOptions {
   onSettings: () => void;
-  onSurrender: () => void;
+  onSurrender?: () => void;
+  /** Defaults to surrender flag "⚑". Tutorial passes "SKIP". */
+  surrenderLabel?: string;
   depth?: number;
 }
 
@@ -34,6 +36,7 @@ export class TopHudBar {
   private readonly objs: Phaser.GameObjects.GameObject[] = [];
   private readonly streakTitle: Phaser.GameObjects.Text;
   private readonly meterGfx: Phaser.GameObjects.Graphics;
+  private surrenderBtn: Phaser.GameObjects.Text | null = null;
 
   private readonly meterX: number;
   private readonly meterY: number;
@@ -138,24 +141,44 @@ export class TopHudBar {
       .setInteractive({ useHandCursor: true });
     this.objs.push(settingsBtn);
 
+    settingsBtn
+      .on("pointerover", () => settingsBtn.setColor("#ff3333"))
+      .on("pointerout", () => settingsBtn.setColor("#cc0000"))
+      .on("pointerdown", () => opts.onSettings());
+
+    const surrenderLabel = opts.surrenderLabel ?? "\u2691";
+    const surrenderFontSize = surrenderLabel.length > 2 ? "11px" : "22px";
+
     const surrenderBtn = scene.add
-      .text(surrenderX, wingCenterY, "⚑", {
-        fontFamily: "Arial, sans-serif", fontSize: "22px", color: "#cc0000",
+      .text(surrenderX, wingCenterY, surrenderLabel, {
+        fontFamily: surrenderLabel.length > 2 ? FONT_DISPLAY : "Arial, sans-serif",
+        fontSize: surrenderFontSize,
+        color: "#cc0000",
+        letterSpacing: surrenderLabel.length > 2 ? 1 : 0,
       })
       .setOrigin(0.5, 0.5)
-      .setDepth(depth)
-      .setInteractive({ useHandCursor: true });
+      .setDepth(depth);
+
+    this.surrenderBtn = surrenderBtn;
+
+    if (opts.onSurrender) {
+      surrenderBtn.setInteractive({ useHandCursor: true });
+      surrenderBtn
+        .on("pointerover", () => surrenderBtn.setColor("#ff3333"))
+        .on("pointerout", () => surrenderBtn.setColor("#cc0000"))
+        .on("pointerdown", () => opts.onSurrender!());
+    }
+
     this.objs.push(surrenderBtn);
+  }
 
-    settingsBtn
-      .on("pointerover",  () => settingsBtn.setColor("#ff3333"))
-      .on("pointerout",   () => settingsBtn.setColor("#cc0000"))
-      .on("pointerdown",  () => opts.onSettings());
-
-    surrenderBtn
-      .on("pointerover",  () => surrenderBtn.setColor("#ff3333"))
-      .on("pointerout",   () => surrenderBtn.setColor("#cc0000"))
-      .on("pointerdown",  () => opts.onSurrender());
+  updateSurrenderLabel(label: string): void {
+    if (!this.surrenderBtn) return;
+    this.surrenderBtn.setText(label);
+    this.surrenderBtn.setFontSize(label.length > 2 ? "11px" : "22px");
+    this.surrenderBtn.setFontFamily(
+      label.length > 2 ? FONT_DISPLAY : "Arial, sans-serif",
+    );
   }
 
   updateStreak(label: string, readingStreak: number, deadeyeStreak: number): void {

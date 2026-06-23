@@ -88,6 +88,11 @@ export class ItemSelector {
     this.paintAll();
   }
 
+  /** Attach chips to a parent layer (same pattern as ActionBar). */
+  addTo(parent: Phaser.GameObjects.Container): void {
+    parent.add(this.container);
+  }
+
   setAllowedItems(items: Set<DuelItemId> | null): void {
     this.allowedItems = items;
     this.paintAll();

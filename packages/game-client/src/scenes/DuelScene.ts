@@ -120,6 +120,7 @@ export class DuelScene extends Phaser.Scene {
   private roundResultToast!: RoundResultToast;
   private mode: "standard" | "daily" = "standard";
   private showingRoundResult = false;
+  private lastRoundOutcome: RoundOutcome | null = null;
   private confirmModal: Phaser.GameObjects.Container | null = null;
   private topHudBar!: TopHudBar;
   private combatHud!: CombatHud;
@@ -244,9 +245,56 @@ export class DuelScene extends Phaser.Scene {
       strings.itemPlate,
     ]);
     this.historyLog.setTitle(strings.history);
+    this.refreshPhaseStatus();
     this.updateHud();
     this.updateActionBarHelp();
+    this.refreshRoundResultIfVisible();
+    if (this.confirmModal) {
+      this.confirmModal.destroy(true);
+      this.confirmModal = null;
+      this.showSurrenderConfirm();
+    }
     this.roundResultToast.refreshLocale();
+  }
+
+  private refreshPhaseStatus(): void {
+    if (!this.adapter) return;
+    const strings = t();
+    const phase = this.adapter.getPhase();
+    if (phase === DuelPhase.ZEGON_THINKING) {
+      this.statusLineText
+        .setText(`${this.zegonReadingBase()}.`)
+        .setColor(COLORS.ember);
+    } else if (phase === DuelPhase.AWAITING_PLAYER) {
+      this.statusLineText.setText(strings.lockedIn).setColor(COLORS.dust);
+    } else if (phase === DuelPhase.DEADEYE) {
+      this.statusLineText.setText(strings.deadeye).setColor(COLORS.ember);
+    }
+  }
+
+  private buildRoundSummaryFor(outcome: RoundOutcome) {
+    const deadeyeStreak = getEffectiveDeadeyeStreak(
+      this.adapter.getState().config.modifiers,
+    );
+    return buildRoundSummary(
+      outcome,
+      t(),
+      (action, role: ActionLabelRole) => {
+        const strings = t();
+        if (role === "predicted" && (action === PlayerAction.USE_ITEM || action === "USE_ITEM")) {
+          return strings.actionUseItemShort;
+        }
+        return actionLabel(action, outcome.itemUsed ?? this.adapter.getEquippedItem());
+      },
+      deadeyeStreak,
+    );
+  }
+
+  private refreshRoundResultIfVisible(): void {
+    if (!this.showingRoundResult || !this.lastRoundOutcome) return;
+    this.roundResultToast.replaceLines(
+      this.buildRoundSummaryFor(this.lastRoundOutcome).lines,
+    );
   }
 
   private computeDuelTip(): string {
@@ -329,21 +377,8 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private showRoundResult(outcome: RoundOutcome): void {
-    const deadeyeStreak = getEffectiveDeadeyeStreak(
-      this.adapter.getState().config.modifiers,
-    );
-    const summary = buildRoundSummary(
-      outcome,
-      t(),
-      (action, role: ActionLabelRole) => {
-        const strings = t();
-        if (role === "predicted" && (action === PlayerAction.USE_ITEM || action === "USE_ITEM")) {
-          return strings.actionUseItemShort;
-        }
-        return actionLabel(action, outcome.itemUsed ?? this.adapter.getEquippedItem());
-      },
-      deadeyeStreak,
-    );
+    this.lastRoundOutcome = outcome;
+    const summary = this.buildRoundSummaryFor(outcome);
     this.showingRoundResult = true;
     playSfx("round_resolve");
     this.roundResultToast.show(summary.lines, () => {

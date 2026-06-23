@@ -350,4 +350,11 @@ export class RoundResultToast {
       this.dragHintText.setText(t().roundSummaryDragHint);
     }
   }
+
+  /** Re-render visible summary copy after language change (keeps dismiss handler). */
+  replaceLines(lines: RoundSummaryLine[]): void {
+    if (!this.container.visible) return;
+    const onDismissed = this.onDismissed;
+    this.show(lines, onDismissed ?? undefined);
+  }
 }

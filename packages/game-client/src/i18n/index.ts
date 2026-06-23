@@ -383,10 +383,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "DEADEYE active! Tap PLATE · blocks the lethal shot and cancels DEADEYE.",
     tutorialStepItemMirror:
       "Tap MIRROR · ZEGON read you and shoots — reflect lethal damage back.",
-    tutorialComplete: "Tutorial complete",
+    tutorialComplete: "Congratulations!",
     tutorialCompleteBody:
-      "You learned lives, read streak, DEADEYE, predictions, items, and scoring.\n\nConnect wallet after a duel to save your score on the global ranking.",
-    tutorialCompleteBadge: "Completed",
+      "You're ready for the duel.\n\nYou learned lives, read streak, DEADEYE, predictions, items, and scoring.",
+    tutorialCompleteBadge: "Ready!",
     tutorialWrong: "Not that one · follow the hint.",
     tutorialGood: "Nice.",
     tutorialSkip: "SKIP",
@@ -647,10 +647,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "¡DEADEYE activo! Tocá PLACA · bloquea el tiro letal y cancela DEADEYE.",
     tutorialStepItemMirror:
       "Tocá ESPEJO · ZEGON te leyó y dispara — devolvé el daño letal.",
-    tutorialComplete: "Tutorial completado",
+    tutorialComplete: "¡Felicidades!",
     tutorialCompleteBody:
-      "Aprendiste vidas, racha, DEADEYE, predicciones, objetos y puntos.\n\nConectá wallet al final del duelo para guardar tu puntaje en el ranking global.",
-    tutorialCompleteBadge: "Completado",
+      "Estás listo para el duelo.\n\nAprendiste vidas, racha, DEADEYE, predicciones, objetos y puntos.",
+    tutorialCompleteBadge: "¡Listo!",
     tutorialWrong: "Esa no · seguí la pista.",
     tutorialGood: "Bien.",
     tutorialSkip: "SALTAR",

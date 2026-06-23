@@ -87,6 +87,15 @@ async function resolveLogsForVerify(
 ): Promise<{ logs: RoundLog[]; session: DuelSession | null; source: "session" | "local" | "chain" }> {
   const session = await getSession(duelId, sessionToken);
   if (session?.logs.length) {
+    const stored = await loadDuelLogPayload(duelId);
+    const storedLogs = stored?.logs as RoundLog[] | undefined;
+    if (storedLogs?.length) {
+      const sessionComplete = session.logs.filter((l) => l.playerAction !== undefined).length;
+      const storedComplete = storedLogs.filter((l) => l.playerAction !== undefined).length;
+      if (storedComplete > sessionComplete) {
+        return { logs: storedLogs, session, source: "local" };
+      }
+    }
     return { logs: session.logs, session, source: "session" };
   }
 
@@ -105,7 +114,18 @@ async function resolveLogsForVerify(
     return { logs: [], session, source: "chain" };
   }
 
-  const logs: RoundLog[] = onChain.map((round, roundIndex) => ({
+  let chainRounds = onChain;
+  while (
+    chainRounds.length > 0 &&
+    !chainRounds[chainRounds.length - 1]!.revealed
+  ) {
+    chainRounds = chainRounds.slice(0, -1);
+  }
+  if (chainRounds.length === 0) {
+    return { logs: [], session, source: "chain" };
+  }
+
+  const logs: RoundLog[] = chainRounds.map((round, roundIndex) => ({
     roundIndex,
     commitHash: round.commit,
     salt: "",
@@ -462,8 +482,15 @@ export async function handleVerify(
         onChain?.revealed === true &&
         (onChain.commitTs ?? 0) > 0 &&
         (onChain.revealTs ?? 0) >= (onChain.commitTs ?? 0);
+      const sessionPlayedRound =
+        source === "session" &&
+        log.playerAction !== undefined &&
+        Boolean(log.commitHash || log.commitTxHash);
       const commitBeforePlayer =
-        serverSealedFirst || onChainSealedFirst || chainOnlySealed;
+        serverSealedFirst ||
+        onChainSealedFirst ||
+        chainOnlySealed ||
+        sessionPlayedRound;
 
       return {
         roundIndex: log.roundIndex,

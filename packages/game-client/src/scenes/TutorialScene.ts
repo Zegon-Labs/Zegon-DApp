@@ -19,16 +19,15 @@ import {
   ItemSelector,
   itemCooldownLabel,
   itemDescription,
-  createHubGameChrome,
-  createHubPromptBar,
   createHubPracticeStrip,
   createHubTutorialModal,
   createLandingBackdrop,
   preloadLandingBackdrop,
   preloadResultPanelAssets,
   preloadSideHudPanels,
+  preloadTopHudBar,
   preloadTutorialPanelAssets,
-  type HubButtonHandle,
+  TopHudBar,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
@@ -84,12 +83,12 @@ export class TutorialScene extends Phaser.Scene {
   private adapter!: GameCoreAdapter;
   private tutorialBrain!: ScriptedZegonBrain;
   private combatHud!: CombatHud;
+  private topHudBar!: TopHudBar;
   private actionBar!: ActionBar;
   private itemSelector!: ItemSelector;
   private arenaView!: ArenaView;
-  private promptBar!: Phaser.GameObjects.Container;
-  private statusText!: Phaser.GameObjects.Text;
-  private stepLabel!: Phaser.GameObjects.Text;
+  private statusLineText!: Phaser.GameObjects.Text;
+  private chooseActionText!: Phaser.GameObjects.Text;
   private glitchOverlay!: Phaser.GameObjects.Container;
   private scanlines!: Phaser.GameObjects.Graphics;
   private glitchPulse = 0;
@@ -100,7 +99,6 @@ export class TutorialScene extends Phaser.Scene {
   private waitingAdvance = false;
   private waitingInstruction = false;
   private localeUnsub: (() => void) | null = null;
-  private chromeHandles: HubButtonHandle[] = [];
 
   constructor() {
     super("TutorialScene");
@@ -108,6 +106,7 @@ export class TutorialScene extends Phaser.Scene {
 
   preload(): void {
     preloadLandingBackdrop(this);
+    preloadTopHudBar(this);
     preloadSideHudPanels(this);
     preloadResultPanelAssets(this);
     preloadTutorialPanelAssets(this);
@@ -125,24 +124,40 @@ export class TutorialScene extends Phaser.Scene {
     this.modalLayer = this.add.container(0, 0).setDepth(110);
     this.gameLayer = this.add.container(0, 0).setDepth(10);
 
-    this.arenaView = new ArenaView(this, 5);
-    this.combatHud = new CombatHud(this, 9);
-    const prompt = createHubPromptBar(this, 10);
-    this.promptBar = prompt.container;
-    this.statusText = prompt.text;
+    this.arenaView = new ArenaView(this, 5, {
+      y: L.bottomStrip.arenaY,
+      characterMaxH: L.bottomStrip.characterMaxH,
+    });
+    this.combatHud = new CombatHud(this, 9, undefined, { hideBlindsight: true });
 
-    this.stepLabel = this.add.text(width / 2, L.history.y, "", {
+    this.topHudBar = new TopHudBar(this, {
+      onSettings: () => gameBridge.openSettingsOverlay(),
+      onSurrender: () => {
+        markTutorialDone();
+        gameBridge.navigate({ type: "hub" });
+      },
+      surrenderLabel: strings.tutorialSkip,
+    });
+
+    this.statusLineText = this.add.text(width / 2, L.bottomStrip.statusY, "", {
       fontFamily: FONT_DISPLAY,
-      fontSize: "21px",
-      color: COLORS.ember,
+      fontSize: "16px",
+      color: COLORS.dust,
+      letterSpacing: 1,
+    }).setOrigin(0.5, 0).setResolution(2).setDepth(11);
+
+    this.chooseActionText = this.add.text(width / 2, L.bottomStrip.chooseActionY, strings.chooseAction, {
+      fontFamily: FONT_DISPLAY,
+      fontSize: "20px",
+      color: COLORS.bone,
       letterSpacing: 2,
-    }).setOrigin(0.5, 0).setDepth(11);
+    }).setOrigin(0.5, 0).setResolution(2).setDepth(11);
 
     this.gameLayer.add([
       this.arenaView.container,
       this.combatHud.container,
-      this.promptBar,
-      this.stepLabel,
+      this.statusLineText,
+      this.chooseActionText,
     ]);
 
     this.tutorialBrain = new ScriptedZegonBrain(buildTutorialScripts(getLanguage()));
@@ -167,25 +182,12 @@ export class TutorialScene extends Phaser.Scene {
       onUseItem: (item) => void this.onUseItem(item),
       depth: 12,
     });
+    this.itemSelector.addTo(this.gameLayer);
 
     this.localeUnsub = onLanguageChange(() => this.refreshLocale());
 
     this.setGameVisible(false);
     this.runCurrentSegment();
-
-    this.chromeHandles = createHubGameChrome(this, {
-      skip: {
-        label: strings.tutorialSkip,
-        onClick: () => {
-          markTutorialDone();
-          gameBridge.navigate({ type: "hub" });
-        },
-      },
-      settings: {
-        label: "\u2699",
-        onClick: () => gameBridge.openSettingsOverlay(),
-      },
-    });
   }
 
   private setGameVisible(visible: boolean): void {
@@ -308,12 +310,14 @@ export class TutorialScene extends Phaser.Scene {
   }
 
   private async beginDuel(): Promise<void> {
+    const strings = t();
     this.modalLayer.removeAll(true);
     this.setGameVisible(true);
     this.duelStarted = true;
     this.waitingAdvance = false;
     this.waitingInstruction = false;
-    this.statusText.setText(t().tutorialPracticeTitle).setColor(COLORS.bone);
+    this.statusLineText.setText(strings.tutorialPracticeTitle).setColor(COLORS.dust);
+    this.chooseActionText.setText(strings.chooseAction).setAlpha(1);
     await this.adapter.initDuel("tutorial", { config: { maxRounds: PRACTICE_SEGMENTS.length } });
     playSfx("duel_start");
   }
@@ -326,12 +330,11 @@ export class TutorialScene extends Phaser.Scene {
     if (!step) return;
 
     const strings = t();
-    this.stepLabel.setText(
-      format(strings.tutorialStepProgress, {
-        current: roundIndex + 1,
-        total: PRACTICE_SEGMENTS.length,
-      }),
-    );
+    const stepLabel = format(strings.tutorialStepProgress, {
+      current: roundIndex + 1,
+      total: PRACTICE_SEGMENTS.length,
+    });
+    this.statusLineText.setText(stepLabel).setColor(COLORS.dust);
     this.showPracticeInstruction(
       localeText(step.instructionKey as keyof LocaleStrings),
       roundIndex,
@@ -350,17 +353,60 @@ export class TutorialScene extends Phaser.Scene {
 
   private refreshLocale(): void {
     const strings = t();
+    this.chooseActionText.setText(strings.chooseAction);
     this.actionBar.refreshLabels((action) =>
       actionLabel(action, this.adapter?.getEquippedItem()),
     );
     this.itemSelector.refreshLabels();
-    if (this.chromeHandles[0]) {
-      this.chromeHandles[0].setLabel(strings.tutorialSkip);
-    }
-    if (this.chromeHandles[1]) {
-      this.chromeHandles[1].setLabel("\u2699");
-    }
+    this.topHudBar.updateSurrenderLabel(strings.tutorialSkip);
+    this.refreshPhaseStatus();
     this.updateHud();
+    if (this.waitingInstruction) {
+      this.refreshPracticeInstruction();
+    }
+  }
+
+  private refreshPhaseStatus(): void {
+    if (!this.adapter || !this.duelStarted) return;
+    const strings = t();
+    const phase = this.adapter.getPhase();
+    if (phase === DuelPhase.ZEGON_THINKING) {
+      this.statusLineText.setText(strings.zegonReading).setColor(COLORS.dust);
+    } else if (phase === DuelPhase.AWAITING_PLAYER) {
+      const roundIndex = this.adapter.getState().roundIndex;
+      const stepLabel = format(strings.tutorialStepProgress, {
+        current: roundIndex + 1,
+        total: PRACTICE_SEGMENTS.length,
+      });
+      this.statusLineText.setText(stepLabel).setColor(COLORS.dust);
+    } else if (phase === DuelPhase.DEADEYE) {
+      this.statusLineText.setText(strings.deadeye).setColor(COLORS.ember);
+    }
+  }
+
+  private refreshPracticeInstruction(): void {
+    const roundIndex = this.adapter.getState().roundIndex;
+    const step = getPracticeForRound(roundIndex);
+    if (!step) return;
+
+    const strings = t();
+    const stepLabel = format(strings.tutorialStepProgress, {
+      current: roundIndex + 1,
+      total: PRACTICE_SEGMENTS.length,
+    });
+
+    this.modalLayer.removeAll(true);
+    const strip = createHubPracticeStrip(this, {
+      badge: `${strings.tutorialTip} · ${stepLabel}`,
+      body: localeText(step.instructionKey as keyof LocaleStrings),
+      buttonLabel: strings.tutorialOk,
+      onDismiss: () => {
+        playSfx("tutorial_slide_next");
+        this.waitingInstruction = false;
+        this.updateActionButtons(true);
+      },
+    });
+    this.modalLayer.add(strip);
   }
 
   private onUseItem(item: DuelItemId): void {
@@ -368,11 +414,11 @@ export class TutorialScene extends Phaser.Scene {
 
     const step = getPracticeForRound(this.adapter.getState().roundIndex);
     if (!step?.allowedActions.includes(PlayerAction.USE_ITEM)) {
-      this.statusText.setText(t().tutorialWrong).setColor(COLORS.ember);
+      this.statusLineText.setText(t().tutorialWrong).setColor(COLORS.ember);
       return;
     }
     if (step.equipItem && step.equipItem !== item) {
-      this.statusText.setText(t().tutorialWrong).setColor(COLORS.ember);
+      this.statusLineText.setText(t().tutorialWrong).setColor(COLORS.ember);
       return;
     }
 
@@ -396,7 +442,7 @@ export class TutorialScene extends Phaser.Scene {
 
     const step = getPracticeForRound(this.adapter.getState().roundIndex);
     if (!step || !step.allowedActions.includes(action)) {
-      this.statusText.setText(t().tutorialWrong).setColor(COLORS.ember);
+      this.statusLineText.setText(t().tutorialWrong).setColor(COLORS.ember);
       return;
     }
 
@@ -421,18 +467,23 @@ export class TutorialScene extends Phaser.Scene {
       const phase = this.adapter.getPhase();
       if (phase === DuelPhase.ZEGON_THINKING) {
         startSfxLoop("zegon_thinking", { volume: 0.28 });
-        this.statusText.setText(strings.zegonReading).setColor(COLORS.ember);
+        this.statusLineText.setText(strings.zegonReading).setColor(COLORS.dust);
+        this.chooseActionText.setAlpha(0.35);
         this.waitingAdvance = false;
         this.actionBar.setDimmedAll(false);
+        this.itemSelector.setDimmedAll(false);
       } else if (phase === DuelPhase.AWAITING_PLAYER) {
         stopSfxLoop("zegon_thinking");
         playSfx("your_turn");
-        this.statusText.setText(strings.yourMove).setColor(COLORS.bone);
+        this.itemSelector.setDimmedAll(false);
+        this.statusLineText.setText(strings.lockedIn).setColor(COLORS.dust);
+        this.chooseActionText.setAlpha(1);
         this.syncStepUi();
       } else if (phase === DuelPhase.DEADEYE) {
         stopSfxLoop("zegon_thinking");
         playSfx("deadeye_sting");
-        this.statusText.setText(strings.deadeye).setColor(COLORS.ember);
+        this.statusLineText.setText(strings.deadeye).setColor(COLORS.ember);
+        this.chooseActionText.setAlpha(0.35);
         this.cameras.main.flash(200, 255, 77, 46);
       }
     }
@@ -449,7 +500,7 @@ export class TutorialScene extends Phaser.Scene {
 
       while (
         this.segmentIndex < TUTORIAL_FLOW.length &&
-        TUTORIAL_FLOW[this.segmentIndex]?.kind !== "finish"
+        TUTORIAL_FLOW[this.segmentIndex]?.kind === "practice"
       ) {
         this.segmentIndex += 1;
       }
@@ -473,23 +524,23 @@ export class TutorialScene extends Phaser.Scene {
       blindsightDelta: outcome.blindsightDelta,
     });
     if (outcome.deadeyeTriggered) {
-      this.statusText.setText(strings.roundSummaryDeadeyeOn).setColor(COLORS.ember);
+      this.statusLineText.setText(strings.roundSummaryDeadeyeOn).setColor(COLORS.ember);
     } else if (outcome.predictionCorrect && outcome.playerDamage > 0) {
       const anchor = this.combatHud.playerDamageAnchor();
       showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
-      this.statusText.setText(`${strings.tutorialGood} · ${strings.roundSummaryRead}`).setColor(COLORS.ember);
+      this.statusLineText.setText(`${strings.tutorialGood} · ${strings.roundSummaryRead}`).setColor(COLORS.ember);
       this.cameras.main.flash(120, 179, 18, 43);
     } else if (outcome.playerDamage > 0) {
       const anchor = this.combatHud.playerDamageAnchor();
       showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
-      this.statusText.setText(`${strings.roundSummaryYouHit} · ${strings.tutorialHpTitle}`).setColor(COLORS.ember);
+      this.statusLineText.setText(`${strings.roundSummaryYouHit} · ${strings.tutorialHpTitle}`).setColor(COLORS.ember);
       this.cameras.main.flash(120, 179, 18, 43);
     } else if (outcome.zegonDamage > 0) {
-      this.statusText.setText(`${strings.tutorialGood} · ${strings.roundSummaryZegonHit}`).setColor(COLORS.bone);
+      this.statusLineText.setText(`${strings.tutorialGood} · ${strings.roundSummaryZegonHit}`).setColor(COLORS.bone);
     } else if (!outcome.predictionCorrect) {
-      this.statusText.setText(`${strings.tutorialGood} · ${strings.roundSummarySurprised}`).setColor(COLORS.bone);
+      this.statusLineText.setText(`${strings.tutorialGood} · ${strings.roundSummarySurprised}`).setColor(COLORS.bone);
     } else {
-      this.statusText.setText(strings.tutorialGood).setColor(COLORS.bone);
+      this.statusLineText.setText(strings.tutorialGood).setColor(COLORS.bone);
     }
   }
 
@@ -523,10 +574,12 @@ export class TutorialScene extends Phaser.Scene {
       hudItem: strings.hudItem,
       hudStatus: strings.hudStatus,
       blindsightLabel: `${strings.hudBlindsight}  ${readingStreak}/${deadeyeStreak}`,
-      blindsightFlavor: strings.blindsightFlavor,
-      nextMoveHint: strings.tutorialHudHintShort,
+      blindsightFlavor: "",
+      nextMoveHint: "",
       zegonStatus: readingStreak >= deadeyeStreak - 1 ? strings.deadeyeNear : undefined,
     });
+
+    this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
 
     this.itemSelector.setCooldown(itemCooldown);
     this.itemSelector.setInteractive(this.adapter.isAwaitingPlayer() && !this.waitingAdvance);
@@ -574,11 +627,8 @@ export class TutorialScene extends Phaser.Scene {
   shutdown(): void {
     this.localeUnsub?.();
     this.localeUnsub = null;
-    for (const handle of this.chromeHandles) {
-      handle.destroy();
-    }
-    this.chromeHandles = [];
     stopAllSfxLoops();
+    this.topHudBar?.destroy();
     this.adapter?.destroy();
     this.combatHud?.destroy();
     this.actionBar?.destroy();
