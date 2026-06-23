@@ -23,6 +23,7 @@ import { buildChallengeUrlFromResult, generateShareCard } from "../utils/shareCa
 import { playDuelEndSfx, playSfx } from "../services/sfx.js";
 import { playDuelEndVoice, stopAllVoice } from "../services/voice.js";
 import { openVerifyDuelWindow } from "../utils/verifyWindow.js";
+import { verifyApiUrl } from "../services/duelSessionStorage.js";
 import {
   isLeaderboardContractConfigured,
   submitScoreOnChain,
@@ -91,7 +92,7 @@ export class ResultScene extends Phaser.Scene {
     void this.trySubmitGlobalScore();
 
     if (this.duelId) {
-      void this.loadVerifySummary(`${this.apiBaseUrl}/api/duel/verify/${this.duelId}`);
+      void this.loadVerifySummary(verifyApiUrl(this.duelId, this.apiBaseUrl));
     }
 
     this.localeUnsub = onLanguageChange(() => this.renderPanel());

@@ -1,4 +1,5 @@
 import { getLanguage } from "../i18n/index.js";
+import { saveDuelSessionToken } from "../services/duelSessionStorage.js";
 import {
   assertCanPerformAction,
   DuelConfig,
@@ -166,6 +167,7 @@ export class GameCoreAdapter {
     } else if (this.brainMode === "api" && !this.offline) {
       this.apiBrain = new ApiZegonBrain(this.apiBaseUrl, (token) => {
         this._sessionToken = token;
+        if (this._duelId) saveDuelSessionToken(this._duelId, token);
       }, (meta) => {
         this._brainMode = meta.brainMode;
         if (meta.commitTxHash) {
@@ -246,6 +248,7 @@ export class GameCoreAdapter {
       const data = (await res.json()) as { duelId: string; sessionToken: string };
       this._duelId = data.duelId;
       this._sessionToken = data.sessionToken;
+      saveDuelSessionToken(data.duelId, data.sessionToken);
       this.apiBrain?.setDuelId(data.duelId);
       this.apiBrain?.setSessionToken(data.sessionToken);
     }

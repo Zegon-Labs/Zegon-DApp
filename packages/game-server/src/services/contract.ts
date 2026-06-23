@@ -126,6 +126,22 @@ export class ContractService {
     };
   }
 
+  /** Scan on-chain rounds until an empty commit (serverless-safe verify fallback). */
+  async listRoundsOnChain(
+    duelId: string,
+    maxRounds = 64,
+  ): Promise<OnChainRound[]> {
+    const zero =
+      "0x0000000000000000000000000000000000000000000000000000000000000000";
+    const out: OnChainRound[] = [];
+    for (let i = 0; i < maxRounds; i++) {
+      const round = await this.getRoundOnChain(duelId, i);
+      if (!round || round.commit === zero) break;
+      out.push(round);
+    }
+    return out;
+  }
+
   getExplorerUrl(duelId: string): string | undefined {
     if (!this.contractAddress) return undefined;
     return `${EXPLORER_BASE}/address/${this.contractAddress}?duel=${duelId}`;

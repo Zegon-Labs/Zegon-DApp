@@ -2,6 +2,7 @@ import { randomBytes, createHash } from "node:crypto";
 import {
   DuelConfig,
   DummyZegonBrain,
+  PlayerAction,
   RoundContext,
   ZegonDecision,
   buildChallengeUrl,
@@ -73,6 +74,57 @@ async function getSession(
 async function persistSession(session: DuelSession): Promise<void> {
   sessions.set(session.id, session);
   await saveSession(session);
+  if (process.env.VERCEL && session.logs.length > 0) {
+    void storeDuelLog(session.id, session.logs).catch((err) => {
+      console.warn("[persistSession] 0G storage upload failed:", err);
+    });
+  }
+}
+
+async function resolveLogsForVerify(
+  duelId: string,
+  sessionToken?: string,
+): Promise<{ logs: RoundLog[]; session: DuelSession | null; source: "session" | "local" | "chain" }> {
+  const session = await getSession(duelId, sessionToken);
+  if (session?.logs.length) {
+    return { logs: session.logs, session, source: "session" };
+  }
+
+  const stored = await loadDuelLogPayload(duelId);
+  if (stored?.logs?.length) {
+    return { logs: stored.logs as RoundLog[], session, source: "local" };
+  }
+
+  const contract = getContractService();
+  if (!contract.isConfigured()) {
+    return { logs: [], session, source: "session" };
+  }
+
+  const onChain = await contract.listRoundsOnChain(duelId);
+  if (onChain.length === 0) {
+    return { logs: [], session, source: "chain" };
+  }
+
+  const logs: RoundLog[] = onChain.map((round, roundIndex) => ({
+    roundIndex,
+    commitHash: round.commit,
+    salt: "",
+    inputHash: "",
+    decision: {
+      predictedPlayerMove: PlayerAction.FIRE,
+      zegonMove: uint8ToZegonAction(round.zegonMove),
+      confidence: 0,
+      taunt: "",
+    },
+    commitTimestamp: round.commitTs > 0 ? round.commitTs * 1000 : 0,
+    commitTsOnChain: round.commitTs,
+    playerActionTimestamp:
+      round.revealed && round.revealTs > round.commitTs
+        ? round.revealTs * 1000
+        : undefined,
+  }));
+
+  return { logs, session, source: "chain" };
 }
 
 function compositeAttestationHash(logs: RoundLog[], duelId: string): string {
@@ -347,7 +399,10 @@ export async function handleRecordDuel(body: {
   };
 }
 
-export async function handleVerify(duelId: string): Promise<{
+export async function handleVerify(
+  duelId: string,
+  sessionToken?: string,
+): Promise<{
   duelId: string;
   verified: boolean;
   teeVerified: boolean;
@@ -382,13 +437,8 @@ export async function handleVerify(duelId: string): Promise<{
   contractExplorerUrl?: string;
   recordTxExplorerUrl?: string;
 }> {
-  const session = await getSession(duelId);
+  const { logs, session, source } = await resolveLogsForVerify(duelId, sessionToken);
   const contract = getContractService();
-  const storedPayload = await loadDuelLogPayload(duelId);
-  const logs: RoundLog[] =
-    session?.logs ??
-    (storedPayload?.logs as RoundLog[] | undefined) ??
-    [];
 
   const rounds = await Promise.all(
     (logs as RoundLog[]).map(async (log) => {
@@ -407,7 +457,13 @@ export async function handleVerify(duelId: string): Promise<{
         commitTs > 0 &&
         typeof playerTs === "number" &&
         commitTs <= Math.floor(playerTs / 1000);
-      const commitBeforePlayer = serverSealedFirst || onChainSealedFirst;
+      const chainOnlySealed =
+        source === "chain" &&
+        onChain?.revealed === true &&
+        (onChain.commitTs ?? 0) > 0 &&
+        (onChain.revealTs ?? 0) >= (onChain.commitTs ?? 0);
+      const commitBeforePlayer =
+        serverSealedFirst || onChainSealedFirst || chainOnlySealed;
 
       return {
         roundIndex: log.roundIndex,
@@ -443,9 +499,14 @@ export async function handleVerify(duelId: string): Promise<{
   const storageIndexerUrl =
     process.env.OG_STORAGE_INDEXER ?? "https://indexer-storage-turbo.0g.ai";
 
+  const verified =
+    rounds.length > 0 &&
+    (allCommitBeforePlayer ||
+      (source === "chain" && rounds.every((r) => r.onChain?.revealed)));
+
   return {
     duelId,
-    verified: allCommitBeforePlayer || (session !== null && rounds.length > 0),
+    verified,
     teeVerified: useOg && hasAttestation,
     brainMode: useOg ? "tee" : "dummy",
     contractAddress: contract.getContractAddress() ?? undefined,

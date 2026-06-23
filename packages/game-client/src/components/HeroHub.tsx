@@ -97,9 +97,14 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     }
   }
 
+  const poolConfigured = poolInfo?.configured === true;
+  const needsWallet = !wallet;
+  const needsStake = poolConfigured && !staked;
+  const canPlayDaily = !needsWallet && !needsStake;
+
   async function handleStakeDaily() {
     if (!wallet) {
-      notify.error(strings.scoreSubmitNoWallet);
+      notify.info(strings.dailyWalletRequired);
       return;
     }
     if (!poolInfo?.poolAddress) {
@@ -118,36 +123,17 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     }
   }
 
-  async function ensureWalletConnected(): Promise<string | null> {
-    if (wallet) return wallet;
-    if (!hasEthereumProvider()) {
-      notify.error(strings.walletNoProvider);
-      return null;
-    }
-    notify.info(strings.dailyWalletRequired);
-    try {
-      const address = await connectWallet();
-      setWallet(address);
-      notify.success(strings.walletConnected, truncateAddress(address));
-      if (!hasNickname(address)) {
-        const remote = await fetchProfile(address);
-        if (!remote?.nickname) onNeedsProfile?.(address);
-      }
-      return address;
-    } catch {
-      notify.error(strings.walletNoProvider);
-      return null;
-    }
-  }
-
   async function startDaily() {
-    const address = await ensureWalletConnected();
-    if (!address) return;
+    if (needsWallet) {
+      notify.info(strings.dailyWalletRequired);
+      return;
+    }
 
-    if (poolInfo?.configured && !staked) {
+    if (needsStake) {
       notify.info(strings.dailyStakeRequired);
       return;
     }
+
     gameBridge.startScene("DuelScene", { mode: "daily" });
   }
 
@@ -217,15 +203,29 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
               {poolInfo?.totalStaked ?? "0"} OG · {poolInfo?.entrants ?? 0}{" "}
               {strings.dailyEntrants}
             </p>
-            {poolInfo?.configured && !staked && (
-              <button type="button" className="btn btn--secondary btn--stake" onClick={() => void handleStakeDaily()}>
-                {strings.dailyStake} ({poolInfo.minStake ?? "0.01"} OG)
+            {poolConfigured && !staked && (
+              <button
+                type="button"
+                className={`btn btn--secondary btn--stake${needsWallet ? " btn--secondary-locked" : " btn--stake-emphasis"}`}
+                onClick={() => void handleStakeDaily()}
+              >
+                {strings.dailyStake} ({poolInfo?.minStake ?? "0.01"} OG)
               </button>
             )}
             {staked && <p className="daily-card__staked">{strings.dailyStakedBadge}</p>}
-            <button type="button" className={`btn btn--secondary${wallet ? "" : " btn--secondary-locked"}`} onClick={() => void startDaily()}>
-              {!wallet && <LockIcon />}
-              <span>{wallet ? strings.dailyPlay : strings.connectWallet}</span>
+            {!canPlayDaily && (
+              <p className="daily-card__hint" role="status">
+                {needsWallet ? strings.dailyWalletRequired : strings.dailyStakeFirst}
+              </p>
+            )}
+            <button
+              type="button"
+              className={`btn btn--secondary btn--daily-play${canPlayDaily ? "" : " btn--secondary-locked"}`}
+              onClick={() => void startDaily()}
+              disabled={!canPlayDaily}
+              aria-disabled={!canPlayDaily}
+            >
+              <span>{strings.dailyPlay}</span>
             </button>
           </div>
 

@@ -56,7 +56,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (slug[0] === "duel" && slug[1] === "verify" && req.method === "GET") {
       const duelId = slug[2] ?? "demo";
-      return res.status(200).json(await h.handleVerify(duelId));
+      const token =
+        typeof req.query.token === "string" ? req.query.token : undefined;
+      return res.status(200).json(await h.handleVerify(duelId, token));
     }
     if (slug[0] === "daily" && slug[1] === "pool") {
       const seed = String(req.query.seed ?? "");

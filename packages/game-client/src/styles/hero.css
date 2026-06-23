@@ -760,6 +760,26 @@ body:has(.hero) {
 
 .hero__menu .daily-card__staked {
   font-size: var(--menu-fs-sm);
+  color: var(--verified);
+}
+
+.hero__menu .daily-card__hint {
+  margin: 0;
+  font-size: var(--menu-fs-xs);
+  line-height: 1.35;
+  color: var(--dust);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.hero__menu .btn--stake-emphasis {
+  border-color: var(--ember);
+  color: var(--bone);
+}
+
+.hero__menu .btn--stake-emphasis:hover {
+  border-color: var(--blood);
+  background: rgba(33, 30, 46, 0.88);
 }
 
 .hero__menu .hero__menu-grid {
@@ -1040,14 +1060,19 @@ body:has(.hero) {
   background: rgba(33,30,46,0.8);
 }
 
-.btn--secondary-locked {
-  opacity: 0.72;
-  border-color: rgba(139, 26, 26, 0.45);
+.btn--secondary-locked,
+.hero__menu .btn--daily-play.btn--secondary-locked {
+  color: var(--dust);
+  opacity: 1;
+  border-color: rgba(58, 53, 80, 0.75);
+  cursor: not-allowed;
 }
 
-.btn--secondary-locked:hover {
-  border-color: var(--ember);
-  background: rgba(33,30,46,0.8);
+.btn--secondary-locked:hover,
+.hero__menu .btn--daily-play.btn--secondary-locked:hover {
+  color: var(--dust);
+  border-color: rgba(58, 53, 80, 0.75);
+  background: rgba(20, 18, 28, 0.72);
 }
 
 .btn__icon {

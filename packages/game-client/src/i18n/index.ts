@@ -159,6 +159,7 @@ export interface LocaleStrings {
   dailyStaked: string;
   dailyStakedBadge: string;
   dailyStakeRequired: string;
+  dailyStakeFirst: string;
   dailyStakeFailed: string;
   dailyPoolNotConfigured: string;
   dailyPlay: string;
@@ -440,10 +441,11 @@ const LOCALES: Record<Language, LocaleStrings> = {
     dailyStaked: "Staked!",
     dailyStakedBadge: "✓ Staked for today",
     dailyStakeRequired: "Stake OG to play today's daily",
+    dailyStakeFirst: "Stake OG above to unlock the daily duel",
     dailyStakeFailed: "Stake failed · check wallet & balance",
     dailyPoolNotConfigured: "Daily pool not configured yet",
     dailyPlay: "Play daily duel",
-    dailyWalletRequired: "Connect wallet to play the daily duel",
+    dailyWalletRequired: "Connect your wallet below to play the daily duel",
     achievementsTitle: "Achievements",
     achievementsMenu: "ACHIEVEMENTS",
     achievementsSubtitle: "Unlock badges by playing duels, daily mode, and on-chain verification.",
@@ -703,10 +705,11 @@ const LOCALES: Record<Language, LocaleStrings> = {
     dailyStaked: "¡Apostado!",
     dailyStakedBadge: "✓ Apostado hoy",
     dailyStakeRequired: "Apostá OG para jugar el daily de hoy",
+    dailyStakeFirst: "Apostá OG arriba para desbloquear el duelo diario",
     dailyStakeFailed: "Falló la apuesta · revisá wallet y saldo",
     dailyPoolNotConfigured: "Pool diario aún no configurado",
     dailyPlay: "Jugar duelo diario",
-    dailyWalletRequired: "Conectá wallet para jugar el duelo diario",
+    dailyWalletRequired: "Conectá la wallet abajo para jugar el duelo diario",
     achievementsTitle: "Logros",
     achievementsMenu: "LOGROS",
     achievementsSubtitle: "Desbloqueá insignias jugando duelos, el modo diario y verificación on-chain.",

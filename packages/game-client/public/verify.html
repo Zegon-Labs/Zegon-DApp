@@ -103,6 +103,9 @@
           commitTx: "Tx commit (sellado)",
           revealTx: "Tx reveal (revelado)",
           actions: {
+            FIRE: "Disparar",
+            DODGE: "Esquivar",
+            USE_ITEM: "Usar objeto",
             FIRE_HIGH: "Disparo alto",
             FIRE_LOW: "Disparo bajo",
             DODGE: "Esquivar",
@@ -132,6 +135,9 @@
           commitTx: "Commit tx (sealed)",
           revealTx: "Reveal tx (opened)",
           actions: {
+            FIRE: "Shoot",
+            DODGE: "Dodge",
+            USE_ITEM: "Use item",
             FIRE_HIGH: "Fire high",
             FIRE_LOW: "Fire low",
             DODGE: "Dodge",
@@ -168,7 +174,16 @@
         }
 
         try {
-          const res = await fetch(`/api/duel/verify/${duelId}`);
+          const tokenKey = "zegon-duel-token:" + duelId;
+          const sessionToken =
+            sessionStorage.getItem(tokenKey) ||
+            (sessionStorage.getItem("zegon-last-duel-id") === duelId
+              ? sessionStorage.getItem("zegon-last-duel-token")
+              : null);
+          const verifyUrl = sessionToken
+            ? `/api/duel/verify/${encodeURIComponent(duelId)}?token=${encodeURIComponent(sessionToken)}`
+            : `/api/duel/verify/${encodeURIComponent(duelId)}`;
+          const res = await fetch(verifyUrl);
           if (!res.ok) throw new Error(String(res.status));
           const data = await res.json();
 
