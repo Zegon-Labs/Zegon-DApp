@@ -1,6 +1,5 @@
 import {
   DummyZegonBrain,
-  PlayerAction,
   RoundContext,
   ZegonDecision,
   ALL_PLAYER_ACTIONS,
