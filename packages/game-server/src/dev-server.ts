@@ -19,6 +19,8 @@ import {
   handleDailyPoolInfo,
   handleDailyClaim,
   handleDailyEnterCheck,
+  handleCreateChallengeLink,
+  handleGetChallengeLink,
 } from "./handlers/duelHandlers.js";
 import { handleHealth } from "./handlers/healthHandler.js";
 
@@ -149,6 +151,22 @@ const server = createServer(async (req, res) => {
     if (url === "/api/global/submit" && req.method === "POST") {
       const body = (await parseBody(req)) as Parameters<typeof handleGlobalSubmit>[0];
       const result = await handleGlobalSubmit(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/challenge/create" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleCreateChallengeLink>[0];
+      const result = await handleCreateChallengeLink(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.startsWith("/api/challenge/") && req.method === "GET") {
+      const id = url.split("/").pop() ?? "";
+      const result = await handleGetChallengeLink(id);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;

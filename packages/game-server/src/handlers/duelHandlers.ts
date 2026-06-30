@@ -13,6 +13,7 @@ import {
 import { computeCommitHash, computeInputHash } from "../services/commit.js";
 import { EXPLORER_BASE, getContractService } from "../services/contract.js";
 import { getLeaderboard, submitScore, type LeaderboardEntry } from "../services/leaderboard.js";
+import { createChallengeLink, getChallengeLink } from "../services/challengeLinks.js";
 import {
   getGlobalLeaderboard,
   submitGlobalScore,
@@ -738,6 +739,20 @@ export async function handleDailyEnterCheck(body: {
     entered: await hasEnteredPool(body.seed, body.player),
     configured: isDailyPoolConfigured(),
   };
+}
+
+export async function handleCreateChallengeLink(body: {
+  payload: Record<string, unknown>;
+}): Promise<{ id: string; urlPath: string }> {
+  const { id } = await createChallengeLink(body.payload ?? {});
+  return { id, urlPath: `?c=${id}` };
+}
+
+export async function handleGetChallengeLink(
+  id: string,
+): Promise<{ payload: Record<string, unknown> | null }> {
+  const entry = await getChallengeLink(id);
+  return { payload: entry?.payload ?? null };
 }
 
 export { buildChallengeUrl };

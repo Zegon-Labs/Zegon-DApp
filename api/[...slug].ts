@@ -82,6 +82,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (slug[0] === "global" && slug[1] === "submit" && req.method === "POST") {
       return res.status(200).json(await h.handleGlobalSubmit(req.body));
     }
+    if (slug[0] === "challenge" && slug[1] === "create" && req.method === "POST") {
+      return res.status(200).json(await h.handleCreateChallengeLink(req.body));
+    }
+    if (slug[0] === "challenge" && slug[1] && req.method === "GET") {
+      return res.status(200).json(await h.handleGetChallengeLink(slug[1]));
+    }
     if (slug[0] === "player" && slug[1] === "profile" && slug[2] === "stats" && req.method === "POST") {
       return res.status(200).json(await h.handleUpdateProfileStats(req.body));
     }

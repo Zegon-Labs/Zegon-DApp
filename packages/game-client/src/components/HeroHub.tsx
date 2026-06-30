@@ -12,7 +12,7 @@ import {
 } from "../services/wallet.js";
 import { fetchProfile, getCachedProfile, hasNickname, onProfileChange } from "../services/profile.js";
 import { isTutorialDone } from "../tutorial/steps.js";
-import { getDailyArchetype, getMsUntilDailyReset, formatDailyCountdown, parseChallengeFromSearch, buildTwitterIntentUrl, type ChallengeMeta, type DuelConfig } from "@zegon/game-core";
+import { getDailyArchetype, getMsUntilDailyReset, formatDailyCountdown, resolveChallengeFromSearch, buildTwitterIntentUrl, type ChallengeMeta, type ChallengePayload, type DuelConfig } from "@zegon/game-core";
 import { format } from "../i18n/index.js";
 import {
   checkDailyEntered,
@@ -88,10 +88,24 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
       })
       .catch(() => undefined);
 
-    const parsed = parseChallengeFromSearch(window.location.search);
-    if (parsed?.meta.challengerScore) {
-      setPendingChallenge(parsed);
-    }
+    void (async () => {
+      const parsed = await resolveChallengeFromSearch(
+        window.location.search,
+        async (id) => {
+          try {
+            const res = await fetch(`/api/challenge/${id}`);
+            if (!res.ok) return null;
+            const data = (await res.json()) as { payload?: ChallengePayload | null };
+            return data.payload ?? null;
+          } catch {
+            return null;
+          }
+        },
+      );
+      if (parsed?.meta.challengerScore) {
+        setPendingChallenge(parsed);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -194,6 +208,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   function acceptChallenge() {
     if (!pendingChallenge) return;
     const url = new URL(window.location.href);
+    url.searchParams.delete("c");
     url.searchParams.delete("challenge");
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
     gameBridge.startScene("DuelScene", {
@@ -207,6 +222,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
 
   function dismissChallenge() {
     const url = new URL(window.location.href);
+    url.searchParams.delete("c");
     url.searchParams.delete("challenge");
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
     setPendingChallenge(null);

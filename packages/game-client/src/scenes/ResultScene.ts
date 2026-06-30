@@ -224,12 +224,13 @@ export class ResultScene extends Phaser.Scene {
       {
         label: strings.challengeLink,
         onClick: () => {
-          const url = buildChallengeUrlFromResult(this.result, this.getShareOptions());
-          void navigator.clipboard?.writeText(url);
-          this.panelHandle?.dailyLabel
-            .setAlpha(1)
-            .setText(strings.copiedChallenge)
-            .setColor(COLORS.cyan);
+          void buildChallengeUrlFromResult(this.result, this.getShareOptions()).then((url) => {
+            void navigator.clipboard?.writeText(url);
+            this.panelHandle?.dailyLabel
+              .setAlpha(1)
+              .setText(strings.copiedChallenge)
+              .setColor(COLORS.cyan);
+          });
         },
       },
       {

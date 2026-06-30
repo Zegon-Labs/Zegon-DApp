@@ -1,10 +1,11 @@
 import {
   buildChallengeUrl,
+  buildShortChallengeUrl,
   buildShareTweetText,
   buildTwitterIntentUrl,
   DuelWinner,
-  type ChallengeMeta,
   type ChallengePayload,
+  type ChallengeMeta,
   type DuelResult,
 } from "@zegon/game-core";
 import { getCachedProfile } from "../services/profile.js";
@@ -112,7 +113,7 @@ export function buildChallengePayloadFromResult(
   };
 }
 
-export function buildChallengeUrlFromResult(
+export async function buildChallengeUrlFromResult(
   result: DuelResult,
   options: {
     seed: string;
@@ -120,15 +121,32 @@ export function buildChallengeUrlFromResult(
     duelId?: string | null;
     mode?: "standard" | "daily";
   },
-): string {
-  const base = typeof window !== "undefined" ? window.location.origin : "https://zegon-dapp.vercel.app";
-  return buildChallengeUrl(
-    `${base}/`,
-    buildChallengePayloadFromResult(result, options),
-  );
+): Promise<string> {
+  const base =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://zegon-dapp.vercel.app";
+  const payload = buildChallengePayloadFromResult(result, options);
+  const home = `${base}/`;
+
+  try {
+    const res = await fetch("/api/challenge/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payload }),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { id?: string };
+      if (data.id) return buildShortChallengeUrl(home, data.id);
+    }
+  } catch {
+    /* fallback to compact inline link */
+  }
+
+  return buildChallengeUrl(home, payload);
 }
 
-export function buildShareOnXUrl(
+export async function buildShareOnXUrl(
   result: DuelResult,
   options: {
     seed: string;
@@ -137,8 +155,8 @@ export function buildShareOnXUrl(
     mode?: "standard" | "daily";
     verifyProof?: string;
   },
-): string {
-  const challengeUrl = buildChallengeUrlFromResult(result, options);
+): Promise<string> {
+  const challengeUrl = await buildChallengeUrlFromResult(result, options);
   const text = buildShareTweetText({
     score: result.score,
     verifyRounds: options.verifyProof,
@@ -150,7 +168,7 @@ export async function shareOnX(
   result: DuelResult,
   options: Parameters<typeof buildShareOnXUrl>[1],
 ): Promise<void> {
-  const url = buildShareOnXUrl(result, options);
+  const url = await buildShareOnXUrl(result, options);
   window.open(url, "_blank", "noopener,noreferrer,width=550,height=420");
 }
 

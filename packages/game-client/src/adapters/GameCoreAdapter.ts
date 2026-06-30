@@ -20,6 +20,7 @@ import {
   ZegonDecision,
   createDailyDuel,
   decodeChallenge,
+  decodeChallengeCompact,
   createStandardDuelWithArchetype,
   type ZegonArchetypeId,
   withUniqueDuelSeed,
@@ -163,8 +164,15 @@ export class GameCoreAdapter {
     let config: Partial<DuelConfig> = options.config ?? {};
     if (!options.config) {
       const params = new URLSearchParams(window.location.search);
+      const compact = params.get("c");
       const challenge = params.get("challenge");
-      if (challenge) {
+      if (compact?.startsWith("v1.")) {
+        try {
+          config = decodeChallengeCompact(compact).config;
+        } catch {
+          /* ignore malformed compact token */
+        }
+      } else if (challenge) {
         config = decodeChallenge(challenge);
       }
     }
