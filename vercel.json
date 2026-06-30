@@ -19,5 +19,11 @@
     { "src": "/api/(.*)", "dest": "/api/[...slug].ts?slug=$1" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/packages/game-client/dist/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/metrics/report",
+      "schedule": "5 0 * * *"
+    }
   ]
 }

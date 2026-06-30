@@ -95,7 +95,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const date = typeof req.query.date === "string" ? req.query.date : undefined;
       return res.status(200).json(await h.handleMetricsSummary(date));
     }
-    if (slug[0] === "metrics" && slug[1] === "report" && req.method === "POST") {
+    if (
+      slug[0] === "metrics" &&
+      slug[1] === "report" &&
+      (req.method === "POST" || req.method === "GET")
+    ) {
+      const cronSecret = process.env.CRON_SECRET;
+      if (
+        cronSecret &&
+        req.headers.authorization !== `Bearer ${cronSecret}`
+      ) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
       const date = typeof req.query.date === "string" ? req.query.date : undefined;
       return res.status(200).json(await h.handleMetricsReport(date));
     }
