@@ -267,10 +267,18 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
                 {format(strings.challengeBanner, { name: challengeName, score: challengeScore })}
               </p>
               <div className="challenge-banner__actions">
-                <button type="button" className="btn btn--primary btn--compact" onClick={acceptChallenge}>
+                <button
+                  type="button"
+                  className="btn btn--menu challenge-banner__accept"
+                  onClick={acceptChallenge}
+                >
                   {strings.challengeAccept}
                 </button>
-                <button type="button" className="btn btn--secondary btn--compact" onClick={dismissChallenge}>
+                <button
+                  type="button"
+                  className="btn btn--menu challenge-banner__dismiss"
+                  onClick={dismissChallenge}
+                >
                   {strings.challengeDismiss}
                 </button>
               </div>

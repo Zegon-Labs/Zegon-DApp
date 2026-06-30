@@ -834,6 +834,26 @@ body:has(.hero) {
   flex-wrap: wrap;
 }
 
+.challenge-banner__actions .btn--menu {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: var(--menu-fs-md);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+
+.challenge-banner__accept {
+  border-color: rgba(232, 178, 58, 0.7);
+}
+
+.challenge-banner__accept:hover {
+  border-color: var(--ember);
+  background: rgba(232, 178, 58, 0.12);
+}
+
 .btn--compact {
   padding: 0.45rem 0.85rem;
   font-size: var(--menu-fs-sm);
