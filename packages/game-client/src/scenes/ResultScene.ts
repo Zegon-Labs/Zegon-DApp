@@ -153,6 +153,7 @@ export class ResultScene extends Phaser.Scene {
       duelId: this.duelId,
       mode: this.mode,
       verifyProof: this.verifyProof,
+      brainMode: this.brainMode,
     };
   }
 

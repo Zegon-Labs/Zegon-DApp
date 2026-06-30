@@ -301,6 +301,8 @@ export interface LocaleStrings {
   scoreInfoSurprise: string;
   scoreInfoDaily: string;
   scoreInfoBlindsight: string;
+  shareImageCopied: string;
+  shareImageDownloaded: string;
 }
 
 const LOCALES: Record<Language, LocaleStrings> = {
@@ -620,6 +622,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreInfoSurprise: "+{points} bonus when you fool ZEGON 2+ rounds in a row",
     scoreInfoDaily: "Daily streak multiplies your score up to ×{mult}",
     scoreInfoBlindsight: "Keep ZEGON's read streak low to avoid penalties",
+    shareImageCopied: "Card copied — paste it (Ctrl+V) into your X post",
+    shareImageDownloaded: "Card downloaded — attach it to your X post",
   },
   es: {
     pageTitle: "ZEGON · Supera al ciego",
@@ -937,6 +941,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreInfoSurprise: "+{points} de bonus si engañás a ZEGON 2+ rondas seguidas",
     scoreInfoDaily: "La racha diaria multiplica tu puntaje hasta ×{mult}",
     scoreInfoBlindsight: "Mantené baja la racha de lectura de ZEGON para evitar penalización",
+    shareImageCopied: "Tarjeta copiada — pegala (Ctrl+V) en tu post de X",
+    shareImageDownloaded: "Tarjeta descargada — adjuntala a tu post de X",
   },
 };
 

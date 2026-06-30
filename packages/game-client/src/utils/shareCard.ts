@@ -10,6 +10,17 @@ import {
 } from "@zegon/game-core";
 import { getCachedProfile } from "../services/profile.js";
 import { getWalletAddress } from "../services/wallet.js";
+import { t } from "../i18n/index.js";
+import { notify } from "../lib/toast.js";
+
+export interface ShareOptions {
+  seed: string;
+  archetype?: string;
+  duelId?: string | null;
+  mode?: "standard" | "daily";
+  verifyProof?: string;
+  brainMode?: string;
+}
 
 const ASSETS = {
   bg: "/landing/bg.png",
@@ -148,13 +159,7 @@ export async function buildChallengeUrlFromResult(
 
 export async function buildShareOnXUrl(
   result: DuelResult,
-  options: {
-    seed: string;
-    archetype?: string;
-    duelId?: string | null;
-    mode?: "standard" | "daily";
-    verifyProof?: string;
-  },
+  options: ShareOptions,
 ): Promise<string> {
   const challengeUrl = await buildChallengeUrlFromResult(result, options);
   const text = buildShareTweetText({
@@ -164,12 +169,89 @@ export async function buildShareOnXUrl(
   return buildTwitterIntentUrl(text, challengeUrl);
 }
 
+async function copyBlobToClipboard(blob: Blob): Promise<boolean> {
+  try {
+    const ClipboardItemCtor = (
+      window as unknown as { ClipboardItem?: typeof ClipboardItem }
+    ).ClipboardItem;
+    if (!ClipboardItemCtor || !navigator.clipboard?.write) return false;
+    await navigator.clipboard.write([
+      new ClipboardItemCtor({ "image/png": blob }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Share to X with the generated card image.
+ * - Mobile: Web Share API attaches the image directly (user picks X).
+ * - Desktop: X's web intent can't attach images, so we copy the card to the
+ *   clipboard (paste with Ctrl+V) or download it as a fallback, then open the
+ *   X composer prefilled with text + challenge link.
+ */
 export async function shareOnX(
   result: DuelResult,
-  options: Parameters<typeof buildShareOnXUrl>[1],
+  options: ShareOptions,
 ): Promise<void> {
+  const strings = t();
   const url = await buildShareOnXUrl(result, options);
+  const filename = `zegon-${result.score}.png`;
+
+  let blob: Blob | null = null;
+  try {
+    const canvas = await renderShareCardCanvas(result, {
+      archetype: options.archetype,
+      brainMode: options.brainMode,
+      verifyProof: options.verifyProof,
+    });
+    blob = await canvasToBlob(canvas);
+  } catch {
+    /* card render failed; still share text + link below */
+  }
+
+  const file = blob
+    ? new File([blob], filename, { type: "image/png" })
+    : null;
+
+  // Mobile / browsers with file share: attaches the actual card image.
+  if (file && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        text: buildShareTweetText({
+          score: result.score,
+          verifyRounds: options.verifyProof,
+        }),
+      });
+      return;
+    } catch {
+      /* user cancelled or unsupported — fall back to intent below */
+    }
+  }
+
+  // Desktop: get the image to the user, then open the X composer.
+  let copied = false;
+  if (blob) {
+    copied = await copyBlobToClipboard(blob);
+    if (!copied) {
+      const dlUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = dlUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(dlUrl);
+    }
+  }
+
   window.open(url, "_blank", "noopener,noreferrer,width=550,height=420");
+
+  if (copied) {
+    notify.success(strings.shareImageCopied);
+  } else if (blob) {
+    notify.info(strings.shareImageDownloaded);
+  }
 }
 
 async function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
@@ -178,15 +260,16 @@ async function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
   });
 }
 
-export async function generateShareCard(
+/** Render the 1200×630 share card and return the canvas. */
+export async function renderShareCardCanvas(
   result: DuelResult,
   meta: ShareCardMeta,
-): Promise<void> {
+): Promise<HTMLCanvasElement> {
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
   canvas.height = 630;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+  if (!ctx) return canvas;
 
   try {
     const [bg, logo, character] = await Promise.all([
@@ -198,10 +281,23 @@ export async function generateShareCard(
     drawImageCover(ctx, bg, 0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "rgba(10, 9, 17, 0.72)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawHudFrame(ctx, canvas.width, canvas.height);
 
+    // Character: larger and anchored to the bottom-right, drawn before the
+    // frame/text so the HUD and copy stay crisp on top of it.
+    const charW = 560;
+    const charH = 612;
+    const charX = canvas.width - charW - 18;
+    const charY = canvas.height - charH;
+    // Soft gradient behind the character so it blends into the card edge.
+    const fade = ctx.createLinearGradient(charX, 0, charX + charW, 0);
+    fade.addColorStop(0, "rgba(10, 9, 17, 0)");
+    fade.addColorStop(0.4, "rgba(10, 9, 17, 0)");
+    ctx.fillStyle = fade;
+    ctx.fillRect(charX, 0, charW, canvas.height);
+    drawImageContain(ctx, character, charX, charY, charW, charH, "right");
+
+    drawHudFrame(ctx, canvas.width, canvas.height);
     drawImageContain(ctx, logo, 48, 42, 240, 78, "left");
-    drawImageContain(ctx, character, 720, 70, 420, 520, "right");
 
     ctx.fillStyle = "#E6E1D3";
     ctx.font = "bold 44px monospace";
@@ -243,6 +339,14 @@ export async function generateShareCard(
     ctx.fillText(`ZEGON · ${result.score}`, 60, 200);
   }
 
+  return canvas;
+}
+
+export async function generateShareCard(
+  result: DuelResult,
+  meta: ShareCardMeta,
+): Promise<void> {
+  const canvas = await renderShareCardCanvas(result, meta);
   const blob = await canvasToBlob(canvas);
   const filename = `zegon-${result.score}.png`;
 
