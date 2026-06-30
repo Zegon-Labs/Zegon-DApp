@@ -16,6 +16,24 @@ const RANK_SHARES: Record<number, number> = {
   3: 0.15,
 };
 
+export interface DailyPoolRankReward {
+  rank: number;
+  sharePercent: number;
+  label: string;
+  note?: string;
+}
+
+export const DAILY_POOL_RANK_REWARDS: DailyPoolRankReward[] = [
+  { rank: 1, sharePercent: 40, label: "#1" },
+  { rank: 2, sharePercent: 25, label: "#2" },
+  { rank: 3, sharePercent: 15, label: "#3" },
+  { rank: 4, sharePercent: 20, label: "#4–#10", note: "split_evenly" },
+];
+
+export function getDailyPoolRankRewards(): DailyPoolRankReward[] {
+  return DAILY_POOL_RANK_REWARDS;
+}
+
 function poolAddress(): string | null {
   return process.env.ZEGON_DAILY_POOL_ADDRESS ?? null;
 }

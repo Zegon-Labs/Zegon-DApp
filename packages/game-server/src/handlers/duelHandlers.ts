@@ -33,6 +33,7 @@ import { storeDuelLog, loadDuelLogPayload } from "../services/storage.js";
 import {
   getPoolInfo,
   getPoolContractAddress,
+  getDailyPoolRankRewards,
   hasEnteredPool,
   processDailyClaim,
   isDailyPoolConfigured,
@@ -705,11 +706,28 @@ export async function handleDailyPoolInfo(seed?: string): Promise<{
   entrants?: number;
   closed?: boolean;
   minStake?: string;
+  rankRewards?: Array<{
+    rank: number;
+    sharePercent: number;
+    label: string;
+    note?: string;
+  }>;
 }> {
   const dailySeed = seed ?? createDailyDuel().seed!;
   const configured = isDailyPoolConfigured();
+  const rankRewards = getDailyPoolRankRewards().map((r) => ({
+    rank: r.rank,
+    sharePercent: r.sharePercent,
+    label: r.label,
+    ...(r.note ? { note: r.note } : {}),
+  }));
   if (!configured) {
-    return { seed: dailySeed, configured: false, poolAddress: getPoolContractAddress() };
+    return {
+      seed: dailySeed,
+      configured: false,
+      poolAddress: getPoolContractAddress(),
+      rankRewards,
+    };
   }
   const info = await getPoolInfo(dailySeed);
   return {
@@ -720,6 +738,7 @@ export async function handleDailyPoolInfo(seed?: string): Promise<{
     entrants: info?.entrants,
     closed: info?.closed,
     minStake: info?.minStake,
+    rankRewards,
   };
 }
 

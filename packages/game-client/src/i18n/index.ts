@@ -267,6 +267,40 @@ export interface LocaleStrings {
   copiedChallenge: string;
   winsVsZegon: string;
   achievementsWins: string;
+  commonCancel: string;
+  dailyEnterPool: string;
+  dailyPlayWithoutStake: string;
+  dailyPrizeEligible: string;
+  stakeModalTitle: string;
+  stakeModalIntro: string;
+  stakeModalMinLabel: string;
+  stakeModalPoolLabel: string;
+  stakeModalContractLabel: string;
+  stakeModalRewardsTitle: string;
+  stakeModalRewardSplit: string;
+  stakeModalReqTitle: string;
+  stakeModalReqNetwork: string;
+  stakeModalReqBalance: string;
+  stakeModalReqWallet: string;
+  stakeModalConfirm: string;
+  stakeModalFaucet: string;
+  stakeErrNoWallet: string;
+  stakeErrWrongNetwork: string;
+  stakeErrInsufficient: string;
+  stakeErrRejected: string;
+  stakeErrAlready: string;
+  stakeErrClosed: string;
+  stakeErrNotConfigured: string;
+  stakeErrFailed: string;
+  scoreInfoOpen: string;
+  scoreInfoTitle: string;
+  scoreInfoIntro: string;
+  scoreInfoRounds: string;
+  scoreInfoVictory: string;
+  scoreInfoRead: string;
+  scoreInfoSurprise: string;
+  scoreInfoDaily: string;
+  scoreInfoBlindsight: string;
 }
 
 const LOCALES: Record<Language, LocaleStrings> = {
@@ -552,6 +586,40 @@ const LOCALES: Record<Language, LocaleStrings> = {
     copiedChallenge: "Challenge link copied",
     winsVsZegon: "Wins vs ZEGON: {wins} / {played} duels",
     achievementsWins: "Duels won: {wins} · played: {played}",
+    commonCancel: "Cancel",
+    dailyEnterPool: "Enter prize pool",
+    dailyPlayWithoutStake: "Play without stake",
+    dailyPrizeEligible: "✓ In today's prize pool",
+    stakeModalTitle: "Enter Prize Pool",
+    stakeModalIntro: "Staking does NOT unlock the game — you can always play the daily for free. It enters today's on-chain prize pool. Top scores split the pool after the daily resets.",
+    stakeModalMinLabel: "Minimum stake",
+    stakeModalPoolLabel: "Current pool",
+    stakeModalContractLabel: "Pool contract",
+    stakeModalRewardsTitle: "Prize split (by daily rank)",
+    stakeModalRewardSplit: "{label} · {percent}%",
+    stakeModalReqTitle: "Requirements",
+    stakeModalReqNetwork: "Be on 0G Galileo testnet (auto-switch)",
+    stakeModalReqBalance: "Hold OG for the stake + gas",
+    stakeModalReqWallet: "Wallet connected",
+    stakeModalConfirm: "Stake {amount} OG",
+    stakeModalFaucet: "Need OG? Get testnet tokens",
+    stakeErrNoWallet: "No wallet found · install MetaMask",
+    stakeErrWrongNetwork: "Switch your wallet to 0G Galileo testnet to stake",
+    stakeErrInsufficient: "Not enough OG for stake + gas · top up at the faucet",
+    stakeErrRejected: "You rejected the signature · you can still play for free",
+    stakeErrAlready: "You already entered today's pool",
+    stakeErrClosed: "Today's pool is closed · come back after reset",
+    stakeErrNotConfigured: "Daily pool not configured yet",
+    stakeErrFailed: "Stake failed · check wallet & balance",
+    scoreInfoOpen: "How scoring works",
+    scoreInfoTitle: "How scoring works",
+    scoreInfoIntro: "Your daily score decides your rank and prize share. Here's how points add up:",
+    scoreInfoRounds: "+{points} per round survived",
+    scoreInfoVictory: "+{points} for beating ZEGON",
+    scoreInfoRead: "−{points} each time ZEGON reads you correctly",
+    scoreInfoSurprise: "+{points} bonus when you fool ZEGON 2+ rounds in a row",
+    scoreInfoDaily: "Daily streak multiplies your score up to ×{mult}",
+    scoreInfoBlindsight: "Keep ZEGON's read streak low to avoid penalties",
   },
   es: {
     pageTitle: "ZEGON · Supera al ciego",
@@ -835,6 +903,40 @@ const LOCALES: Record<Language, LocaleStrings> = {
     copiedChallenge: "Link de desafío copiado",
     winsVsZegon: "Victorias vs ZEGON: {wins} / {played} duelos",
     achievementsWins: "Duelos ganados: {wins} · jugados: {played}",
+    commonCancel: "Cancelar",
+    dailyEnterPool: "Entrar al prize pool",
+    dailyPlayWithoutStake: "Jugar sin apostar",
+    dailyPrizeEligible: "✓ Dentro del prize pool de hoy",
+    stakeModalTitle: "Entrar al Prize Pool",
+    stakeModalIntro: "Apostar NO desbloquea el juego — siempre podés jugar el daily gratis. Tu OG entra al prize pool on-chain de hoy. Los mejores puntajes se reparten el pool cuando el daily se reinicia.",
+    stakeModalMinLabel: "Apuesta mínima",
+    stakeModalPoolLabel: "Pool actual",
+    stakeModalContractLabel: "Contrato del pool",
+    stakeModalRewardsTitle: "Reparto de premios (por rank diario)",
+    stakeModalRewardSplit: "{label} · {percent}%",
+    stakeModalReqTitle: "Requisitos",
+    stakeModalReqNetwork: "Estar en 0G Galileo testnet (cambio automático)",
+    stakeModalReqBalance: "Tener OG para la apuesta + gas",
+    stakeModalReqWallet: "Wallet conectada",
+    stakeModalConfirm: "Apostar {amount} OG",
+    stakeModalFaucet: "¿Necesitás OG? Conseguí tokens de testnet",
+    stakeErrNoWallet: "No hay wallet · instalá MetaMask",
+    stakeErrWrongNetwork: "Cambiá tu wallet a 0G Galileo testnet para apostar",
+    stakeErrInsufficient: "OG insuficiente para apuesta + gas · recargá en el faucet",
+    stakeErrRejected: "Rechazaste la firma · igual podés jugar gratis",
+    stakeErrAlready: "Ya entraste al pool de hoy",
+    stakeErrClosed: "El pool de hoy está cerrado · volvé tras el reinicio",
+    stakeErrNotConfigured: "Pool diario aún no configurado",
+    stakeErrFailed: "Falló la apuesta · revisá wallet y saldo",
+    scoreInfoOpen: "Cómo se calcula el puntaje",
+    scoreInfoTitle: "Cómo se calcula el puntaje",
+    scoreInfoIntro: "Tu puntaje diario define tu rank y tu parte del premio. Así suman los puntos:",
+    scoreInfoRounds: "+{points} por ronda sobrevivida",
+    scoreInfoVictory: "+{points} por vencer a ZEGON",
+    scoreInfoRead: "−{points} cada vez que ZEGON te lee correctamente",
+    scoreInfoSurprise: "+{points} de bonus si engañás a ZEGON 2+ rondas seguidas",
+    scoreInfoDaily: "La racha diaria multiplica tu puntaje hasta ×{mult}",
+    scoreInfoBlindsight: "Mantené baja la racha de lectura de ZEGON para evitar penalización",
   },
 };
 

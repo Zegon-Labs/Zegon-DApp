@@ -13,15 +13,30 @@ import {
 import { fetchProfile, getCachedProfile, hasNickname, onProfileChange } from "../services/profile.js";
 import { isTutorialDone } from "../tutorial/steps.js";
 import { getDailyArchetype, getMsUntilDailyReset, formatDailyCountdown, resolveChallengeFromSearch, buildTwitterIntentUrl, type ChallengeMeta, type ChallengePayload, type DuelConfig } from "@zegon/game-core";
-import { format } from "../i18n/index.js";
+import { format, type LocaleStrings } from "../i18n/index.js";
 import {
   checkDailyEntered,
+  DailyStakeError,
   enterDailyPool,
   fetchDailyPool,
+  type DailyStakeErrorCode,
 } from "../services/dailyStake.js";
 import { fetchHealth } from "../services/health.js";
 import { playSfx } from "../services/sfx.js";
 import { HeroCharacter } from "./HeroCharacter.js";
+import { DailyStakeModal } from "./DailyStakeModal.js";
+import { ScoreInfoModal } from "./ScoreInfoModal.js";
+
+const STAKE_ERROR_KEYS: Record<DailyStakeErrorCode, keyof LocaleStrings> = {
+  NO_WALLET: "stakeErrNoWallet",
+  WRONG_NETWORK: "stakeErrWrongNetwork",
+  INSUFFICIENT_BALANCE: "stakeErrInsufficient",
+  USER_REJECTED: "stakeErrRejected",
+  ALREADY_ENTERED: "stakeErrAlready",
+  POOL_CLOSED: "stakeErrClosed",
+  POOL_NOT_CONFIGURED: "stakeErrNotConfigured",
+  TX_FAILED: "stakeErrFailed",
+};
 
 interface HeroHubProps {
   onNeedsProfile?: (address: string) => void;
@@ -70,6 +85,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   } | null>(null);
   const [wins, setWins] = useState(0);
   const [duelsPlayed, setDuelsPlayed] = useState(0);
+  const [showStakeModal, setShowStakeModal] = useState(false);
+  const [showScoreInfo, setShowScoreInfo] = useState(false);
 
   const dailyArch = getDailyArchetype();
   const dailyArchName = lang === "es" ? dailyArch.nameEs : dailyArch.nameEn;
@@ -163,16 +180,20 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
 
   const poolConfigured = poolInfo?.configured === true;
   const needsWallet = !wallet;
-  const needsStake = poolConfigured && !staked;
-  const canPlayDaily = !needsWallet && !needsStake;
+  const canStake = poolConfigured && !staked;
+
+  function openStakeModal() {
+    playSfx("ui_modal_open");
+    setShowStakeModal(true);
+  }
 
   async function handleStakeDaily() {
-    if (!wallet) {
-      notify.info(strings.dailyWalletRequired);
+    if (!poolInfo?.poolAddress) {
+      notify.error(strings.stakeErrNotConfigured);
       return;
     }
-    if (!poolInfo?.poolAddress) {
-      notify.error(strings.dailyPoolNotConfigured);
+    if (!wallet) {
+      notify.info(strings.dailyWalletRequired);
       return;
     }
     try {
@@ -181,23 +202,20 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
       setStaked(true);
       playSfx("daily_stake");
       notify.success(strings.dailyStaked, tx.slice(0, 10) + "…");
+      setShowStakeModal(false);
       void fetchDailyPool().then(setPoolInfo);
-    } catch {
-      notify.error(strings.dailyStakeFailed);
+    } catch (err) {
+      const code: DailyStakeErrorCode =
+        err instanceof DailyStakeError ? err.code : "TX_FAILED";
+      notify.error(strings[STAKE_ERROR_KEYS[code]]);
+      if (code !== "USER_REJECTED") {
+        // keep modal open so they can adjust network/balance and retry
+      }
     }
   }
 
-  async function startDaily() {
-    if (needsWallet) {
-      notify.info(strings.dailyWalletRequired);
-      return;
-    }
-
-    if (needsStake) {
-      notify.info(strings.dailyStakeRequired);
-      return;
-    }
-
+  function startDaily() {
+    setShowStakeModal(false);
     gameBridge.startScene("DuelScene", { mode: "daily" });
   }
 
@@ -338,37 +356,47 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
                 </ul>
               </div>
             )}
-            {poolConfigured && !staked && (
+            {canStake && (
               <button
                 type="button"
-                className={`btn btn--secondary btn--stake${needsWallet ? " btn--secondary-locked" : " btn--stake-emphasis"}`}
-                onClick={() => void handleStakeDaily()}
+                className="btn btn--secondary btn--stake btn--stake-emphasis"
+                onClick={openStakeModal}
               >
-                {strings.dailyStake} ({poolInfo?.minStake ?? "0.01"} OG)
+                {strings.dailyEnterPool} ({poolInfo?.minStake ?? "0.01"} OG)
               </button>
             )}
-            {staked && <p className="daily-card__staked">{strings.dailyStakedBadge}</p>}
-            {!canPlayDaily && (
+            {staked && <p className="daily-card__staked">{strings.dailyPrizeEligible}</p>}
+            {needsWallet && (
               <p className="daily-card__hint" role="status">
-                {needsWallet ? strings.dailyPlayFreeRank : strings.dailyStakeFirst}
+                {strings.dailyPlayFreeRank}
               </p>
             )}
             <button
               type="button"
-              className="btn btn--secondary btn--daily-share"
-              onClick={shareDailyDraw}
-            >
-              {strings.dailyShareToday}
-            </button>
-            <button
-              type="button"
-              className={`btn btn--secondary btn--daily-play${canPlayDaily ? "" : " btn--secondary-locked"}`}
-              onClick={() => void startDaily()}
-              disabled={!canPlayDaily}
-              aria-disabled={!canPlayDaily}
+              className="btn btn--primary btn--daily-play"
+              onClick={startDaily}
             >
               <span>{strings.dailyPlay}</span>
             </button>
+            <div className="daily-card__links">
+              <button
+                type="button"
+                className="daily-card__link-btn"
+                onClick={() => {
+                  playSfx("ui_modal_open");
+                  setShowScoreInfo(true);
+                }}
+              >
+                {strings.scoreInfoOpen}
+              </button>
+              <button
+                type="button"
+                className="daily-card__link-btn"
+                onClick={shareDailyDraw}
+              >
+                {strings.dailyShareToday}
+              </button>
+            </div>
           </div>
 
           <div className="hero__divider" role="separator">
@@ -490,6 +518,28 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           </div>
         </div>
       </footer>
+
+      {showStakeModal && poolInfo && (
+        <DailyStakeModal
+          pool={poolInfo}
+          walletConnected={!needsWallet}
+          onClose={() => {
+            playSfx("ui_modal_close");
+            setShowStakeModal(false);
+          }}
+          onStake={handleStakeDaily}
+          onPlayFree={startDaily}
+        />
+      )}
+
+      {showScoreInfo && (
+        <ScoreInfoModal
+          onClose={() => {
+            playSfx("ui_modal_close");
+            setShowScoreInfo(false);
+          }}
+        />
+      )}
     </main>
   );
 }

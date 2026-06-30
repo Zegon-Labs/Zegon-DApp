@@ -2700,6 +2700,150 @@ html.zegon-reduced-motion .smoke-particle {
   width: 100%;
 }
 
+.daily-card__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.daily-card__link-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--dust);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.daily-card__link-btn:hover {
+  color: var(--ember);
+}
+
+/* --- Daily stake / prize pool modal --- */
+.stake-modal {
+  max-width: 460px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.stake-modal__intro {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dust);
+  margin: 0 0 16px;
+}
+
+.stake-modal__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(58, 53, 80, 0.85);
+  border-radius: 6px;
+  background: rgba(10, 9, 17, 0.55);
+  margin-bottom: 16px;
+}
+
+.stake-modal__stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.stake-modal__stat-label {
+  color: var(--dust);
+}
+
+.stake-modal__stat-value {
+  color: var(--ember);
+  font-weight: 600;
+  text-align: right;
+}
+
+.stake-modal__mono {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+}
+
+.stake-modal__section {
+  margin-bottom: 16px;
+}
+
+.stake-modal__section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stake-modal__rewards,
+.stake-modal__reqs,
+.stake-modal__scoring {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stake-modal__rewards li,
+.stake-modal__reqs li,
+.stake-modal__scoring li {
+  font-size: 13px;
+  color: var(--dust);
+  line-height: 1.4;
+  padding-left: 16px;
+  position: relative;
+}
+
+.stake-modal__rewards li::before,
+.stake-modal__reqs li::before,
+.stake-modal__scoring li::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  color: var(--ember);
+}
+
+.stake-modal__req--ok {
+  color: var(--verified);
+}
+
+.stake-modal__faucet {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.stake-modal__faucet:hover {
+  color: var(--ember);
+}
+
+.stake-modal__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.stake-modal__cancel {
+  width: 100%;
+}
+
 .hackathon-bar-wrap {
   position: fixed;
   top: 0;
