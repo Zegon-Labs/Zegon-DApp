@@ -22,6 +22,7 @@ import { C, COLORS } from "../ui/theme.js";
 import { formatScoreBreakdown } from "../ui/scoreBreakdownText.js";
 import { buildChallengeUrlFromResult, generateShareCard, shareOnX } from "../utils/shareCard.js";
 import { playDuelEndSfx, playSfx } from "../services/sfx.js";
+import { trackMetric } from "../services/metrics.js";
 import { playDuelEndVoice, stopAllVoice } from "../services/voice.js";
 import { openVerifyDuelWindow } from "../utils/verifyWindow.js";
 import { verifyApiUrl } from "../services/duelSessionStorage.js";
@@ -81,6 +82,7 @@ export class ResultScene extends Phaser.Scene {
     this.challengeMeta = data.challengeMeta;
     this.scoreSubmitted = false;
     this.verifyProof = undefined;
+    trackMetric("duel_finished");
 
     this.cameras.main.setBackgroundColor(C.void);
     createLandingBackdrop(this, 0);
@@ -209,6 +211,7 @@ export class ResultScene extends Phaser.Scene {
       {
         label: strings.shareOnX,
         onClick: () => {
+          trackMetric("share_x");
           void shareOnX(this.result, this.getShareOptions());
         },
       },

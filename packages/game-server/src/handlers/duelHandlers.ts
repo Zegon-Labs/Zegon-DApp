@@ -42,6 +42,11 @@ import { uint8ToZegonAction } from "../services/moveMapping.js";
 import { encodeSessionToken, decodeSessionToken } from "../utils/sessionToken.js";
 import type { DuelSession, RoundLog } from "../types/duelSession.js";
 import { handleHealth } from "./healthHandler.js";
+import {
+  getMetricsSummary,
+  sendMetricsReport,
+  trackMetric,
+} from "../services/metrics.js";
 
 export { handleHealth };
 
@@ -772,6 +777,26 @@ export async function handleGetChallengeLink(
 ): Promise<{ payload: Record<string, unknown> | null }> {
   const entry = await getChallengeLink(id);
   return { payload: entry?.payload ?? null };
+}
+
+export async function handleTrackMetric(body: {
+  event?: unknown;
+  visitorId?: unknown;
+  wallet?: unknown;
+}): Promise<Awaited<ReturnType<typeof trackMetric>>> {
+  return trackMetric(body);
+}
+
+export async function handleMetricsSummary(
+  date?: string,
+): Promise<Awaited<ReturnType<typeof getMetricsSummary>>> {
+  return getMetricsSummary(date);
+}
+
+export async function handleMetricsReport(
+  date?: string,
+): Promise<Awaited<ReturnType<typeof sendMetricsReport>>> {
+  return sendMetricsReport(date);
 }
 
 export { buildChallengeUrl };

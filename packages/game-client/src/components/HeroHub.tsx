@@ -23,6 +23,7 @@ import {
 } from "../services/dailyStake.js";
 import { fetchHealth } from "../services/health.js";
 import { playSfx } from "../services/sfx.js";
+import { trackMetric } from "../services/metrics.js";
 import { HeroCharacter } from "./HeroCharacter.js";
 import { DailyStakeModal } from "./DailyStakeModal.js";
 import { ScoreInfoModal } from "./ScoreInfoModal.js";
@@ -163,6 +164,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     }
     try {
       const address = await connectWallet();
+      trackMetric("connect_wallet");
       notify.success(strings.walletConnected, truncateAddress(address));
       if (!hasNickname(address)) {
         const remote = await fetchProfile(address);
@@ -183,6 +185,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   const canStake = poolConfigured && !staked;
 
   function openStakeModal() {
+    trackMetric("stake_click");
     playSfx("ui_modal_open");
     setShowStakeModal(true);
   }
@@ -199,6 +202,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     try {
       const min = poolInfo.minStake ?? "0.01";
       const tx = await enterDailyPool(poolInfo.poolAddress, poolInfo.seed, min);
+      trackMetric("stake_success");
       setStaked(true);
       playSfx("daily_stake");
       notify.success(strings.dailyStaked, tx.slice(0, 10) + "…");
@@ -215,6 +219,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   }
 
   function startDaily() {
+    trackMetric("daily_start");
     setShowStakeModal(false);
     gameBridge.startScene("DuelScene", { mode: "daily" });
   }

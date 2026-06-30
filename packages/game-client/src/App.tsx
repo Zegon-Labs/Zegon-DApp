@@ -10,6 +10,7 @@ import { gameBridge, type AppView } from "./game/bridge.js";
 import { fetchProfile, hasNickname } from "./services/profile.js";
 import { connectWallet, getWalletAddress, onWalletChange } from "./services/wallet.js";
 import { playSfx, playUiClick, playUiHover } from "./services/sfx.js";
+import { trackMetric } from "./services/metrics.js";
 
 export default function App() {
   const [view, setView] = useState<AppView>({ type: "hub" });
@@ -20,6 +21,9 @@ export default function App() {
 
   useEffect(() => gameBridge.onNavigate(setView), []);
   useEffect(() => gameBridge.onSettingsOverlay(setInGameSettings), []);
+  useEffect(() => {
+    trackMetric("page_view");
+  }, []);
   useEffect(
     () =>
       gameBridge.onWalletConnectRequest(() => {

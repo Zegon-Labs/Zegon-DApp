@@ -88,6 +88,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (slug[0] === "challenge" && slug[1] && req.method === "GET") {
       return res.status(200).json(await h.handleGetChallengeLink(slug[1]));
     }
+    if (slug[0] === "metrics" && slug[1] === "track" && req.method === "POST") {
+      return res.status(200).json(await h.handleTrackMetric(req.body));
+    }
+    if (slug[0] === "metrics" && slug[1] === "summary" && req.method === "GET") {
+      const date = typeof req.query.date === "string" ? req.query.date : undefined;
+      return res.status(200).json(await h.handleMetricsSummary(date));
+    }
+    if (slug[0] === "metrics" && slug[1] === "report" && req.method === "POST") {
+      const date = typeof req.query.date === "string" ? req.query.date : undefined;
+      return res.status(200).json(await h.handleMetricsReport(date));
+    }
     if (slug[0] === "player" && slug[1] === "profile" && slug[2] === "stats" && req.method === "POST") {
       return res.status(200).json(await h.handleUpdateProfileStats(req.body));
     }
