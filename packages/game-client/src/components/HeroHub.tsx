@@ -373,7 +373,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             )}
             <button
               type="button"
-              className="btn btn--primary btn--daily-play"
+              className="btn btn--secondary btn--daily-play btn--stake-emphasis"
               onClick={startDaily}
             >
               <span>{strings.dailyPlay}</span>

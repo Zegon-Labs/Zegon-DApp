@@ -810,6 +810,10 @@ body:has(.hero) {
   width: 100%;
 }
 
+.hero__menu .btn--daily-play {
+  width: 100%;
+}
+
 .challenge-banner {
   width: 100%;
   margin-bottom: 0.75rem;
