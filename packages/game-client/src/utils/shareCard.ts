@@ -184,12 +184,20 @@ async function copyBlobToClipboard(blob: Blob): Promise<boolean> {
   }
 }
 
+function isCoarsePointer(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
 /**
  * Share to X with the generated card image.
- * - Mobile: Web Share API attaches the image directly (user picks X).
- * - Desktop: X's web intent can't attach images, so we copy the card to the
- *   clipboard (paste with Ctrl+V) or download it as a fallback, then open the
- *   X composer prefilled with text + challenge link.
+ * - Mobile (touch): Web Share API attaches the image directly (user picks X).
+ * - Desktop: always open the X composer (text + challenge link) and copy the
+ *   card image to the clipboard so it can be pasted with Ctrl+V. We never open
+ *   the OS share sheet or auto-download on desktop, so the X tab always opens.
  */
 export async function shareOnX(
   result: DuelResult,
@@ -215,8 +223,8 @@ export async function shareOnX(
     ? new File([blob], filename, { type: "image/png" })
     : null;
 
-  // Mobile / browsers with file share: attaches the actual card image.
-  if (file && navigator.canShare?.({ files: [file] })) {
+  // Touch devices only: native share can attach the actual card image.
+  if (isCoarsePointer() && file && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({
         files: [file],
@@ -231,26 +239,14 @@ export async function shareOnX(
     }
   }
 
-  // Desktop: get the image to the user, then open the X composer.
-  let copied = false;
-  if (blob) {
-    copied = await copyBlobToClipboard(blob);
-    if (!copied) {
-      const dlUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = dlUrl;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(dlUrl);
-    }
-  }
+  // Desktop: copy the card to the clipboard (best-effort) so it can be pasted,
+  // then always open the X composer.
+  const copied = blob ? await copyBlobToClipboard(blob) : false;
 
   window.open(url, "_blank", "noopener,noreferrer,width=550,height=420");
 
   if (copied) {
     notify.success(strings.shareImageCopied);
-  } else if (blob) {
-    notify.info(strings.shareImageDownloaded);
   }
 }
 
