@@ -5,16 +5,45 @@ const STORAGE_KEY = "zegon-wallet";
 type WalletListener = (address: string | null) => void;
 
 let cachedAddress: string | null = loadStored();
+let providerListenersBound = false;
 
 const listeners = new Set<WalletListener>();
 
 function loadStored(): string | null {
-  if (typeof sessionStorage === "undefined") return null;
-  const stored = sessionStorage.getItem(STORAGE_KEY);
+  if (typeof localStorage === "undefined") return null;
+  const stored = localStorage.getItem(STORAGE_KEY);
   if (stored && isAddress(stored)) {
     return getAddress(stored);
   }
   return null;
+}
+
+function persist(address: string | null): void {
+  if (typeof localStorage === "undefined") return;
+  if (address) {
+    localStorage.setItem(STORAGE_KEY, address);
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+function bindProviderListeners(): void {
+  if (providerListenersBound) return;
+  const provider = window.ethereum;
+  if (!provider?.on) return;
+  providerListenersBound = true;
+
+  provider.on("accountsChanged", (accounts: string[]) => {
+    const next = accounts?.[0];
+    if (next && isAddress(next)) {
+      cachedAddress = getAddress(next);
+      persist(cachedAddress);
+    } else {
+      cachedAddress = null;
+      persist(null);
+    }
+    notify();
+  });
 }
 
 function notify(): void {
@@ -55,21 +84,28 @@ export async function connectWallet(): Promise<string> {
   }
 
   cachedAddress = getAddress(raw);
-  sessionStorage.setItem(STORAGE_KEY, cachedAddress);
+  persist(cachedAddress);
+  bindProviderListeners();
   notify();
   return cachedAddress;
 }
 
 export function disconnectWallet(): void {
   cachedAddress = null;
-  sessionStorage.removeItem(STORAGE_KEY);
+  persist(null);
   notify();
+}
+
+if (typeof window !== "undefined" && cachedAddress) {
+  bindProviderListeners();
 }
 
 declare global {
   interface Window {
     ethereum?: {
       request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on?: (event: string, handler: (...args: never[]) => void) => void;
+      removeListener?: (event: string, handler: (...args: never[]) => void) => void;
     };
   }
 }

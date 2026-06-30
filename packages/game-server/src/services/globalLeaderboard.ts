@@ -6,6 +6,7 @@ export interface GlobalLeaderboardEntry {
   playerId: string;
   score: number;
   duelId?: string;
+  nickname?: string;
   timestamp: number;
 }
 
@@ -30,18 +31,20 @@ export async function submitGlobalScore(
   playerId: string,
   score: number,
   duelId?: string,
+  nickname?: string,
 ): Promise<void> {
   const board = await loadBoard();
   const existing = board.find((e) => e.playerId === playerId);
 
   if (existing) {
+    if (nickname) existing.nickname = nickname;
     if (score > existing.score) {
       existing.score = score;
       existing.timestamp = Date.now();
       existing.duelId = duelId ?? existing.duelId;
     }
   } else {
-    board.push({ playerId, score, duelId, timestamp: Date.now() });
+    board.push({ playerId, score, duelId, nickname, timestamp: Date.now() });
   }
 
   board.sort((a, b) => b.score - a.score);

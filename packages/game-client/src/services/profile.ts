@@ -101,6 +101,64 @@ export async function saveProfile(
   return data.profile;
 }
 
+const DEFAULT_STATS = {
+  duelsWon: 0,
+  duelsPlayed: 0,
+  bestDailyScore: 0,
+  timesReadTotal: 0,
+  streakDays: 0,
+};
+
+/**
+ * Update the locally cached profile after a duel. The client cache is the
+ * source of truth for achievements/stats display because server storage is
+ * ephemeral on serverless. No-op if the wallet has no profile yet.
+ */
+export function recordLocalProgress(
+  address: string,
+  update: {
+    won?: boolean;
+    timesRead?: number;
+    xpGain?: number;
+    dailyScore?: number;
+    achievements?: readonly string[];
+    unlocks?: readonly string[];
+  },
+): PlayerProfile | null {
+  const cached = getCachedProfile(address);
+  if (!cached?.nickname) return null;
+
+  const stats = { ...DEFAULT_STATS, ...cached.stats };
+  if (update.won !== undefined || update.timesRead !== undefined) {
+    stats.duelsPlayed += 1;
+    if (update.won) stats.duelsWon += 1;
+  }
+  if (update.timesRead !== undefined) {
+    stats.timesReadTotal += update.timesRead;
+  }
+  if (update.dailyScore !== undefined) {
+    stats.bestDailyScore = Math.max(stats.bestDailyScore, update.dailyScore);
+  }
+
+  const achievements = new Set(cached.achievements ?? []);
+  for (const a of update.achievements ?? []) achievements.add(a);
+  const unlocks = new Set(cached.unlocks ?? []);
+  for (const u of update.unlocks ?? []) unlocks.add(u);
+
+  const xp = (cached.xp ?? 0) + (update.xpGain ?? 0);
+  const next: PlayerProfile = {
+    ...cached,
+    xp,
+    level: Math.floor(xp / 500) + 1,
+    stats,
+    achievements: [...achievements],
+    unlocks: [...unlocks],
+    updatedAt: Date.now(),
+  };
+  setCachedProfile(next);
+  return next;
+}
+
 export function onProfileChange(listener: ProfileListener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

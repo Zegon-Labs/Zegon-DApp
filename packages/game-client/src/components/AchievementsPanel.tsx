@@ -1,6 +1,7 @@
 import { getWalletAddress } from "../services/wallet.js";
 import { getCachedProfile } from "../services/profile.js";
 import { useLocale } from "../hooks/useLocale.js";
+import { format } from "../i18n/index.js";
 import { gameBridge } from "../game/bridge.js";
 import { playSfx } from "../services/sfx.js";
 import { ACHIEVEMENTS } from "@zegon/game-core";
@@ -30,12 +31,23 @@ export function AchievementsList() {
 
 export function AchievementsPanel() {
   const { strings } = useLocale();
+  const wallet = getWalletAddress();
+  const profile = wallet ? getCachedProfile(wallet) : null;
+  const stats = profile?.stats;
 
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
       <div className="hero__panel hero__panel--wide hero__panel--utility hero__panel--utility-scroll">
         <h2 className="hero__panel-title">{strings.achievementsTitle}</h2>
         <p className="settings-hint">{strings.achievementsSubtitle}</p>
+        {stats && stats.duelsPlayed > 0 && (
+          <p className="achievements-stats">
+            {format(strings.achievementsWins, {
+              wins: stats.duelsWon,
+              played: stats.duelsPlayed,
+            })}
+          </p>
+        )}
         <AchievementsList />
         <button
           type="button"

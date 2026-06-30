@@ -26,6 +26,46 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+/** Draw an image covering a box, cropping overflow while preserving aspect ratio. */
+function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  const scale = Math.max(w / img.width, h / img.height);
+  const dw = img.width * scale;
+  const dh = img.height * scale;
+  const dx = x + (w - dw) / 2;
+  const dy = y + (h - dh) / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.drawImage(img, dx, dy, dw, dh);
+  ctx.restore();
+}
+
+/** Draw an image fully inside a box, preserving aspect ratio (no distortion). */
+function drawImageContain(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  align: "left" | "center" | "right" = "center",
+): void {
+  const scale = Math.min(w / img.width, h / img.height);
+  const dw = img.width * scale;
+  const dh = img.height * scale;
+  const dx = align === "left" ? x : align === "right" ? x + (w - dw) : x + (w - dw) / 2;
+  const dy = y + (h - dh);
+  ctx.drawImage(img, dx, dy, dw, dh);
+}
+
 function drawHudFrame(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   ctx.strokeStyle = "rgba(46, 230, 214, 0.45)";
   ctx.lineWidth = 3;
@@ -137,13 +177,13 @@ export async function generateShareCard(
       loadImage(ASSETS.character),
     ]);
 
-    ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+    drawImageCover(ctx, bg, 0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "rgba(10, 9, 17, 0.72)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     drawHudFrame(ctx, canvas.width, canvas.height);
 
-    ctx.drawImage(logo, 48, 42, 220, 72);
-    ctx.drawImage(character, 760, 120, 380, 480);
+    drawImageContain(ctx, logo, 48, 42, 240, 78, "left");
+    drawImageContain(ctx, character, 720, 70, 420, 520, "right");
 
     ctx.fillStyle = "#E6E1D3";
     ctx.font = "bold 44px monospace";

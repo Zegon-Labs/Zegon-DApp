@@ -10,7 +10,7 @@ import {
   onWalletChange,
   truncateAddress,
 } from "../services/wallet.js";
-import { fetchProfile, hasNickname } from "../services/profile.js";
+import { fetchProfile, getCachedProfile, hasNickname, onProfileChange } from "../services/profile.js";
 import { isTutorialDone } from "../tutorial/steps.js";
 import { getDailyArchetype, getMsUntilDailyReset, formatDailyCountdown, parseChallengeFromSearch, buildTwitterIntentUrl, type ChallengeMeta, type DuelConfig } from "@zegon/game-core";
 import { format } from "../i18n/index.js";
@@ -58,6 +58,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     config: DuelConfig;
     meta: ChallengeMeta;
   } | null>(null);
+  const [wins, setWins] = useState(0);
+  const [duelsPlayed, setDuelsPlayed] = useState(0);
 
   const dailyArch = getDailyArchetype();
   const dailyArchName = lang === "es" ? dailyArch.nameEs : dailyArch.nameEn;
@@ -94,18 +96,26 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     void checkDailyEntered(poolInfo.seed, wallet).then(setStaked);
   }, [wallet, poolInfo?.seed]);
 
+  useEffect(() => {
+    function syncStats(address: string | null) {
+      const profile = address ? getCachedProfile(address) : null;
+      setWins(profile?.stats?.duelsWon ?? 0);
+      setDuelsPlayed(profile?.stats?.duelsPlayed ?? 0);
+    }
+    syncStats(wallet);
+    if (wallet) void fetchProfile(wallet).then(() => syncStats(wallet));
+    return onProfileChange((address) => {
+      if (address === wallet) syncStats(wallet);
+    });
+  }, [wallet]);
+
   const tutorialDone = isTutorialDone();
   const tutorialLabel = tutorialDone
     ? `${strings.tutorial} ${strings.tutorialDoneBadge}`
     : strings.tutorial;
 
 
-  async function handleWallet() {
-    if (wallet) {
-      disconnectWallet();
-      notify.info(strings.disconnectWallet);
-      return;
-    }
+  async function handleConnectWallet() {
     if (!hasEthereumProvider()) {
       notify.error(strings.walletNoProvider);
       return;
@@ -120,6 +130,11 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     } catch {
       notify.error(strings.walletNoProvider);
     }
+  }
+
+  function handleDisconnectWallet() {
+    disconnectWallet();
+    notify.info(strings.disconnectWallet);
   }
 
   const poolConfigured = poolInfo?.configured === true;
@@ -326,10 +341,33 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             <span>{strings.heroOr}</span>
           </div>
 
-          <button type="button" className="btn btn--secondary" onClick={() => void handleWallet()}>
-            <WalletIcon />
-            <span>{wallet ? truncateAddress(wallet) : strings.connectWallet}</span>
-          </button>
+          {wallet ? (
+            <div className="hero__wallet-connected">
+              <div className="hero__wallet-row">
+                <span className="hero__wallet-address">
+                  <WalletIcon />
+                  {truncateAddress(wallet)}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--compact hero__wallet-disconnect"
+                  onClick={handleDisconnectWallet}
+                >
+                  {strings.disconnectWallet}
+                </button>
+              </div>
+              {duelsPlayed > 0 && (
+                <p className="hero__wallet-stats">
+                  {format(strings.winsVsZegon, { wins, played: duelsPlayed })}
+                </p>
+              )}
+            </div>
+          ) : (
+            <button type="button" className="btn btn--secondary" onClick={() => void handleConnectWallet()}>
+              <WalletIcon />
+              <span>{strings.connectWallet}</span>
+            </button>
+          )}
 
           <div className="hero__menu-grid">
             <button

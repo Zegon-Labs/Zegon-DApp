@@ -386,7 +386,8 @@ export async function handleRecordDuel(body: {
 }> {
   const session = await getSession(body.duelId, body.sessionToken);
   if (!session) {
-    throw new Error("Duel not found");
+    // Session storage is ephemeral on serverless; recording is best-effort.
+    return { stored: false };
   }
 
   const contract = getContractService();
@@ -587,7 +588,7 @@ export async function handleGlobalLeaderboard(): Promise<{
 
   const enriched = walletEntries.slice(0, 10).map((e) => {
     const key = e.playerId.toLowerCase();
-    const nickname = nicknames[key];
+    const nickname = e.nickname ?? nicknames[key];
     return {
       ...e,
       nickname,
@@ -602,15 +603,19 @@ export async function handleGlobalSubmit(body: {
   playerId: string;
   score: number;
   duelId?: string;
-}): Promise<{ accepted: boolean }> {
+  nickname?: string;
+}): Promise<{ accepted: boolean; reason?: string }> {
   if (!isWalletAddress(body.playerId)) {
-    return { accepted: false };
+    return { accepted: false, reason: "WALLET_REQUIRED" };
   }
+  if (!Number.isFinite(body.score) || body.score < 0) {
+    return { accepted: false, reason: "INVALID_SCORE" };
+  }
+  // Server profile storage is ephemeral on serverless, so the nickname from
+  // the client (which enforces it locally) is the reliable display source.
   const profile = await getProfile(body.playerId);
-  if (!profile) {
-    return { accepted: false };
-  }
-  await submitGlobalScore(body.playerId, body.score, body.duelId);
+  const nickname = profile?.nickname ?? body.nickname?.trim();
+  await submitGlobalScore(body.playerId, body.score, body.duelId, nickname);
   return { accepted: true };
 }
 

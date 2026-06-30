@@ -265,6 +265,8 @@ export interface LocaleStrings {
   challengeLost: string;
   challengeTie: string;
   copiedChallenge: string;
+  winsVsZegon: string;
+  achievementsWins: string;
 }
 
 const LOCALES: Record<Language, LocaleStrings> = {
@@ -548,6 +550,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     challengeLost: "{name} still leads with {score}.",
     challengeTie: "Tied with {name} at {score}.",
     copiedChallenge: "Challenge link copied",
+    winsVsZegon: "Wins vs ZEGON: {wins} / {played} duels",
+    achievementsWins: "Duels won: {wins} · played: {played}",
   },
   es: {
     pageTitle: "ZEGON · Supera al ciego",
@@ -829,6 +833,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     challengeLost: "{name} sigue arriba con {score}.",
     challengeTie: "Empate con {name} en {score}.",
     copiedChallenge: "Link de desafío copiado",
+    winsVsZegon: "Victorias vs ZEGON: {wins} / {played} duelos",
+    achievementsWins: "Duelos ganados: {wins} · jugados: {played}",
   },
 };
 

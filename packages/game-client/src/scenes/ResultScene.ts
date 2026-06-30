@@ -307,13 +307,11 @@ export class ResultScene extends Phaser.Scene {
           .setText(strings.globalScoreSubmitted)
           .setColor(COLORS.cyan);
         playSfx("verify_success");
-      } else if (res.reason !== "NOT_CONFIGURED") {
-        this.panelHandle?.dailyLabel
-          .setText(strings.globalScoreSubmitFailed)
-          .setColor(COLORS.ember);
       }
+      // On-chain failures fall back to the API submit below.
     }
 
+    const nickname = getCachedProfile(address)?.nickname;
     try {
       const res = await fetch("/api/global/submit", {
         method: "POST",
@@ -322,19 +320,25 @@ export class ResultScene extends Phaser.Scene {
           playerId: address,
           score: this.result.score,
           duelId: this.duelId ?? undefined,
+          nickname,
         }),
       });
-      const body = (await res.json()) as { accepted?: boolean };
+      const body = (await res.json().catch(() => ({}))) as { accepted?: boolean };
       if (body.accepted) {
         this.scoreSubmitted = true;
         if (!onChainOk) {
           this.panelHandle?.dailyLabel
             .setText(strings.globalScoreSubmittedApi)
             .setColor(COLORS.cyan);
+          playSfx("verify_success");
         }
+      } else if (!onChainOk) {
+        this.panelHandle?.dailyLabel
+          .setText(strings.globalScoreSubmitFailed)
+          .setColor(COLORS.ember);
       }
     } catch {
-      if (!onChainOk && !this.scoreSubmitted) {
+      if (!onChainOk) {
         this.panelHandle?.dailyLabel
           .setText(strings.globalScoreSubmitFailed)
           .setColor(COLORS.ember);
