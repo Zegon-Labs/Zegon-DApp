@@ -879,6 +879,23 @@ body:has(.hero) {
 
 .hero__wallet-disconnect {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(154, 147, 168, 0.4);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dust);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.hero__wallet-disconnect:hover {
+  border-color: var(--ember);
+  color: var(--bone);
 }
 
 .hero__wallet-stats {

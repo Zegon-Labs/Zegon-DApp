@@ -37,6 +37,16 @@ function WalletIcon() {
   );
 }
 
+function DisconnectIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M16 17l5-5-5-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21 12H9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function LockIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -350,10 +360,12 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
                 </span>
                 <button
                   type="button"
-                  className="btn btn--ghost btn--compact hero__wallet-disconnect"
+                  className="hero__wallet-disconnect"
                   onClick={handleDisconnectWallet}
+                  aria-label={strings.disconnectWallet}
+                  title={strings.disconnectWallet}
                 >
-                  {strings.disconnectWallet}
+                  <DisconnectIcon />
                 </button>
               </div>
               {duelsPlayed > 0 && (
