@@ -76,6 +76,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (slug[0] === "daily" && slug[1] === "submit" && req.method === "POST") {
       return res.status(200).json(await h.handleSubmitScore(req.body));
     }
+    if (slug[0] === "global" && slug[1] === "leaderboard" && req.method === "GET") {
+      return res.status(200).json(await h.handleGlobalLeaderboard());
+    }
+    if (slug[0] === "global" && slug[1] === "submit" && req.method === "POST") {
+      return res.status(200).json(await h.handleGlobalSubmit(req.body));
+    }
     if (slug[0] === "player" && slug[1] === "profile" && slug[2] === "stats" && req.method === "POST") {
       return res.status(200).json(await h.handleUpdateProfileStats(req.body));
     }

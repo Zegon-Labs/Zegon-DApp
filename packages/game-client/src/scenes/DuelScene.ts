@@ -5,7 +5,7 @@ import {
 } from "../adapters/GameCoreAdapter.js";
 import { shouldUseServerApi, apiBaseUrl } from "../services/apiMode.js";
 import { onLanguageChange, t } from "../i18n/index.js";
-import type { DuelEvent, RoundOutcome, ZegonArchetypeId } from "@zegon/game-core";
+import type { ChallengeMeta, DuelConfig, DuelEvent, RoundOutcome, ZegonArchetypeId } from "@zegon/game-core";
 import {
   ActionValidationError,
   DuelItemId,
@@ -119,6 +119,8 @@ export class DuelScene extends Phaser.Scene {
   private chooseActionText!: Phaser.GameObjects.Text;
   private roundResultToast!: RoundResultToast;
   private mode: "standard" | "daily" = "standard";
+  private challengeConfig?: Partial<DuelConfig>;
+  private challengeMeta?: ChallengeMeta;
   private showingRoundResult = false;
   private lastRoundOutcome: RoundOutcome | null = null;
   private confirmModal: Phaser.GameObjects.Container | null = null;
@@ -139,9 +141,13 @@ export class DuelScene extends Phaser.Scene {
   init(data: {
     mode?: "standard" | "daily";
     archetypeId?: ZegonArchetypeId;
+    challengeConfig?: Partial<DuelConfig>;
+    challengeMeta?: ChallengeMeta;
   }): void {
     this.mode = data.mode ?? "standard";
-    this.archetypeId = data.archetypeId ?? "reader";
+    this.archetypeId = (data.challengeConfig?.archetype as ZegonArchetypeId) ?? data.archetypeId ?? "reader";
+    this.challengeConfig = data.challengeConfig;
+    this.challengeMeta = data.challengeMeta;
     this.showingRoundResult = false;
   }
 
@@ -208,6 +214,7 @@ export class DuelScene extends Phaser.Scene {
     this.adapter = new GameCoreAdapter({
       brainMode: shouldUseServerApi() ? "api" : "dummy",
       apiBaseUrl: apiBaseUrl(),
+      config: this.challengeConfig,
       onEvent: (event) => this.handleEvent(event),
     });
 
@@ -362,6 +369,7 @@ export class DuelScene extends Phaser.Scene {
     try {
       await this.adapter.initDuel(this.mode, {
         archetypeId: this.mode === "standard" ? this.archetypeId : undefined,
+        config: this.challengeConfig,
       });
       if (token !== this.bootToken) return;
       resetVoiceState();
@@ -529,6 +537,7 @@ export class DuelScene extends Phaser.Scene {
           archetype: this.archetypeId,
           brainMode: this.adapter.getBrainMode(),
           scoreOptions,
+          challengeMeta: this.challengeMeta,
         });
       });
     }

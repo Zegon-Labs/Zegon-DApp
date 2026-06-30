@@ -160,11 +160,13 @@ export class GameCoreAdapter {
     this.offline = Boolean(options.customBrain || options.forceOffline);
     this.apiBaseUrl = options.apiBaseUrl ?? "";
 
-    let config = options.config ?? {};
-    const params = new URLSearchParams(window.location.search);
-    const challenge = params.get("challenge");
-    if (challenge) {
-      config = decodeChallenge(challenge);
+    let config: Partial<DuelConfig> = options.config ?? {};
+    if (!options.config) {
+      const params = new URLSearchParams(window.location.search);
+      const challenge = params.get("challenge");
+      if (challenge) {
+        config = decodeChallenge(challenge);
+      }
     }
 
     const seed = config.seed ?? "standard";

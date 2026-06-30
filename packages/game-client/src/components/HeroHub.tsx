@@ -12,7 +12,8 @@ import {
 } from "../services/wallet.js";
 import { fetchProfile, hasNickname } from "../services/profile.js";
 import { isTutorialDone } from "../tutorial/steps.js";
-import { getDailyArchetype } from "@zegon/game-core";
+import { getDailyArchetype, getMsUntilDailyReset, formatDailyCountdown, parseChallengeFromSearch, buildTwitterIntentUrl, type ChallengeMeta, type DuelConfig } from "@zegon/game-core";
+import { format } from "../i18n/index.js";
 import {
   checkDailyEntered,
   enterDailyPool,
@@ -51,6 +52,12 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   const [poolInfo, setPoolInfo] = useState<Awaited<ReturnType<typeof fetchDailyPool>> | null>(null);
   const [staked, setStaked] = useState(false);
   const [brainLabel, setBrainLabel] = useState("…");
+  const [countdown, setCountdown] = useState(formatDailyCountdown(getMsUntilDailyReset()));
+  const [dailyTop, setDailyTop] = useState<Array<{ displayName?: string; playerId: string; score: number }>>([]);
+  const [pendingChallenge, setPendingChallenge] = useState<{
+    config: DuelConfig;
+    meta: ChallengeMeta;
+  } | null>(null);
 
   const dailyArch = getDailyArchetype();
   const dailyArchName = lang === "es" ? dailyArch.nameEs : dailyArch.nameEn;
@@ -62,6 +69,24 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     void fetchHealth().then((h) => {
       setBrainLabel(h.brainMode === "tee" ? "0G TEE" : "Dummy Brain");
     });
+    void fetch("/api/daily/leaderboard")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { entries?: Array<{ playerId: string; score: number; displayName?: string }> } | null) => {
+        setDailyTop((data?.entries ?? []).slice(0, 3));
+      })
+      .catch(() => undefined);
+
+    const parsed = parseChallengeFromSearch(window.location.search);
+    if (parsed?.meta.challengerScore) {
+      setPendingChallenge(parsed);
+    }
+  }, []);
+
+  useEffect(() => {
+    const tick = () => setCountdown(formatDailyCountdown(getMsUntilDailyReset()));
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -141,6 +166,36 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     gameBridge.startScene("DuelScene", { mode: "standard", archetypeId: "reader" });
   }
 
+  function acceptChallenge() {
+    if (!pendingChallenge) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("challenge");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+    gameBridge.startScene("DuelScene", {
+      mode: "standard",
+      archetypeId: (pendingChallenge.config.archetype as "reader") ?? "reader",
+      challengeConfig: pendingChallenge.config,
+      challengeMeta: pendingChallenge.meta,
+    });
+    setPendingChallenge(null);
+  }
+
+  function dismissChallenge() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("challenge");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+    setPendingChallenge(null);
+  }
+
+  function shareDailyDraw() {
+    const url = `${window.location.origin}/`;
+    const text = `Today's ZEGON Daily Blind Draw is live on 0G. Can you outdraw the blind?\n\n@Zegon_0g`;
+    window.open(buildTwitterIntentUrl(text, url), "_blank", "noopener,noreferrer,width=550,height=420");
+  }
+
+  const challengeName = pendingChallenge?.meta.challengerName ?? "Someone";
+  const challengeScore = pendingChallenge?.meta.challengerScore ?? 0;
+
   return (
     <main className="hero">
       <div className="hero__scene" aria-hidden="true">
@@ -181,6 +236,22 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           </div>
 
           <div className="hero__actions">
+          {pendingChallenge && challengeScore > 0 && (
+            <div className="challenge-banner" role="status">
+              <p className="challenge-banner__text">
+                {format(strings.challengeBanner, { name: challengeName, score: challengeScore })}
+              </p>
+              <div className="challenge-banner__actions">
+                <button type="button" className="btn btn--primary btn--compact" onClick={acceptChallenge}>
+                  {strings.challengeAccept}
+                </button>
+                <button type="button" className="btn btn--secondary btn--compact" onClick={dismissChallenge}>
+                  {strings.challengeDismiss}
+                </button>
+              </div>
+            </div>
+          )}
+
           {!tutorialDone && (
             <p className="hero__tutorial-callout" role="status">
               {strings.heroTutorialFirst}
@@ -197,12 +268,27 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           </button>
 
           <div className="daily-card">
-            <p className="daily-card__title">{strings.daily}</p>
+            <p className="daily-card__title">{strings.dailyBlindDraw}</p>
             <p className="daily-card__meta">
               {dailyArchName} · {strings.dailyPoolLabel}{" "}
               {poolInfo?.totalStaked ?? "0"} OG · {poolInfo?.entrants ?? 0}{" "}
               {strings.dailyEntrants}
             </p>
+            <p className="daily-card__countdown">
+              {strings.dailyCountdownLabel} <strong>{countdown}</strong> UTC
+            </p>
+            {dailyTop.length > 0 && (
+              <div className="daily-card__top">
+                <p className="daily-card__top-title">{strings.dailyTopScores}</p>
+                <ul>
+                  {dailyTop.map((entry, i) => (
+                    <li key={`${entry.playerId}-${i}`}>
+                      #{i + 1} {entry.displayName ?? entry.playerId.slice(0, 8)} · {entry.score}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {poolConfigured && !staked && (
               <button
                 type="button"
@@ -215,9 +301,16 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             {staked && <p className="daily-card__staked">{strings.dailyStakedBadge}</p>}
             {!canPlayDaily && (
               <p className="daily-card__hint" role="status">
-                {needsWallet ? strings.dailyWalletRequired : strings.dailyStakeFirst}
+                {needsWallet ? strings.dailyPlayFreeRank : strings.dailyStakeFirst}
               </p>
             )}
+            <button
+              type="button"
+              className="btn btn--secondary btn--daily-share"
+              onClick={shareDailyDraw}
+            >
+              {strings.dailyShareToday}
+            </button>
             <button
               type="button"
               className={`btn btn--secondary btn--daily-play${canPlayDaily ? "" : " btn--secondary-locked"}`}

@@ -49,3 +49,19 @@ export function createStandardDuel(
     ...overrides,
   };
 }
+
+/** Milliseconds until the next UTC daily reset (00:00 UTC). */
+export function getMsUntilDailyReset(now: Date = new Date()): number {
+  const next = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
+  );
+  return Math.max(0, next.getTime() - now.getTime());
+}
+
+export function formatDailyCountdown(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}

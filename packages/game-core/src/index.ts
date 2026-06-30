@@ -13,6 +13,7 @@ export * from "./ai/dummyZegonBrain.js";
 export * from "./ai/zegonTactics.js";
 export * from "./modes/dailySeed.js";
 export * from "./modes/challenge.js";
+export * from "./social/share.js";
 export * from "./modes/zegonArchetypes.js";
 export * from "./modes/duelSeed.js";
 export * from "./progression/achievements.js";

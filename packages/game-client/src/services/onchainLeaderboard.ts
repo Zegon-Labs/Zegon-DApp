@@ -5,6 +5,8 @@ import {
   encodeFunctionData,
   getAddress,
   http,
+  keccak256,
+  stringToBytes,
   type Address,
   type Hex,
 } from "viem";
@@ -108,7 +110,6 @@ export async function submitScoreOnChain(
   if (!player) return { ok: false, reason: "NO_WALLET" };
 
   const duelBytes = duelIdToBytes32(duelId);
-  if (!duelBytes) return { ok: false, reason: "INVALID_DUEL_ID" };
 
   try {
     const walletClient = createWalletClient({
@@ -141,7 +142,7 @@ export async function submitScoreOnChain(
   }
 }
 
-function duelIdToBytes32(duelId: string): Hex | null {
+function duelIdToBytes32(duelId: string): Hex {
   const trimmed = duelId.trim();
   if (/^0x[0-9a-fA-F]{64}$/.test(trimmed)) {
     return trimmed as Hex;
@@ -149,5 +150,5 @@ function duelIdToBytes32(duelId: string): Hex | null {
   if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
     return `0x${trimmed}` as Hex;
   }
-  return null;
+  return keccak256(stringToBytes(trimmed));
 }

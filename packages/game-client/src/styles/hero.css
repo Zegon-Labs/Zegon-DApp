@@ -772,6 +772,73 @@ body:has(.hero) {
   text-align: center;
 }
 
+.hero__menu .daily-card__countdown {
+  margin: 0.35rem 0 0;
+  font-size: var(--menu-fs-xs);
+  color: var(--cyan);
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.hero__menu .daily-card__top {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(46, 230, 214, 0.25);
+  border-radius: 4px;
+  background: rgba(10, 9, 17, 0.45);
+}
+
+.hero__menu .daily-card__top-title {
+  margin: 0 0 0.35rem;
+  font-size: var(--menu-fs-xs);
+  color: var(--dust);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero__menu .daily-card__top ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--menu-fs-sm);
+  color: var(--bone);
+  line-height: 1.45;
+}
+
+.hero__menu .btn--daily-share {
+  margin-top: 0.45rem;
+  width: 100%;
+}
+
+.challenge-banner {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(232, 178, 58, 0.45);
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(255, 77, 46, 0.12), rgba(46, 230, 214, 0.08));
+}
+
+.challenge-banner__text {
+  margin: 0 0 0.65rem;
+  font-size: var(--menu-fs-sm);
+  color: var(--bone);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.challenge-banner__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn--compact {
+  padding: 0.45rem 0.85rem;
+  font-size: var(--menu-fs-sm);
+}
+
 .hero__menu .btn--stake-emphasis {
   border-color: var(--ember);
   color: var(--bone);

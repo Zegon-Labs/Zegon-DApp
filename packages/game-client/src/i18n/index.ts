@@ -246,8 +246,25 @@ export interface LocaleStrings {
   globalScoreSubmitted: string;
   globalScoreSubmitFailed: string;
   globalScoreSubmitNoDuel: string;
+  globalScoreSubmittedApi: string;
+  globalScoreSubmitWallet: string;
+  globalScoreSubmitProfile: string;
+  globalScoreSubmitting: string;
   globalLeaderboardTitle: string;
   leaderboardGlobalSubtitle: string;
+  shareOnX: string;
+  dailyBlindDraw: string;
+  dailyCountdownLabel: string;
+  dailyPlayFreeRank: string;
+  dailyShareToday: string;
+  dailyTopScores: string;
+  challengeBanner: string;
+  challengeAccept: string;
+  challengeDismiss: string;
+  challengeBeat: string;
+  challengeLost: string;
+  challengeTie: string;
+  copiedChallenge: string;
 }
 
 const LOCALES: Record<Language, LocaleStrings> = {
@@ -512,8 +529,25 @@ const LOCALES: Record<Language, LocaleStrings> = {
     globalScoreSubmitted: "Score saved on-chain",
     globalScoreSubmitFailed: "Could not submit score on-chain",
     globalScoreSubmitNoDuel: "No verified duel id · score not submitted",
+    globalScoreSubmittedApi: "Score saved to global ranking",
+    globalScoreSubmitWallet: "Connect wallet to save your score",
+    globalScoreSubmitProfile: "Set a nickname to appear on the ranking",
+    globalScoreSubmitting: "Saving score…",
     globalLeaderboardTitle: "GLOBAL RANKING",
     leaderboardGlobalSubtitle: "Best scores on-chain · top 10",
+    shareOnX: "SHARE ON X",
+    dailyBlindDraw: "DAILY BLIND DRAW",
+    dailyCountdownLabel: "Resets in",
+    dailyPlayFreeRank: "Play free · connect wallet + nickname to rank",
+    dailyShareToday: "Share today's draw",
+    dailyTopScores: "Today's top scores",
+    challengeBanner: "{name} scored {score}. Can you outdraw them?",
+    challengeAccept: "Accept challenge",
+    challengeDismiss: "Dismiss",
+    challengeBeat: "You beat {name}'s {score}!",
+    challengeLost: "{name} still leads with {score}.",
+    challengeTie: "Tied with {name} at {score}.",
+    copiedChallenge: "Challenge link copied",
   },
   es: {
     pageTitle: "ZEGON · Supera al ciego",
@@ -776,8 +810,25 @@ const LOCALES: Record<Language, LocaleStrings> = {
     globalScoreSubmitted: "Puntaje guardado on-chain",
     globalScoreSubmitFailed: "No se pudo enviar el puntaje on-chain",
     globalScoreSubmitNoDuel: "Sin id de duelo verificado · puntaje no enviado",
+    globalScoreSubmittedApi: "Puntaje guardado en el ranking global",
+    globalScoreSubmitWallet: "Conectá la wallet para guardar tu puntaje",
+    globalScoreSubmitProfile: "Elegí un nickname para aparecer en el ranking",
+    globalScoreSubmitting: "Guardando puntaje…",
     globalLeaderboardTitle: "RANKING GLOBAL",
     leaderboardGlobalSubtitle: "Mejores puntajes on-chain · top 10",
+    shareOnX: "COMPARTIR EN X",
+    dailyBlindDraw: "DAILY BLIND DRAW",
+    dailyCountdownLabel: "Reinicia en",
+    dailyPlayFreeRank: "Jugá gratis · conectá wallet + nickname para rankear",
+    dailyShareToday: "Compartir el draw de hoy",
+    dailyTopScores: "Top del día",
+    challengeBanner: "{name} hizo {score}. ¿Podés superarlo?",
+    challengeAccept: "Aceptar desafío",
+    challengeDismiss: "Cerrar",
+    challengeBeat: "¡Superaste a {name} ({score})!",
+    challengeLost: "{name} sigue arriba con {score}.",
+    challengeTie: "Empate con {name} en {score}.",
+    copiedChallenge: "Link de desafío copiado",
   },
 };
 
