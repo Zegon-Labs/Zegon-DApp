@@ -174,7 +174,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   }
 
   function handleDisconnectWallet() {
-    disconnectWallet();
+    void disconnectWallet();
     notify.info(strings.disconnectWallet);
   }
 

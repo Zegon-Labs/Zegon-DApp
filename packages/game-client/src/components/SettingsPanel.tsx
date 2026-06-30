@@ -217,7 +217,7 @@ export function SettingsPanel({
                 type="button"
                 className="btn btn--menu settings-inline-btn"
                 onClick={() => {
-                  disconnectWallet();
+                  void disconnectWallet();
                   notify.info(strings.disconnectWallet);
                 }}
               >

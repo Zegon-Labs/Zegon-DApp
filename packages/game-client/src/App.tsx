@@ -23,7 +23,7 @@ export default function App() {
   useEffect(
     () =>
       gameBridge.onWalletConnectRequest(() => {
-        void connectWallet().catch(() => undefined);
+        void connectWallet({ pickAccount: false }).catch(() => undefined);
       }),
     [],
   );

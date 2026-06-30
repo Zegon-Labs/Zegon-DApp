@@ -46,6 +46,30 @@ function bindProviderListeners(): void {
   });
 }
 
+async function requestAccountPicker(): Promise<void> {
+  if (!window.ethereum) return;
+  try {
+    await window.ethereum.request({
+      method: "wallet_requestPermissions",
+      params: [{ eth_accounts: {} }],
+    });
+  } catch {
+    // Wallet may not support EIP-2255 permissions; eth_requestAccounts still runs below.
+  }
+}
+
+async function revokeWalletPermissions(): Promise<void> {
+  if (!window.ethereum) return;
+  try {
+    await window.ethereum.request({
+      method: "wallet_revokePermissions",
+      params: [{ eth_accounts: {} }],
+    });
+  } catch {
+    // Not all wallets implement revoke; local disconnect still clears app state.
+  }
+}
+
 function notify(): void {
   for (const listener of listeners) {
     listener(cachedAddress);
@@ -69,9 +93,15 @@ export function hasEthereumProvider(): boolean {
   return typeof window !== "undefined" && Boolean(window.ethereum);
 }
 
-export async function connectWallet(): Promise<string> {
+export async function connectWallet(options?: { pickAccount?: boolean }): Promise<string> {
   if (!window.ethereum) {
     throw new Error("NO_WALLET");
+  }
+
+  // After disconnect we revoke permissions; always re-prompt so the user can pick
+  // an account. Explicit pickAccount also forces the wallet account selector.
+  if (options?.pickAccount !== false) {
+    await requestAccountPicker();
   }
 
   const accounts = (await window.ethereum.request({
@@ -90,9 +120,10 @@ export async function connectWallet(): Promise<string> {
   return cachedAddress;
 }
 
-export function disconnectWallet(): void {
+export async function disconnectWallet(): Promise<void> {
   cachedAddress = null;
   persist(null);
+  await revokeWalletPermissions();
   notify();
 }
 

@@ -116,7 +116,7 @@ export class TitleScene extends Phaser.Scene {
         width - 12,
         10,
         `${truncateAddress(address)}`,
-        () => disconnectWallet(),
+        () => void disconnectWallet(),
       );
       this.walletHint = this.add.text(width - 12, 32, strings.disconnectWallet, {
         fontFamily: FONT,
