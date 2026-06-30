@@ -5,7 +5,6 @@ import {
   custom,
   defineChain,
   encodeFunctionData,
-  http,
   keccak256,
   parseEther,
   toBytes,
@@ -182,17 +181,33 @@ export async function enterDailyPool(
     chain: GALILEO_CHAIN,
     transport: custom(eth as Parameters<typeof custom>[0]),
   });
-  const [account] = await walletClient.getAddresses();
 
-  const publicClient = createPublicClient({
-    chain: GALILEO_CHAIN,
-    transport: http(GALILEO_CHAIN.rpcUrls.default.http[0]),
-  });
+  // Ensure the dapp is authorized for an account (prompts connection if needed).
+  let account: `0x${string}` | undefined;
+  try {
+    [account] = await walletClient.requestAddresses();
+  } catch {
+    [account] = await walletClient.getAddresses();
+  }
+  if (!account) throw new DailyStakeError("NO_WALLET");
 
   const valueWei = parseEther(valueEth);
-  const balance = await publicClient.getBalance({ address: account });
-  if (balance < valueWei) {
-    throw new DailyStakeError("INSUFFICIENT_BALANCE");
+
+  // Best-effort balance check through the wallet's own provider (avoids public
+  // RPC CORS issues). If the read fails for any reason, skip it and let the
+  // wallet surface insufficient-funds during signing.
+  try {
+    const reader = createPublicClient({
+      chain: GALILEO_CHAIN,
+      transport: custom(eth as Parameters<typeof custom>[0]),
+    });
+    const balance = await reader.getBalance({ address: account });
+    if (balance < valueWei) {
+      throw new DailyStakeError("INSUFFICIENT_BALANCE");
+    }
+  } catch (err) {
+    if (err instanceof DailyStakeError) throw err;
+    // ignore read errors and proceed to the signature prompt
   }
 
   const data = encodeFunctionData({
@@ -201,20 +216,31 @@ export async function enterDailyPool(
     args: [seedToBytes32(seed)],
   });
 
+  let hash: `0x${string}`;
   try {
-    const hash = await walletClient.sendTransaction({
-      chain: GALILEO_CHAIN,
+    hash = await walletClient.sendTransaction({
       account,
       to: poolAddress as `0x${string}`,
       value: valueWei,
       data,
     });
-    await publicClient.waitForTransactionReceipt({ hash });
-    return hash;
   } catch (err) {
     if (err instanceof DailyStakeError) throw err;
     throw parseStakeError(err);
   }
+
+  // Wait for confirmation, but don't fail the stake if the receipt read is
+  // blocked — the transaction is already submitted at this point.
+  try {
+    const reader = createPublicClient({
+      chain: GALILEO_CHAIN,
+      transport: custom(eth as Parameters<typeof custom>[0]),
+    });
+    await reader.waitForTransactionReceipt({ hash });
+  } catch {
+    // ignore; tx hash is already returned
+  }
+  return hash;
 }
 
 export async function claimDailyReward(body: {
