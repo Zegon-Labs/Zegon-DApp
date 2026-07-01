@@ -5,29 +5,34 @@ import {
   GameCoreAdapter,
   DuelPhase,
 } from "../adapters/GameCoreAdapter.js";
-import type { DuelEvent, RoundOutcome, DuelItemId } from "@zegon/game-core";
-import { getEffectiveDeadeyeStreak, PlayerAction } from "@zegon/game-core";
+import { DuelItemId, getEffectiveDeadeyeStreak, ITEM, PlayerAction } from "@zegon/game-core";
+import type { DuelEvent, RoundOutcome } from "@zegon/game-core";
 import {
+  blindsightBlinkAlpha,
+  blindsightShakeParams,
+  blindsightSurgeStrength,
   drawGlitchOverlay,
   drawScanlines,
   scanlinePulseAlpha,
 } from "../ui/components.js";
 import {
-  ActionBar,
   ArenaView,
   CombatHud,
-  ItemSelector,
   itemCooldownLabel,
-  itemDescription,
   createHubPracticeStrip,
   createHubTutorialModal,
   createLandingBackdrop,
+  preloadActionAssets,
   preloadLandingBackdrop,
+  preloadPlayerHand,
   preloadResultPanelAssets,
   preloadSideHudPanels,
   preloadTopHudBar,
   preloadTutorialPanelAssets,
+  PlayerHandSprite,
+  SpriteActionBar,
   TopHudBar,
+  type SpriteActionEntry,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
@@ -37,6 +42,7 @@ import {
   playActionSfx,
   playRoundOutcomeSfx,
   playSfx,
+  playZegonMoveSfx,
   startSfxLoop,
   stopAllSfxLoops,
   stopSfxLoop,
@@ -79,19 +85,32 @@ function localeText(key: keyof LocaleStrings): string {
   return t()[key];
 }
 
+function playerFiredAction(action: string): boolean {
+  return action === PlayerAction.FIRE || action === "FIRE";
+}
+
+const ITEM_SLOT_INDEX: Record<DuelItemId, number> = {
+  SMOKE: 2,
+  MIRROR: 3,
+  PLATE: 4,
+};
+
 export class TutorialScene extends Phaser.Scene {
   private adapter!: GameCoreAdapter;
   private tutorialBrain!: ScriptedZegonBrain;
   private combatHud!: CombatHud;
   private topHudBar!: TopHudBar;
-  private actionBar!: ActionBar;
-  private itemSelector!: ItemSelector;
+  private spriteActionBar!: SpriteActionBar;
+  private playerHandSprite!: PlayerHandSprite;
   private arenaView!: ArenaView;
   private statusLineText!: Phaser.GameObjects.Text;
   private chooseActionText!: Phaser.GameObjects.Text;
   private glitchOverlay!: Phaser.GameObjects.Container;
   private scanlines!: Phaser.GameObjects.Graphics;
+  private blinkOverlay!: Phaser.GameObjects.Rectangle;
   private glitchPulse = 0;
+  private glitchIntensityCache = -1;
+  private lastShakeAt = 0;
   private modalLayer!: Phaser.GameObjects.Container;
   private gameLayer!: Phaser.GameObjects.Container;
   private segmentIndex = 0;
@@ -106,6 +125,8 @@ export class TutorialScene extends Phaser.Scene {
 
   preload(): void {
     preloadLandingBackdrop(this);
+    preloadPlayerHand(this);
+    preloadActionAssets(this);
     preloadTopHudBar(this);
     preloadSideHudPanels(this);
     preloadResultPanelAssets(this);
@@ -113,13 +134,18 @@ export class TutorialScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { width } = this.scale;
+    const { width, height } = this.scale;
     const strings = t();
 
     this.cameras.main.setBackgroundColor(C.void);
-    createLandingBackdrop(this, 0);
-    this.scanlines = drawScanlines(this, 98, 0.04);
+    createLandingBackdrop(this, 0, { duel: true });
+    this.scanlines = drawScanlines(this, 98, 0.06);
     this.glitchOverlay = drawGlitchOverlay(this, 0, 97);
+    this.blinkOverlay = this.add
+      .rectangle(width / 2, height / 2, width, height, C.blood, 1)
+      .setDepth(96)
+      .setAlpha(0)
+      .setBlendMode(Phaser.BlendModes.ADD);
 
     this.modalLayer = this.add.container(0, 0).setDepth(110);
     this.gameLayer = this.add.container(0, 0).setDepth(10);
@@ -128,6 +154,7 @@ export class TutorialScene extends Phaser.Scene {
       y: L.bottomStrip.arenaY,
       characterMaxH: L.bottomStrip.characterMaxH,
     });
+    this.playerHandSprite = new PlayerHandSprite(this, 6);
     this.combatHud = new CombatHud(this, 9, undefined, { hideBlindsight: true });
 
     this.topHudBar = new TopHudBar(this, {
@@ -167,22 +194,22 @@ export class TutorialScene extends Phaser.Scene {
       onEvent: (event) => this.handleEvent(event),
     });
 
-    this.actionBar = new ActionBar(
-      this,
-      [PlayerAction.FIRE, PlayerAction.DODGE],
-      (action) => actionLabel(action, this.adapter?.getEquippedItem()),
-      (action) => void this.onAction(action),
-      12,
-    );
-    this.actionBar.addTo(this.gameLayer);
-
-    this.itemSelector = new ItemSelector(this, {
-      labelFor: duelItemLabel,
-      descFor: (item) => itemDescription(item, t()),
-      onUseItem: (item) => void this.onUseItem(item),
+    const helpTexts = this.buildActionHelpTexts();
+    const actionEntries: SpriteActionEntry[] = [
+      { label: strings.actionFire, action: PlayerAction.FIRE, helpText: helpTexts[0] },
+      { label: strings.actionDodge, action: PlayerAction.DODGE, helpText: helpTexts[1] },
+      { label: strings.itemSmoke, action: PlayerAction.USE_ITEM, item: DuelItemId.SMOKE, helpText: helpTexts[2] },
+      { label: strings.itemMirror, action: PlayerAction.USE_ITEM, item: DuelItemId.MIRROR, helpText: helpTexts[3] },
+      { label: strings.itemPlate, action: PlayerAction.USE_ITEM, item: DuelItemId.PLATE, helpText: helpTexts[4] },
+    ];
+    this.spriteActionBar = new SpriteActionBar(this, {
+      entries: actionEntries,
+      onAction: (action, item) => {
+        if (item) void this.onUseItem(item);
+        else void this.onAction(action);
+      },
       depth: 12,
     });
-    this.itemSelector.addTo(this.gameLayer);
 
     this.localeUnsub = onLanguageChange(() => this.refreshLocale());
 
@@ -192,14 +219,29 @@ export class TutorialScene extends Phaser.Scene {
 
   private setGameVisible(visible: boolean): void {
     this.gameLayer.setVisible(visible);
-    this.actionBar.setVisible(visible);
+    this.spriteActionBar.setVisible(visible);
+    this.playerHandSprite.setVisible(visible);
     if (!visible) {
       this.glitchOverlay.setVisible(false);
       this.scanlines.setVisible(false);
+      this.blinkOverlay.setVisible(false);
     } else {
       this.glitchOverlay.setVisible(true);
       this.scanlines.setVisible(true);
+      this.blinkOverlay.setVisible(true);
     }
+  }
+
+  private buildActionHelpTexts(): string[] {
+    const strings = t();
+    const cooldown = `\n\n${strings.itemCooldownNote.replace("{n}", String(ITEM.COOLDOWN_ROUNDS))}`;
+    return [
+      strings.actionDescFire,
+      strings.actionDescDodge,
+      `${strings.itemDescSmoke}${cooldown}`,
+      `${strings.itemDescMirror}${cooldown}`,
+      `${strings.itemDescPlate}${cooldown}`,
+    ];
   }
 
   private runCurrentSegment(): void {
@@ -272,7 +314,7 @@ export class TutorialScene extends Phaser.Scene {
     this.modalLayer.removeAll(true);
     this.waitingInstruction = true;
     playSfx("ui_modal_open");
-    this.actionBar.setEnabledMap(false, new Set());
+    this.spriteActionBar.setSlotEnabledMap(false, new Set());
 
     const stepLabel = format(strings.tutorialStepProgress, {
       current: roundIndex + 1,
@@ -354,10 +396,14 @@ export class TutorialScene extends Phaser.Scene {
   private refreshLocale(): void {
     const strings = t();
     this.chooseActionText.setText(strings.chooseAction);
-    this.actionBar.refreshLabels((action) =>
-      actionLabel(action, this.adapter?.getEquippedItem()),
-    );
-    this.itemSelector.refreshLabels();
+    this.spriteActionBar.refreshLabels([
+      actionLabel(PlayerAction.FIRE, this.adapter?.getEquippedItem()),
+      actionLabel(PlayerAction.DODGE, this.adapter?.getEquippedItem()),
+      strings.itemSmoke,
+      strings.itemMirror,
+      strings.itemPlate,
+    ]);
+    this.spriteActionBar.refreshHelpTexts(this.buildActionHelpTexts());
     this.topHudBar.updateSurrenderLabel(strings.tutorialSkip);
     this.refreshPhaseStatus();
     this.updateHud();
@@ -430,8 +476,7 @@ export class TutorialScene extends Phaser.Scene {
       this.adapter.patchState({ readingStreak: 2, blindsight: 100, isDeadeye: true });
     }
 
-    this.actionBar.setDimmedAll(true);
-    this.itemSelector.setDimmedAll(true);
+    this.spriteActionBar.setDimmedAll(true);
     playActionSfx(PlayerAction.USE_ITEM);
     playSfx("tutorial_correct");
     void this.adapter.submitAction(PlayerAction.USE_ITEM);
@@ -454,8 +499,11 @@ export class TutorialScene extends Phaser.Scene {
       this.adapter.patchState({ readingStreak: 2, blindsight: 100, isDeadeye: true });
     }
 
-    this.actionBar.setDimmedAll(true);
+    this.spriteActionBar.setDimmedAll(true);
     playActionSfx(action);
+    if (action === PlayerAction.FIRE) {
+      this.playerHandSprite.playFire();
+    }
     playSfx("tutorial_correct");
     void this.adapter.submitAction(action);
   }
@@ -470,12 +518,11 @@ export class TutorialScene extends Phaser.Scene {
         this.statusLineText.setText(strings.zegonReading).setColor(COLORS.dust);
         this.chooseActionText.setAlpha(0.35);
         this.waitingAdvance = false;
-        this.actionBar.setDimmedAll(false);
-        this.itemSelector.setDimmedAll(false);
+        this.spriteActionBar.setDimmedAll(false);
       } else if (phase === DuelPhase.AWAITING_PLAYER) {
         stopSfxLoop("zegon_thinking");
         playSfx("your_turn");
-        this.itemSelector.setDimmedAll(false);
+        this.spriteActionBar.setDimmedAll(false);
         this.statusLineText.setText(strings.lockedIn).setColor(COLORS.dust);
         this.chooseActionText.setAlpha(1);
         this.syncStepUi();
@@ -516,6 +563,12 @@ export class TutorialScene extends Phaser.Scene {
 
   private onRoundResolved(outcome: RoundOutcome): void {
     const strings = t();
+    const state = this.adapter.getState();
+    const playerHpNow = this.adapter.getPlayerHp();
+    const zegonHpNow = this.adapter.getZegonHp();
+    const prevPlayerHp = playerHpNow + outcome.playerDamage;
+    const prevZegonHp = zegonHpNow + outcome.zegonDamage;
+
     playRoundOutcomeSfx({
       playerAction: outcome.playerAction,
       zegonMove: outcome.zegonDecision.zegonMove,
@@ -523,18 +576,42 @@ export class TutorialScene extends Phaser.Scene {
       zegonDamage: outcome.zegonDamage,
       blindsightDelta: outcome.blindsightDelta,
     });
+
+    if (outcome.blindsightDelta > 0) {
+      this.triggerBlindsightSurge(outcome.blindsightDelta);
+    }
+
+    if (outcome.playerDamage > 0) {
+      const anchor = this.combatHud.playerDamageAnchor();
+      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
+      this.combatHud.playPlayerHit(prevPlayerHp, playerHpNow, state.config.initialPlayerHp);
+      this.arenaView.pulsePlayerHit();
+    }
+
+    if (outcome.zegonDamage > 0) {
+      const anchor = this.combatHud.zegonDamageAnchor();
+      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.zegonDamage, "zegon");
+      this.combatHud.playZegonHit(prevZegonHp, zegonHpNow, state.config.initialZegonHp);
+      this.playZegonHitFlash();
+    } else if (playerFiredAction(outcome.playerAction) && outcome.playerDamage === 0) {
+      this.playArenaFlash(C.ember, 0.38, 44);
+    }
+
+    if (outcome.zegonDecision.zegonMove === "FIRE") {
+      this.time.delayedCall(120, () => {
+        playZegonMoveSfx(outcome.zegonDecision.zegonMove);
+        this.playFireFlash();
+      });
+    } else if (outcome.zegonDecision.zegonMove === "DODGE") {
+      playZegonMoveSfx(outcome.zegonDecision.zegonMove);
+    }
+
     if (outcome.deadeyeTriggered) {
       this.statusLineText.setText(strings.roundSummaryDeadeyeOn).setColor(COLORS.ember);
     } else if (outcome.predictionCorrect && outcome.playerDamage > 0) {
-      const anchor = this.combatHud.playerDamageAnchor();
-      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
       this.statusLineText.setText(`${strings.tutorialGood} · ${strings.roundSummaryRead}`).setColor(COLORS.ember);
-      this.cameras.main.flash(120, 179, 18, 43);
     } else if (outcome.playerDamage > 0) {
-      const anchor = this.combatHud.playerDamageAnchor();
-      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
       this.statusLineText.setText(`${strings.roundSummaryYouHit} · ${strings.tutorialHpTitle}`).setColor(COLORS.ember);
-      this.cameras.main.flash(120, 179, 18, 43);
     } else if (outcome.zegonDamage > 0) {
       this.statusLineText.setText(`${strings.tutorialGood} · ${strings.roundSummaryZegonHit}`).setColor(COLORS.bone);
     } else if (!outcome.predictionCorrect) {
@@ -544,12 +621,88 @@ export class TutorialScene extends Phaser.Scene {
     }
   }
 
+  private playArenaFlash(color: number, alpha = 0.7, radius = 60): void {
+    const { width } = this.scale;
+    const flash = this.add
+      .circle(width / 2, L.bottomStrip.arenaY + 45, radius, color, alpha)
+      .setDepth(20);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: 2.5,
+      duration: 280,
+      onComplete: () => flash.destroy(),
+    });
+    this.cameras.main.shake(100, 0.003);
+  }
+
+  private playFireFlash(): void {
+    this.playArenaFlash(C.ember);
+  }
+
+  private playZegonHitFlash(): void {
+    this.playArenaFlash(C.blood, 0.82, 72);
+    this.cameras.main.flash(200, 179, 18, 43);
+    this.cameras.main.shake(130, 0.0045);
+    this.arenaView.pulseHit();
+  }
+
+  private triggerBlindsightSurge(delta: number): void {
+    const strength = blindsightSurgeStrength(delta);
+    if (strength <= 0) return;
+    this.cameras.main.shake(100 + strength * 120, 0.0025 + strength * 0.007);
+    this.cameras.main.flash(140, 179, 18, 43, false, undefined, 0.06 + strength * 0.2);
+    this.glitchPulse += 0.8 + strength * 1.4;
+  }
+
+  private syncGlitchOverlay(intensity: number): void {
+    const bucket = Math.round(intensity * 20) / 20;
+    if (bucket === this.glitchIntensityCache) return;
+    this.glitchIntensityCache = bucket;
+    this.glitchOverlay.destroy();
+    this.glitchOverlay = drawGlitchOverlay(this, intensity, 97);
+  }
+
+  update(_time: number, delta: number): void {
+    if (!this.adapter || !this.duelStarted || !this.gameLayer.visible) return;
+
+    const blindsight = this.adapter.getBlindsight();
+    const intensity = blindsight / 100;
+
+    this.syncGlitchOverlay(intensity);
+    this.glitchPulse += (0.001 + intensity * 0.006) * delta;
+
+    this.scanlines.setAlpha(scanlinePulseAlpha(blindsight, this.glitchPulse));
+    this.blinkOverlay.setAlpha(blindsightBlinkAlpha(blindsight, this.glitchPulse));
+
+    const overlayBase = 0.22 + intensity * 0.68;
+    if (intensity > 0.18) {
+      const flicker = 0.86 + Math.sin(this.glitchPulse * 3.4) * 0.14 * intensity;
+      this.glitchOverlay.setAlpha(overlayBase * flicker);
+    } else {
+      this.glitchOverlay.setAlpha(overlayBase);
+    }
+
+    const shake = blindsightShakeParams(blindsight);
+    if (shake && this.time.now - this.lastShakeAt >= shake.intervalMs) {
+      this.lastShakeAt = this.time.now;
+      this.cameras.main.shake(shake.durationMs, shake.intensity);
+    }
+
+    if (intensity > 0.5) {
+      this.cameras.main.setZoom(1 + (intensity - 0.5) * 0.045);
+    } else {
+      this.cameras.main.setZoom(1);
+    }
+  }
+
   private updateHud(): void {
     const strings = t();
+    const state = this.adapter.getState();
     const blindsight = this.adapter.getBlindsight();
     const readingStreak = this.adapter.getReadingStreak();
     const itemCooldown = this.adapter.getItemCooldown();
-    const deadeyeStreak = getEffectiveDeadeyeStreak(this.adapter.getState().config.modifiers);
+    const deadeyeStreak = getEffectiveDeadeyeStreak(state.config.modifiers);
 
     const itemStatus = itemCooldownLabel(
       itemCooldown,
@@ -560,8 +713,8 @@ export class TutorialScene extends Phaser.Scene {
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
-      playerMaxHp: 100,
-      zegonMaxHp: 100,
+      playerMaxHp: state.config.initialPlayerHp,
+      zegonMaxHp: state.config.initialZegonHp,
       blindsight,
       readingStreak,
       deadeyeStreak,
@@ -581,26 +734,18 @@ export class TutorialScene extends Phaser.Scene {
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
 
-    this.itemSelector.setCooldown(itemCooldown);
-    this.itemSelector.setInteractive(this.adapter.isAwaitingPlayer() && !this.waitingAdvance);
-
-    this.arenaView.update(blindsight, readingStreak >= deadeyeStreak);
-
-    const intensity = blindsight / 100;
-    this.glitchOverlay.destroy();
-    this.glitchOverlay = drawGlitchOverlay(this, intensity, 97);
-    this.glitchPulse += 0.06 + intensity * 0.14;
-    this.scanlines.setAlpha(scanlinePulseAlpha(blindsight, this.glitchPulse));
-
-    if (intensity > 0.45) {
-      const flicker = 0.92 + Math.sin(this.glitchPulse) * 0.08 * intensity;
-      this.glitchOverlay.setAlpha((0.35 + intensity * 0.55) * flicker);
-    }
+    this.arenaView.update(
+      blindsight,
+      readingStreak >= deadeyeStreak,
+      this.adapter.getZegonHp(),
+      state.config.initialZegonHp,
+    );
   }
 
   private updateActionButtons(enabled: boolean): void {
     const step = getPracticeForRound(this.adapter.getState().roundIndex);
     const allowed = new Set(step?.allowedActions ?? []);
+    const adapterAvailable = new Set(this.adapter.getAvailableActions());
     const canAct =
       enabled &&
       !this.waitingInstruction &&
@@ -608,31 +753,39 @@ export class TutorialScene extends Phaser.Scene {
       this.adapter.isAwaitingPlayer() &&
       allowed.size > 0;
 
-    const actionAllowed = new Set(
-      [...allowed].filter((a) => a !== PlayerAction.USE_ITEM),
-    );
-    this.actionBar.setEnabledMap(canAct, actionAllowed);
+    const enabledSlots = new Set<number>();
+    if (canAct) {
+      if (allowed.has(PlayerAction.FIRE) && adapterAvailable.has(PlayerAction.FIRE)) {
+        enabledSlots.add(0);
+      }
+      if (allowed.has(PlayerAction.DODGE) && adapterAvailable.has(PlayerAction.DODGE)) {
+        enabledSlots.add(1);
+      }
+      if (allowed.has(PlayerAction.USE_ITEM) && adapterAvailable.has(PlayerAction.USE_ITEM)) {
+        if (step?.equipItem) {
+          enabledSlots.add(ITEM_SLOT_INDEX[step.equipItem]);
+        } else {
+          enabledSlots.add(2);
+          enabledSlots.add(3);
+          enabledSlots.add(4);
+        }
+      }
+    }
 
-    const itemAllowed =
-      canAct &&
-      allowed.has(PlayerAction.USE_ITEM) &&
-      (!step?.equipItem || step.equipItem);
-    this.itemSelector.setAllowedItems(
-      step?.equipItem ? new Set([step.equipItem]) : null,
-    );
-    this.itemSelector.setInteractive(Boolean(itemAllowed));
-    if (!canAct) this.actionBar.resetHoverAll();
+    this.spriteActionBar.setSlotEnabledMap(canAct, enabledSlots);
+    if (!canAct) this.spriteActionBar.resetHoverAll();
   }
 
   shutdown(): void {
     this.localeUnsub?.();
     this.localeUnsub = null;
     stopAllSfxLoops();
+    this.cameras.main.setZoom(1);
     this.topHudBar?.destroy();
     this.adapter?.destroy();
     this.combatHud?.destroy();
-    this.actionBar?.destroy();
-    this.itemSelector?.destroy();
+    this.spriteActionBar?.destroy();
+    this.playerHandSprite?.destroy();
     this.arenaView?.destroy();
   }
 }

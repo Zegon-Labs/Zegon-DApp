@@ -260,6 +260,27 @@ export class SpriteActionBar {
     });
   }
 
+  /** Per-slot enablement (tutorial restricts individual item buttons). */
+  setSlotEnabledMap(canAct: boolean, enabledSlots: Set<number>): void {
+    this.entries.forEach((_, i) => {
+      const enabled = canAct && enabledSlots.has(i);
+      if (this.enabledStates[i] === enabled) return;
+      this.enabledStates[i] = enabled;
+      this.applyState(i);
+    });
+  }
+
+  setVisible(visible: boolean): void {
+    this.panel?.setVisible(visible);
+    this.buttons.forEach((b) => b.setVisible(visible));
+    this.labels.forEach((l) => l.setVisible(visible));
+    this.helpButtons.forEach((h) => {
+      h.badge.setVisible(visible);
+      if (!visible) h.tooltip.setVisible(false);
+    });
+    if (!visible) this.hideAllTooltips();
+  }
+
   setDimmedAll(dimmed: boolean): void {
     if (this.dimmedAll === dimmed) return;
     this.dimmedAll = dimmed;

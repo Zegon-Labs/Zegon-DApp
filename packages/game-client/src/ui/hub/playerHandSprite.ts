@@ -94,6 +94,10 @@ export class PlayerHandSprite {
     });
   }
 
+  setVisible(visible: boolean): void {
+    this.sprite?.setVisible(visible);
+  }
+
   /** Plays the full draw-and-fire animation once; no-op if already playing. */
   playFire(): void {
     if (!this.sprite?.active || this.playing) return;
