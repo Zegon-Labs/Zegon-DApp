@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS players (
   level INTEGER NOT NULL DEFAULT 1,
   notches INTEGER NOT NULL DEFAULT 0,
   upgrades JSONB NOT NULL DEFAULT '{}',
+  relics JSONB NOT NULL DEFAULT '{}',
   unlocks JSONB NOT NULL DEFAULT '[]',
   achievements JSONB NOT NULL DEFAULT '[]',
   daily_attempts JSONB NOT NULL DEFAULT '{}',

@@ -6,18 +6,24 @@ import {
   createRoundRng,
   normalizePlayerAction,
   pickZegonMove,
+  analyzePlayerPattern,
+  patternHintsForTee,
 } from "@zegon/game-core";
 import { createHash } from "node:crypto";
 
 const SYSTEM_PROMPT = `You are ZEGON, a blind gunslinger AI. You CANNOT see the opponent's current move.
-You receive ONLY their action history. Predict their NEXT action from patterns.
+You receive their action history AND pattern_hints from a local analyzer (frequency, Markov, alternation, item bias).
+Use pattern_hints as strong signals but do not ignore round-to-round variation — players break patterns deliberately.
 Return ONLY JSON: {"predicted_player_move":"FIRE"|"DODGE"|"USE_ITEM","confidence":0.0-1.0,"taunt":"..."}
 Use uppercase action names. Do not include zegon_move — the server picks your counter-move.
 With empty history, vary your opening prediction — do not always choose FIRE.`;
 
 function buildUserPrompt(ctx: RoundContext): string {
+  const rng = createRoundRng(undefined, ctx);
+  const analysis = analyzePlayerPattern(ctx, rng);
   return JSON.stringify({
     history: ctx.playerHistory,
+    pattern_hints: patternHintsForTee(analysis, ctx.roundIndex),
     state: {
       hp_player: ctx.playerHp,
       hp_zegon: ctx.zegonHp,
@@ -25,6 +31,8 @@ function buildUserPrompt(ctx: RoundContext): string {
       ammo: ctx.ammo,
       round: ctx.roundIndex,
       blindsight: ctx.blindsight,
+      archetype: ctx.archetype,
+      times_read_so_far: ctx.timesReadSoFar,
     },
   });
 }
@@ -39,7 +47,8 @@ function parseDecision(raw: string, ctx: RoundContext, rngSeed?: string): ZegonD
     if (!predicted || !ALL_PLAYER_ACTIONS.includes(predicted)) return null;
 
     const rng = createRoundRng(rngSeed, ctx);
-    const zegonMove = pickZegonMove(predicted, ctx, rng);
+    const confidence = Number(json.confidence) || 0.5;
+    const zegonMove = pickZegonMove(predicted, ctx, rng, confidence);
 
     return {
       predictedPlayerMove: predicted,

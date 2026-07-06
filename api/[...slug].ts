@@ -93,6 +93,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (slug[0] === "player" && slug[1] === "upgrade" && req.method === "POST") {
       return res.status(200).json(await h.handlePurchaseUpgrade(req.body));
     }
+    if (slug[0] === "player" && slug[1] === "relic" && req.method === "POST") {
+      return res.status(200).json(await h.handlePurchaseRelic(req.body));
+    }
+    if (slug[0] === "player" && slug[1] === "equip-consumable" && req.method === "POST") {
+      return res.status(200).json(await h.handleEquipConsumable(req.body));
+    }
+    if (slug[0] === "player" && slug[1] === "consume-equipped" && req.method === "POST") {
+      return res.status(200).json(await h.handleConsumeEquippedConsumable(req.body));
+    }
     if (slug[0] === "duel" && slug[2] === "replay" && req.method === "GET") {
       const duelId = slug[1] ?? "";
       const token = typeof req.query.token === "string" ? req.query.token : undefined;

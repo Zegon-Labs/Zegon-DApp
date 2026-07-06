@@ -11,6 +11,8 @@ export interface RoundLog {
   commitTimestamp: number;
   playerActionTimestamp?: number;
   playerAction?: string;
+  itemUsed?: string;
+  predictionCorrect?: boolean;
   commitTxHash?: string;
   revealTxHash?: string;
   commitTsOnChain?: number;

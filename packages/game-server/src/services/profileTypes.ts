@@ -1,4 +1,4 @@
-import type { UpgradeLevels } from "@zegon/game-core";
+import type { UpgradeLevels, SaloonRelicLevels, SaloonRelicId } from "@zegon/game-core";
 
 export interface PlayerStats {
   duelsWon: number;
@@ -31,6 +31,8 @@ export interface PlayerProfile {
   level: number;
   notches: number;
   upgrades: UpgradeLevels;
+  relics: SaloonRelicLevels;
+  equippedConsumable?: SaloonRelicId | null;
   stats: PlayerStats;
   unlocks: string[];
   achievements: string[];
@@ -68,6 +70,8 @@ export function normalizeProfile(
     level: raw.level ?? 1,
     notches: raw.notches ?? 0,
     upgrades: raw.upgrades ?? {},
+    relics: raw.relics ?? {},
+    equippedConsumable: raw.equippedConsumable ?? null,
     stats: { ...DEFAULT_STATS, ...raw.stats },
     unlocks: raw.unlocks ?? [],
     achievements: raw.achievements ?? [],

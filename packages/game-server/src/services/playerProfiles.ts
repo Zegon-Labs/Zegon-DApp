@@ -2,9 +2,13 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   canPurchaseUpgrade,
+  canPurchaseConsumable,
   getUpgradeLevel,
+  getConsumableCount,
   type UpgradeId,
   type UpgradeLevels,
+  type SaloonRelicId,
+  type SaloonRelicLevels,
 } from "@zegon/game-core";
 import { getSql, isDatabaseConfigured } from "./db.js";
 import {
@@ -65,7 +69,7 @@ async function loadProfileFromDb(address: string): Promise<PlayerProfile | null>
   if (!sql) return null;
   const rows = (await sql`
     SELECT address, nickname, created_at, updated_at, xp, level, notches,
-           upgrades, unlocks, achievements, daily_attempts, stats
+           upgrades, relics, unlocks, achievements, daily_attempts, stats
     FROM players WHERE address = ${normalizeAddress(address)}
   `) as Array<Record<string, unknown>>;
   const row = rows[0];
@@ -79,6 +83,7 @@ async function loadProfileFromDb(address: string): Promise<PlayerProfile | null>
     level: Number(row.level),
     notches: Number(row.notches),
     upgrades: (row.upgrades ?? {}) as UpgradeLevels,
+    relics: (row.relics ?? {}) as SaloonRelicLevels,
     unlocks: (row.unlocks ?? []) as string[],
     achievements: (row.achievements ?? []) as string[],
     dailyAttempts: (row.daily_attempts ?? {}) as Record<string, DailyAttempt>,
@@ -92,11 +97,12 @@ async function saveProfileToDb(profile: PlayerProfile): Promise<void> {
   await sql`
     INSERT INTO players (
       address, nickname, created_at, updated_at, xp, level, notches,
-      upgrades, unlocks, achievements, daily_attempts, stats
+      upgrades, relics, unlocks, achievements, daily_attempts, stats
     ) VALUES (
       ${profile.address}, ${profile.nickname}, ${profile.createdAt}, ${profile.updatedAt},
       ${profile.xp}, ${profile.level}, ${profile.notches},
       ${JSON.stringify(profile.upgrades)}::jsonb,
+      ${JSON.stringify(profile.relics ?? {})}::jsonb,
       ${JSON.stringify(profile.unlocks)}::jsonb,
       ${JSON.stringify(profile.achievements)}::jsonb,
       ${JSON.stringify(profile.dailyAttempts)}::jsonb,
@@ -109,6 +115,7 @@ async function saveProfileToDb(profile: PlayerProfile): Promise<void> {
       level = EXCLUDED.level,
       notches = EXCLUDED.notches,
       upgrades = EXCLUDED.upgrades,
+      relics = EXCLUDED.relics,
       unlocks = EXCLUDED.unlocks,
       achievements = EXCLUDED.achievements,
       daily_attempts = EXCLUDED.daily_attempts,
@@ -122,7 +129,7 @@ async function loadAllProfiles(): Promise<PlayerProfile[]> {
     if (sql) {
       const rows = (await sql`
         SELECT address, nickname, created_at, updated_at, xp, level, notches,
-               upgrades, unlocks, achievements, daily_attempts, stats
+               upgrades, relics, unlocks, achievements, daily_attempts, stats
         FROM players
       `) as Array<Record<string, unknown>>;
       return rows.map((row) =>
@@ -195,6 +202,8 @@ export async function setProfile(
     level: existing?.level,
     notches: existing?.notches,
     upgrades: existing?.upgrades,
+    relics: existing?.relics,
+    equippedConsumable: existing?.equippedConsumable,
     stats: existing?.stats,
     unlocks: existing?.unlocks,
     achievements: existing?.achievements,
@@ -333,6 +342,72 @@ export async function purchaseUpgrade(
   const current = getUpgradeLevel(profile.upgrades, upgradeId);
   profile.notches -= check.cost;
   profile.upgrades = { ...profile.upgrades, [upgradeId]: current + 1 };
+  profile.updatedAt = Date.now();
+  await persistProfile(profile);
+  return profile;
+}
+
+export async function purchaseRelic(
+  address: string,
+  relicId: SaloonRelicId,
+): Promise<PlayerProfile> {
+  const profile = await getProfile(address);
+  if (!profile) throw new Error("PROFILE_REQUIRED");
+
+  const check = canPurchaseConsumable(
+    relicId,
+    profile.relics,
+    profile.upgrades,
+    profile.notches,
+    profile.level,
+  );
+  if (!check.ok) throw new Error(check.reason);
+
+  const current = getConsumableCount(profile.relics, relicId);
+  profile.notches -= check.cost;
+  profile.relics = { ...profile.relics, [relicId]: current + 1 };
+  profile.updatedAt = Date.now();
+  await persistProfile(profile);
+  return profile;
+}
+
+export async function equipConsumable(
+  address: string,
+  relicId: SaloonRelicId | null,
+): Promise<PlayerProfile> {
+  const profile = await getProfile(address);
+  if (!profile) throw new Error("PROFILE_REQUIRED");
+
+  if (relicId && getConsumableCount(profile.relics, relicId) <= 0) {
+    throw new Error("NO_CHARGES");
+  }
+
+  profile.equippedConsumable = relicId;
+  profile.updatedAt = Date.now();
+  await persistProfile(profile);
+  return profile;
+}
+
+export async function consumeEquippedConsumable(
+  address: string,
+): Promise<PlayerProfile> {
+  const profile = await getProfile(address);
+  if (!profile) throw new Error("PROFILE_REQUIRED");
+
+  const equipped = profile.equippedConsumable;
+  if (!equipped) return profile;
+
+  const left = getConsumableCount(profile.relics, equipped);
+  if (left <= 0) {
+    profile.equippedConsumable = null;
+  } else {
+    const next = left - 1;
+    profile.relics = {
+      ...profile.relics,
+      [equipped]: next > 0 ? next : undefined,
+    };
+    if (next <= 0) profile.equippedConsumable = null;
+  }
   profile.updatedAt = Date.now();
   await persistProfile(profile);
   return profile;

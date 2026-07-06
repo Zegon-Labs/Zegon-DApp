@@ -2,8 +2,10 @@ import { randomBytes, createHash } from "node:crypto";
 import {
   DuelConfig,
   DummyZegonBrain,
+  DuelItemId,
   PlayerAction,
   RoundContext,
+  ZegonAction,
   ZegonDecision,
   buildChallengeUrl,
   createDailyDuel,
@@ -26,6 +28,9 @@ import {
   hasDailyAttempt,
   updateProfileStats,
   purchaseUpgrade,
+  purchaseRelic,
+  equipConsumable,
+  consumeEquippedConsumable,
 } from "../services/playerProfiles.js";
 import {
   buildSiweMessage,
@@ -97,45 +102,136 @@ async function getSession(
 async function persistSession(session: DuelSession): Promise<void> {
   sessions.set(session.id, session);
   await saveSession(session);
-  if (process.env.VERCEL && session.logs.length > 0) {
+  if (session.logs.length > 0) {
     void storeDuelLog(session.id, session.logs).catch((err) => {
-      console.warn("[persistSession] 0G storage upload failed:", err);
+      console.warn("[persistSession] duel log persist failed:", err);
     });
   }
 }
 
-async function resolveLogsForVerify(
-  duelId: string,
-  sessionToken?: string,
-): Promise<{ logs: RoundLog[]; session: DuelSession | null; source: "session" | "local" | "chain" }> {
-  const session = await getSession(duelId, sessionToken);
-  if (session?.logs.length) {
-    const stored = await loadDuelLogPayload(duelId);
-    const storedLogs = stored?.logs as RoundLog[] | undefined;
-    if (storedLogs?.length) {
-      const sessionComplete = session.logs.filter((l) => l.playerAction !== undefined).length;
-      const storedComplete = storedLogs.filter((l) => l.playerAction !== undefined).length;
-      if (storedComplete > sessionComplete) {
-        return { logs: storedLogs, session, source: "local" };
-      }
+function isChainStubLog(log: RoundLog): boolean {
+  return !log.salt && !log.inputHash;
+}
+
+function mergeRoundLog(base: RoundLog, patch: Partial<RoundLog>): RoundLog {
+  const patchLog = patch as RoundLog;
+  const patchIsStub = patchLog.roundIndex != null && isChainStubLog(patchLog);
+  const baseIsStub = isChainStubLog(base);
+
+  const decision =
+    patchIsStub && !baseIsStub
+      ? base.decision
+      : !patchIsStub && baseIsStub
+        ? patchLog.decision ?? base.decision
+        : patchLog.decision?.taunt
+          ? patchLog.decision
+          : base.decision ?? patchLog.decision;
+
+  return {
+    ...base,
+    ...patch,
+    decision,
+    playerAction: patch.playerAction ?? base.playerAction,
+    itemUsed: patch.itemUsed ?? base.itemUsed,
+    predictionCorrect: patch.predictionCorrect ?? base.predictionCorrect,
+    commitTxHash: patch.commitTxHash ?? base.commitTxHash,
+    revealTxHash: patch.revealTxHash ?? base.revealTxHash,
+    commitTsOnChain: patch.commitTsOnChain ?? base.commitTsOnChain,
+    commitTimestamp: patch.commitTimestamp ?? base.commitTimestamp,
+    playerActionTimestamp: patch.playerActionTimestamp ?? base.playerActionTimestamp,
+    attestationHash: patch.attestationHash ?? base.attestationHash,
+  };
+}
+
+function mergeRoundLogsByIndex(...sources: Array<RoundLog[] | undefined>): RoundLog[] {
+  const byIndex = new Map<number, RoundLog>();
+  for (const source of sources) {
+    if (!source?.length) continue;
+    for (const log of source) {
+      const prev = byIndex.get(log.roundIndex);
+      byIndex.set(log.roundIndex, prev ? mergeRoundLog(prev, log) : { ...log });
     }
-    return { logs: session.logs, session, source: "session" };
+  }
+  return [...byIndex.values()].sort((a, b) => a.roundIndex - b.roundIndex);
+}
+
+type ClientRoundLog = {
+  roundIndex: number;
+  playerAction: string;
+  itemUsed?: string;
+  predictionCorrect?: boolean;
+  predictedMove?: string;
+  zegonMove?: string;
+};
+
+function wasPlayerRead(
+  playerAction: string,
+  predictedMove: string,
+  itemUsed?: string,
+): boolean {
+  if (playerAction === PlayerAction.USE_ITEM && itemUsed === DuelItemId.SMOKE) {
+    return false;
+  }
+  return predictedMove === playerAction;
+}
+
+function applyClientRoundLogs(
+  session: DuelSession,
+  clientLogs?: ClientRoundLog[],
+): void {
+  if (!clientLogs?.length) return;
+
+  for (const cr of clientLogs) {
+    let log = session.logs.find((l) => l.roundIndex === cr.roundIndex);
+    if (!log) {
+      log = {
+        roundIndex: cr.roundIndex,
+        commitHash: "",
+        salt: "",
+        inputHash: "",
+        decision: {
+          predictedPlayerMove: (cr.predictedMove as PlayerAction) ?? PlayerAction.FIRE,
+          zegonMove: (cr.zegonMove as ZegonAction) ?? ZegonAction.DODGE,
+          confidence: 0,
+          taunt: "",
+        },
+        commitTimestamp: Date.now(),
+      };
+      session.logs.push(log);
+    }
+
+    if (!log.playerAction && cr.playerAction) {
+      log.playerAction = cr.playerAction;
+    }
+    if (cr.itemUsed) {
+      log.itemUsed = cr.itemUsed;
+    }
+    if (cr.predictionCorrect != null) {
+      log.predictionCorrect = cr.predictionCorrect;
+    } else if (log.playerAction && log.decision?.predictedPlayerMove) {
+      log.predictionCorrect = wasPlayerRead(
+        log.playerAction,
+        log.decision.predictedPlayerMove,
+        log.itemUsed,
+      );
+    }
+    if (cr.predictedMove) {
+      log.decision.predictedPlayerMove = cr.predictedMove as PlayerAction;
+    }
+    if (cr.zegonMove) {
+      log.decision.zegonMove = cr.zegonMove as ZegonAction;
+    }
   }
 
-  const stored = await loadDuelLogPayload(duelId);
-  if (stored?.logs?.length) {
-    return { logs: stored.logs as RoundLog[], session, source: "local" };
-  }
+  session.logs.sort((a, b) => a.roundIndex - b.roundIndex);
+}
 
+async function loadChainRoundLogs(duelId: string): Promise<RoundLog[]> {
   const contract = getContractService();
-  if (!contract.isConfigured()) {
-    return { logs: [], session, source: "session" };
-  }
+  if (!contract.isConfigured()) return [];
 
   const onChain = await contract.listRoundsOnChain(duelId);
-  if (onChain.length === 0) {
-    return { logs: [], session, source: "chain" };
-  }
+  if (onChain.length === 0) return [];
 
   let chainRounds = onChain;
   while (
@@ -144,11 +240,9 @@ async function resolveLogsForVerify(
   ) {
     chainRounds = chainRounds.slice(0, -1);
   }
-  if (chainRounds.length === 0) {
-    return { logs: [], session, source: "chain" };
-  }
+  if (chainRounds.length === 0) return [];
 
-  const logs: RoundLog[] = chainRounds.map((round, roundIndex) => ({
+  return chainRounds.map((round, roundIndex) => ({
     roundIndex,
     commitHash: round.commit,
     salt: "",
@@ -166,8 +260,29 @@ async function resolveLogsForVerify(
         ? round.revealTs * 1000
         : undefined,
   }));
+}
 
-  return { logs, session, source: "chain" };
+async function resolveLogsForVerify(
+  duelId: string,
+  sessionToken?: string,
+): Promise<{ logs: RoundLog[]; session: DuelSession | null; source: "session" | "local" | "chain" }> {
+  const session = await getSession(duelId, sessionToken);
+  const stored = await loadDuelLogPayload(duelId);
+  const storedLogs = stored?.logs as RoundLog[] | undefined;
+  const sessionLogs = session?.logs ?? [];
+  const chainLogs = await loadChainRoundLogs(duelId);
+
+  const merged = mergeRoundLogsByIndex(chainLogs, sessionLogs, storedLogs);
+  if (merged.length === 0) {
+    return { logs: [], session, source: "session" };
+  }
+
+  const hasStoredMoves = storedLogs?.some((l) => l.playerAction !== undefined) ?? false;
+  const hasSessionMoves = sessionLogs.some((l) => l.playerAction !== undefined);
+  const source: "session" | "local" | "chain" =
+    hasStoredMoves ? "local" : hasSessionMoves ? "session" : chainLogs.length ? "chain" : "session";
+
+  return { logs: merged, session, source };
 }
 
 function compositeAttestationHash(logs: RoundLog[], duelId: string): string {
@@ -191,11 +306,17 @@ export async function handleStartDuel(body: {
       : {
           ...DEFAULT_DUEL_CONFIG,
           ...body.config,
-          mode: "standard",
+          mode: mode === "challenge" ? "challenge" : "standard",
         };
+
+  const config =
+    mode === "challenge" && body.config?.seed
+      ? { ...baseConfig, seed: body.config.seed }
+      : withUniqueDuelSeed(baseConfig, duelId);
+
   const session: DuelSession = {
     id: duelId,
-    config: withUniqueDuelSeed(baseConfig, duelId),
+    config,
     roundIndex: 0,
     logs: [],
     createdAt: Date.now(),
@@ -211,6 +332,8 @@ export async function handleRoundCommit(body: {
   sessionToken?: string;
 }): Promise<{
   taunt: string;
+  predictedPlayerMove: string;
+  confidence: number;
   commitHash: string;
   commitTxHash?: string;
   roundIndex: number;
@@ -236,6 +359,8 @@ export async function handleRoundCommit(body: {
   if (pendingLog) {
     return {
       taunt: pendingLog.decision.taunt,
+      predictedPlayerMove: pendingLog.decision.predictedPlayerMove,
+      confidence: pendingLog.decision.confidence,
       commitHash: pendingLog.commitHash,
       commitTxHash: pendingLog.commitTxHash,
       roundIndex: pendingLog.roundIndex,
@@ -317,6 +442,8 @@ export async function handleRoundCommit(body: {
 
   return {
     taunt: decision.taunt,
+    predictedPlayerMove: decision.predictedPlayerMove,
+    confidence: decision.confidence,
     commitHash,
     commitTxHash,
     roundIndex: session.roundIndex,
@@ -332,6 +459,7 @@ export async function handleRoundReveal(body: {
   roundIndex: number;
   playerAction: string;
   playerActionTimestamp?: number;
+  itemUsed?: string;
   sessionToken?: string;
 }): Promise<{
   verified: boolean;
@@ -358,6 +486,16 @@ export async function handleRoundReveal(body: {
   }
 
   log.playerAction = body.playerAction;
+  if (body.itemUsed) {
+    log.itemUsed = body.itemUsed;
+  } else if (body.playerAction !== "USE_ITEM") {
+    log.itemUsed = undefined;
+  }
+  log.predictionCorrect = wasPlayerRead(
+    body.playerAction,
+    log.decision.predictedPlayerMove,
+    log.itemUsed,
+  );
   log.playerActionTimestamp =
     body.playerActionTimestamp ?? Date.now();
 
@@ -385,6 +523,9 @@ export async function handleRoundReveal(body: {
 
   session.roundIndex += 1;
   await persistSession(session);
+  void storeDuelLog(body.duelId, session.logs).catch((err) => {
+    console.warn("[round/reveal] duel log persist failed:", err);
+  });
 
   return {
     verified: true,
@@ -399,6 +540,7 @@ export async function handleRecordDuel(body: {
   result: number;
   attestationHash: string;
   sessionToken?: string;
+  roundLogs?: ClientRoundLog[];
 }): Promise<{
   stored: boolean;
   storageRoot?: string;
@@ -411,6 +553,8 @@ export async function handleRecordDuel(body: {
     // Session storage is ephemeral on serverless; recording is best-effort.
     return { stored: false };
   }
+
+  applyClientRoundLogs(session, body.roundLogs);
 
   const contract = getContractService();
   let recordTxHash: string | undefined;
@@ -465,6 +609,10 @@ export async function handleVerify(
     playerActionTimestamp?: number;
     commitBeforePlayer: boolean;
     zegonMove?: string;
+    playerAction?: string;
+    predictedMove?: string;
+    itemUsed?: string;
+    predictionCorrect?: boolean;
     attestationHash?: string;
     onChain?: {
       commit: string;
@@ -529,9 +677,14 @@ export async function handleVerify(
           ? contract.getTxExplorerUrl(log.revealTxHash)
           : undefined,
         commitTsOnChain: commitTs,
+        commitTimestamp: log.commitTimestamp,
         playerActionTimestamp: playerTs,
         commitBeforePlayer,
         zegonMove: log.decision?.zegonMove,
+        playerAction: log.playerAction,
+        predictedMove: log.decision?.predictedPlayerMove,
+        itemUsed: log.itemUsed,
+        predictionCorrect: log.predictionCorrect,
         attestationHash: log.attestationHash,
         onChain: onChain
           ? {
@@ -925,6 +1078,44 @@ export async function handlePurchaseUpgrade(body: {
   return { profile };
 }
 
+export async function handlePurchaseRelic(body: {
+  address: string;
+  relicId: string;
+  auth?: { message?: string; signature?: string };
+}): Promise<{ profile: Awaited<ReturnType<typeof purchaseRelic>> }> {
+  const siwe = requireSiweOrDev(body.address, body.auth);
+  if (!siwe.ok) throw new Error(siwe.error);
+  const profile = await purchaseRelic(
+    body.address,
+    body.relicId as import("@zegon/game-core").SaloonRelicId,
+  );
+  return { profile };
+}
+
+export async function handleEquipConsumable(body: {
+  address: string;
+  relicId: string | null;
+  auth?: { message?: string; signature?: string };
+}): Promise<{ profile: Awaited<ReturnType<typeof equipConsumable>> }> {
+  const siwe = requireSiweOrDev(body.address, body.auth);
+  if (!siwe.ok) throw new Error(siwe.error);
+  const profile = await equipConsumable(
+    body.address,
+    body.relicId as import("@zegon/game-core").SaloonRelicId | null,
+  );
+  return { profile };
+}
+
+export async function handleConsumeEquippedConsumable(body: {
+  address: string;
+  auth?: { message?: string; signature?: string };
+}): Promise<{ profile: Awaited<ReturnType<typeof consumeEquippedConsumable>> }> {
+  const siwe = requireSiweOrDev(body.address, body.auth);
+  if (!siwe.ok) throw new Error(siwe.error);
+  const profile = await consumeEquippedConsumable(body.address);
+  return { profile };
+}
+
 export async function handleDuelReplay(
   duelId: string,
   sessionToken?: string,
@@ -935,6 +1126,8 @@ export async function handleDuelReplay(
     predictedMove?: string;
     zegonMove?: string;
     playerAction?: string;
+    itemUsed?: string;
+    predictionCorrect?: boolean;
     taunt?: string;
     playerDamage?: number;
     zegonDamage?: number;
@@ -951,6 +1144,8 @@ export async function handleDuelReplay(
     predictedMove: log.decision?.predictedPlayerMove,
     zegonMove: log.decision?.zegonMove,
     playerAction: log.playerAction,
+    itemUsed: log.itemUsed,
+    predictionCorrect: log.predictionCorrect,
     taunt: log.decision?.taunt,
     commitTimestamp: log.commitTimestamp,
     playerActionTimestamp: log.playerActionTimestamp,

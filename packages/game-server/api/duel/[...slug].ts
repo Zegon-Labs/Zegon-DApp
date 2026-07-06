@@ -32,7 +32,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (slug?.[0] === "verify" && req.method === "GET") {
       const duelId = slug[1] ?? "demo";
-      return res.status(200).json(await handleVerify(duelId));
+      const token =
+        typeof req.query.token === "string" ? req.query.token : undefined;
+      return res.status(200).json(await handleVerify(duelId, token));
     }
     if (slug?.[0] === "daily" && slug?.[1] === "leaderboard") {
       return res.status(200).json(await handleDailyLeaderboard());

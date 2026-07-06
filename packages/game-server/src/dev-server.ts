@@ -23,6 +23,9 @@ import {
   handleGetChallengeLink,
   handleAuthNonce,
   handlePurchaseUpgrade,
+  handlePurchaseRelic,
+  handleEquipConsumable,
+  handleConsumeEquippedConsumable,
   handleDuelReplay,
   handleSeasonClaim,
 } from "./handlers/duelHandlers.js";
@@ -131,16 +134,20 @@ const server = createServer(async (req, res) => {
     }
 
     if (url.startsWith("/api/duel/verify/") && req.method === "GET") {
-      const duelId = url.split("/").pop() ?? "demo";
-      const result = await handleVerify(duelId);
+      const parsed = new URL(url, "http://localhost");
+      const duelId = parsed.pathname.split("/").pop() ?? "demo";
+      const token = parsed.searchParams.get("token") ?? undefined;
+      const result = await handleVerify(duelId, token);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;
     }
 
-    const replayMatch = url.match(/^\/api\/duel\/([^/]+)\/replay$/);
+    const replayMatch = url.match(/^\/api\/duel\/([^/?]+)\/replay/);
     if (replayMatch && req.method === "GET") {
-      const result = await handleDuelReplay(replayMatch[1]!);
+      const parsed = new URL(url, "http://localhost");
+      const token = parsed.searchParams.get("token") ?? undefined;
+      const result = await handleDuelReplay(replayMatch[1]!, token);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;
@@ -158,6 +165,30 @@ const server = createServer(async (req, res) => {
     if (url === "/api/player/upgrade" && req.method === "POST") {
       const body = (await parseBody(req)) as Parameters<typeof handlePurchaseUpgrade>[0];
       const result = await handlePurchaseUpgrade(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/relic" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handlePurchaseRelic>[0];
+      const result = await handlePurchaseRelic(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/equip-consumable" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleEquipConsumable>[0];
+      const result = await handleEquipConsumable(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/consume-equipped" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleConsumeEquippedConsumable>[0];
+      const result = await handleConsumeEquippedConsumable(body);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;
@@ -209,6 +240,12 @@ const server = createServer(async (req, res) => {
       const result = await handleGetChallengeLink(id);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/metrics/track" && req.method === "POST") {
+      res.writeHead(204);
+      res.end();
       return;
     }
 
