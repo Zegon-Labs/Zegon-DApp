@@ -3,6 +3,7 @@ import { LANDING_CHARACTER_KEY } from "./landingBackdrop.js";
 import { ZegonDamagePortrait, ZEGON_DAMAGE_KEY } from "./zegonDamagePortrait.js";
 import { DUEL_LAYOUT as L } from "../layout.js";
 import { C } from "../theme.js";
+import { safeShake } from "../safeShake.js";
 
 export class ArenaView {
   readonly container: Phaser.GameObjects.Container;
@@ -13,6 +14,7 @@ export class ArenaView {
 
   private playerOverlay: Phaser.GameObjects.Rectangle | null = null;
   private zegonOverlay: Phaser.GameObjects.Rectangle | null = null;
+  private tensionGlow: Phaser.GameObjects.Graphics | null = null;
 
   /** The visible Phaser Image regardless of which branch is active. */
   private get charImage(): Phaser.GameObjects.Image | null {
@@ -42,6 +44,9 @@ export class ArenaView {
       .setBlendMode(Phaser.BlendModes.ADD);
     this.container.add([this.playerOverlay, this.zegonOverlay]);
 
+    this.tensionGlow = scene.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+    this.container.add(this.tensionGlow);
+
     if (scene.textures.exists(ZEGON_DAMAGE_KEY)) {
       // Scale up 1.3× vs the static character so the figure fills more of the
       // arena. depth - 1 ensures the ADD-blend overlays always render on top.
@@ -60,21 +65,25 @@ export class ArenaView {
     const img = this.charImage;
     if (!img) return;
 
-    const pulse = 0.94 + (blindsight / 100) * 0.06;
     if (this.damagePortrait) {
-      this.damagePortrait.setAlpha(pulse);
+      this.damagePortrait.setAlpha(1);
       if (zegonHp !== undefined && zegonMaxHp !== undefined) {
         this.damagePortrait.updateHp(zegonHp, zegonMaxHp);
       }
     } else {
-      img.setAlpha(pulse);
+      img.setAlpha(0.96);
     }
 
     if (deadeye || blindsight >= 80) {
       this.damagePortrait ? this.damagePortrait.setTint(0xff8866) : img.setTint(0xff8866);
+    } else if (blindsight >= 35) {
+      const warm = blindsight >= 60 ? 0xff9977 : 0xffbbaa;
+      this.damagePortrait ? this.damagePortrait.setTint(warm) : img.setTint(warm);
     } else {
       this.damagePortrait ? this.damagePortrait.clearTint() : img.clearTint();
     }
+
+    this.tensionGlow?.clear();
   }
 
   pulseHit(): void {
@@ -113,7 +122,7 @@ export class ArenaView {
     });
     this.flashOverlay(this.playerOverlay, 0.55);
     img.scene.cameras.main.flash(160, 179, 18, 43, false, undefined, 0.35);
-    img.scene.cameras.main.shake(220, 0.012);
+    safeShake(img.scene, 180, 0.006);
   }
 
   private flashOverlay(

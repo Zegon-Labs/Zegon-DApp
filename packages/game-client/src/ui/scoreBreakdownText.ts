@@ -7,15 +7,18 @@ import type {
 function lineText(line: ScoreBreakdownLine, strings: LocaleStrings): string {
   const points = Math.abs(line.points);
   switch (line.reason) {
-    case "rounds_played":
-      return format(strings.scoreLineRounds, {
+    case "unread_rounds":
+      return format(strings.scoreLineUnread, {
         points: line.points,
         count: line.count ?? 0,
       });
-    case "blindsight_penalty":
-      return format(strings.scoreLineBlindsight, { points: line.points });
-    case "times_read":
-      return format(strings.scoreLineTimesRead, {
+    case "read_penalty":
+      return format(strings.scoreLineReadPenalty, {
+        points,
+        count: line.count ?? 0,
+      });
+    case "read_streak_penalty":
+      return format(strings.scoreLineReadStreak, {
         points,
         count: line.count ?? 0,
       });
@@ -23,6 +26,10 @@ function lineText(line: ScoreBreakdownLine, strings: LocaleStrings): string {
       return format(strings.scoreLineSurprise, { points: line.points });
     case "victory":
       return format(strings.scoreLineVictory, { points: line.points });
+    case "clean_victory":
+      return format(strings.scoreLineCleanVictory, { points: line.points });
+    case "hp_bonus":
+      return format(strings.scoreLineHpBonus, { points: line.points });
     case "daily_multiplier":
       return format(strings.scoreLineDailyMult, {
         points: line.points,
@@ -38,7 +45,7 @@ export function formatScoreBreakdown(
   strings: LocaleStrings,
   totalScore: number,
 ): string {
-  const lines = breakdown.lines.map((line) => lineText(line, strings));
+  const lines = breakdown.lines.map((line) => lineText(line, strings)).filter(Boolean);
   const tips = [
     strings.scoreRankingTip1,
     strings.scoreRankingTip2,

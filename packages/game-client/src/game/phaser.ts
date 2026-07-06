@@ -22,7 +22,7 @@ export function createPhaserGame(parent: HTMLElement): Phaser.Game {
     parent,
     backgroundColor: C.void,
     scale: {
-      mode: Phaser.Scale.FIT,
+      mode: Phaser.Scale.ENVELOP,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     render: {
@@ -44,6 +44,11 @@ export function createPhaserGame(parent: HTMLElement): Phaser.Game {
 export function destroyPhaserGame(): void {
   gameInstance?.destroy(true);
   gameInstance = null;
+}
+
+/** Recompute canvas size after the stage container becomes visible. */
+export function refreshPhaserScale(): void {
+  gameInstance?.scale.refresh();
 }
 
 export function startPhaserScene(scene: string, data?: Record<string, unknown>): void {

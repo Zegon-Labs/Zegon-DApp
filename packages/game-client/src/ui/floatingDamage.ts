@@ -9,9 +9,15 @@ export function showFloatingDamage(
   y: number,
   amount: number,
   target: "player" | "zegon",
+  maxHp = 100,
 ): void {
   const strings = t();
-  const label = formatLivesLost(amount, strings.lifeSingular, strings.lifePlural);
+  const label = formatLivesLost(
+    amount,
+    strings.lifeSingular,
+    strings.lifePlural,
+    maxHp,
+  );
   const color = target === "player" ? COLORS.blood : COLORS.verified;
   const fontSize = target === "zegon" ? "26px" : "22px";
 

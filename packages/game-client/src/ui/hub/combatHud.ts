@@ -1,12 +1,14 @@
 import Phaser from "phaser";
 import { BlindsightMeter } from "./blindsightMeter.js";
 import { SideHudPanel } from "./sideHudPanel.js";
+import { HUD_SAFE, actionPanelTopY } from "../layout.js";
 
 export interface CombatHudState {
   playerHp: number;
   zegonHp: number;
   playerMaxHp: number;
   zegonMaxHp: number;
+  playerHitsLabel?: string;
   blindsight: number;
   readingStreak: number;
   deadeyeStreak: number;
@@ -56,21 +58,26 @@ export class CombatHud {
   ) {
     this.container = scene.add.container(0, 0).setDepth(depth);
 
-    const { width, height } = scene.scale;
-    const panelH = fighterLayout?.panelH ?? 110;
+    const { width } = scene.scale;
+    const panelH = fighterLayout?.panelH ?? 86;
+
+    const stripTop = actionPanelTopY(width);
+    const defaultPlayerY = Math.round(stripTop - panelH + 10);
+    const defaultZegonY = HUD_SAFE.top + 4;
 
     this.playerPanel = new SideHudPanel(scene, {
       side: "left",
-      x: fighterLayout?.playerPanelX ?? 0,
-      y: fighterLayout?.playerPanelY ?? height - panelH - 104,
+      x: fighterLayout?.playerPanelX ?? HUD_SAFE.side,
+      y: fighterLayout?.playerPanelY ?? defaultPlayerY,
       panelH,
       depth,
+      showHitsSubtitle: true,
     });
 
     this.zegonPanel = new SideHudPanel(scene, {
       side: "right",
-      x: fighterLayout?.zegonPanelX ?? width,
-      y: fighterLayout?.zegonPanelY ?? 4,
+      x: fighterLayout?.zegonPanelX ?? width - HUD_SAFE.side,
+      y: fighterLayout?.zegonPanelY ?? defaultZegonY,
       panelH,
       depth,
     });
@@ -82,7 +89,11 @@ export class CombatHud {
   }
 
   update(state: CombatHudState): void {
-    this.playerPanel.update(state.playerHp, state.playerMaxHp);
+    this.playerPanel.update(
+      state.playerHp,
+      state.playerMaxHp,
+      state.playerHitsLabel,
+    );
     this.zegonPanel.update(state.zegonHp, state.zegonMaxHp);
     this.blindsightMeter?.update(
       state.blindsightLabel,
@@ -90,7 +101,6 @@ export class CombatHud {
       state.deadeyeStreak,
       state.blindsightFlavor,
       state.nextMoveHint,
-      state.blindsight,
     );
   }
 

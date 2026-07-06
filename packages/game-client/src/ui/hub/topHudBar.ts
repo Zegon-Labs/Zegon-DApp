@@ -1,7 +1,8 @@
 import Phaser from "phaser";
 import { FONT_DISPLAY } from "../theme.js";
+import { HUD_SAFE } from "../layout.js";
 import { LANDING_LOGO_KEY, preloadHubLogo } from "./landingBackdrop.js";
-import { drawSegmentedMeter } from "./duelHudDraw.js";
+import { drawStreakMeter } from "./duelHudDraw.js";
 
 export const HEADER_BAR_KEY = "header-bar";
 
@@ -42,7 +43,7 @@ export class TopHudBar {
   private readonly meterY: number;
   private readonly meterW: number;
   private readonly meterH = 7;
-  private readonly meterSegments = 2;
+  private meterSegments = 2;
 
   readonly barDisplayH: number;
 
@@ -73,28 +74,33 @@ export class TopHudBar {
     const settingsX  = Math.round(barLeft + barDisplayW * 0.72);       // right wing
     const surrenderX = Math.round(barLeft + barDisplayW * 0.83);       // right wing
 
+    const barTop = HUD_SAFE.top;
+
     // ── Bar background image ──────────────────────────────────────────────
     if (scene.textures.exists(HEADER_BAR_KEY)) {
       const bar = scene.add
-        .image(centerX, 0, HEADER_BAR_KEY)
+        .image(centerX, barTop, HEADER_BAR_KEY)
         .setOrigin(0.5, 0)
         .setScale(scaleX, scaleY)
         .setDepth(depth - 3); // below historyLog (12) — no X-overlap but safe
       this.objs.push(bar);
     }
 
+    const wingCenterYAdj = wingCenterY + barTop;
+    const panelCenterYAdj = panelCenterY + barTop;
+
     // ── CENTER: ZEGON logo ────────────────────────────────────────────────
     const logoMaxW = 100;
     if (scene.textures.exists(LANDING_LOGO_KEY)) {
       const logo = scene.add
-        .image(centerX, panelCenterY, LANDING_LOGO_KEY)
+        .image(centerX, panelCenterYAdj, LANDING_LOGO_KEY)
         .setOrigin(0.5, 0.5)
         .setDepth(depth);
       logo.setScale(Math.min(logoMaxW / logo.width, 1));
       this.objs.push(logo);
     } else {
       const t = scene.add
-        .text(centerX, panelCenterY, "ZEGON", {
+        .text(centerX, panelCenterYAdj, "ZEGON", {
           fontFamily: "'Oswald', 'Arial Narrow', sans-serif",
           fontSize: "18px",
           color: "#FF4D2E",
@@ -107,7 +113,7 @@ export class TopHudBar {
 
     // ── LEFT WING: streak label + segmented bar ───────────────────────────
     this.streakTitle = scene.add
-      .text(streakCX, wingCenterY - 11, "RACHA", {
+      .text(streakCX, wingCenterYAdj - 11, "RACHA", {
         fontFamily: FONT_DISPLAY,
         fontSize: "12px",
         color: "#ffffff",
@@ -120,20 +126,20 @@ export class TopHudBar {
 
     const meterW = 90;
     this.meterX = streakCX - meterW / 2;
-    this.meterY = wingCenterY + 1;
+    this.meterY = wingCenterYAdj + 1;
     this.meterW = meterW;
 
     this.meterGfx = scene.add.graphics().setDepth(depth);
     this.objs.push(this.meterGfx);
 
-    drawSegmentedMeter(
+    drawStreakMeter(
       this.meterGfx, this.meterX, this.meterY, this.meterW, this.meterH,
       0, this.meterSegments,
     );
 
     // ── RIGHT WING: Settings ⚙ and Surrender ⚑ ───────────────────────────
     const settingsBtn = scene.add
-      .text(settingsX, wingCenterY, "\u2699", {
+      .text(settingsX, wingCenterYAdj, "\u2699", {
         fontFamily: "Arial, sans-serif", fontSize: "22px", color: "#cc0000",
       })
       .setOrigin(0.5, 0.5)
@@ -150,7 +156,7 @@ export class TopHudBar {
     const surrenderFontSize = surrenderLabel.length > 2 ? "11px" : "22px";
 
     const surrenderBtn = scene.add
-      .text(surrenderX, wingCenterY, surrenderLabel, {
+      .text(surrenderX, wingCenterYAdj, surrenderLabel, {
         fontFamily: surrenderLabel.length > 2 ? FONT_DISPLAY : "Arial, sans-serif",
         fontSize: surrenderFontSize,
         color: "#cc0000",
@@ -183,15 +189,13 @@ export class TopHudBar {
 
   updateStreak(label: string, readingStreak: number, deadeyeStreak: number): void {
     this.streakTitle.setText(label.toUpperCase());
+    this.meterSegments = Math.max(2, deadeyeStreak);
 
-    const pct = deadeyeStreak > 0
-      ? Math.min(100, Math.round((readingStreak / deadeyeStreak) * 100))
-      : 0;
-
-    drawSegmentedMeter(
+    drawStreakMeter(
       this.meterGfx,
       this.meterX, this.meterY, this.meterW, this.meterH,
-      pct, this.meterSegments,
+      readingStreak,
+      this.meterSegments,
     );
   }
 

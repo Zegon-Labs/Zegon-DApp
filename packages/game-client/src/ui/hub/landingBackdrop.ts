@@ -71,11 +71,13 @@ export function createLandingBackdrop(
     container.add(scene.add.rectangle(width / 2, height / 2, width, height, C.void));
   }
 
-  const vignetteAlpha = duel ? 0.38 : 0.55;
-  const vignette = scene.add.rectangle(width / 2, height / 2, width, height, 0x030205, vignetteAlpha);
-  container.add(vignette);
+  // Vignette oscurece el paisaje — omitida en duelo para no tapar a ZEGON.
+  if (!duel) {
+    const vignette = scene.add.rectangle(width / 2, height / 2, width, height, 0x030205, 0.55);
+    container.add(vignette);
+  }
 
-  const floorAlpha = duel ? 0.45 : 0.75;
+  const floorAlpha = duel ? 0.28 : 0.75;
   const floorFade = scene.add.rectangle(width / 2, height * 0.82, width, height * 0.45, C.void, floorAlpha);
   container.add(floorFade);
 

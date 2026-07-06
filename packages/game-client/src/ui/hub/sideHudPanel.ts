@@ -26,7 +26,7 @@ const SRC_H = 512;
 
 // Fixed display width for BOTH panels — ensures they look the same size
 // Both images display at PANEL_DISPLAY_W × panelH regardless of SRC_W:SRC_H ratio
-const PANEL_DISPLAY_W = 440;
+const PANEL_DISPLAY_W = 408;
 
 // LEFT panel (side_bar.png):  portrait frame LEFT, bar extends RIGHT
 const L_ZONE_A_W   = 480;   // portrait frame width in source
@@ -50,6 +50,8 @@ export interface SideHudPanelOptions {
   y: number;
   panelH?: number;
   depth?: number;
+  /** Optional hits label under the bar (player upgrades). */
+  showHitsSubtitle?: boolean;
 }
 
 // ── Class ───────────────────────────────────────────────────────────────────
@@ -63,12 +65,15 @@ export class SideHudPanel {
   private readonly barW: number;
   private readonly barH: number;
   private readonly hpGfx: Phaser.GameObjects.Graphics;
+  private readonly subtitleText: Phaser.GameObjects.Text | null;
+  private readonly showSubtitle: boolean;
 
   constructor(scene: Phaser.Scene, opts: SideHudPanelOptions) {
     this.scene = scene;
 
     const depth   = opts.depth ?? 9;
     const panelH  = opts.panelH ?? 80;
+    this.showSubtitle = Boolean(opts.showHitsSubtitle);
 
     // Both panels use the SAME fixed display width so they look identical in size.
     // scaleX compresses/stretches the image to PANEL_DISPLAY_W; scaleY sets the height.
@@ -129,12 +134,30 @@ export class SideHudPanel {
     this.hpGfx = scene.add.graphics().setDepth(depth + 2);
     this.objs.push(this.hpGfx);
     this.drawSegments(0, 1);
+
+    if (this.showSubtitle) {
+      this.subtitleText = scene.add
+        .text(this.barX + this.barW / 2, this.barY + this.barH + 6, "", {
+          fontFamily: "VT323, monospace",
+          fontSize: "14px",
+          color: "#9a8f82",
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(depth + 2);
+      this.objs.push(this.subtitleText);
+    } else {
+      this.subtitleText = null;
+    }
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
 
-  update(hp: number, maxHp: number): void {
+  update(hp: number, maxHp: number, hitsLabel?: string): void {
     this.drawSegments(Math.max(0, hp), Math.max(1, maxHp));
+    if (this.subtitleText) {
+      this.subtitleText.setText(hitsLabel ?? "");
+      this.subtitleText.setVisible(Boolean(hitsLabel));
+    }
   }
 
   playHit(previousHp: number, newHp: number, maxHp: number): void {

@@ -3,6 +3,7 @@ import { gameBridge } from "../game/bridge.js";
 import {
   createPhaserGame,
   destroyPhaserGame,
+  refreshPhaserScale,
   startPhaserScene,
   stopToBlank,
 } from "../game/phaser.js";
@@ -29,12 +30,23 @@ export function PhaserHost({ visible }: PhaserHostProps) {
 
   useEffect(() => {
     if (!visible) stopToBlank();
+    else refreshPhaserScale();
   }, [visible]);
+
+  useEffect(() => {
+    const onResize = () => refreshPhaserScale();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   return (
     <div
       className="game-stage"
-      style={visible ? undefined : { visibility: "hidden", pointerEvents: "none", position: "fixed", inset: 0, zIndex: -1 }}
+      style={
+        visible
+          ? undefined
+          : { visibility: "hidden", pointerEvents: "none", position: "fixed", inset: 0, zIndex: -1 }
+      }
       aria-hidden={!visible}
     >
       <div className="game-stage__frame">

@@ -28,6 +28,30 @@ export function paintDuelFrameCorners(
   }
 }
 
+export function drawStreakMeter(
+  g: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  filledSegments: number,
+  segments = 2,
+  fillColor = C.ember,
+  emptyColor = C.fog,
+): void {
+  g.clear();
+  const gap = 3;
+  const segW = (w - gap * (segments - 1)) / segments;
+  const filled = Math.max(0, Math.min(segments, filledSegments));
+  for (let i = 0; i < segments; i++) {
+    const sx = x + i * (segW + gap);
+    g.fillStyle(i < filled ? fillColor : emptyColor, i < filled ? 1 : 0.45);
+    g.fillRect(sx, y, segW, h);
+  }
+  g.lineStyle(1, C.blood, 0.65);
+  g.strokeRect(x - 1, y - 1, w + 2, h + 2);
+}
+
 export function drawSegmentedMeter(
   g: Phaser.GameObjects.Graphics,
   x: number,

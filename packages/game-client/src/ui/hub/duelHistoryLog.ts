@@ -297,6 +297,14 @@ export class DuelHistoryLog {
     );
   }
 
+  get panelHeight(): number {
+    return this.panelH;
+  }
+
+  get panelWidth(): number {
+    return this.panelW;
+  }
+
   destroy(): void {
     this.scene.input.off("wheel", this.wheelHandler);
     for (const entry of this.entryTexts) {

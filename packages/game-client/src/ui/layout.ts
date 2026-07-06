@@ -2,6 +2,30 @@
 export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 720;
 
+/** Keep HUD widgets inside these insets so FIT scaling never clips ornaments. */
+export const HUD_SAFE = {
+  top: 10,
+  bottom: 8,
+  side: 6,
+} as const;
+
+/** action_panel.png opaque width / height (see spriteActionBar). */
+const ACTION_PANEL_SRC_W = 3318 - 44;
+const ACTION_PANEL_SRC_H = 474;
+
+/** Vertical centre for the bottom action strip — derived from panel height. */
+export function actionPanelCenterY(screenWidth: number): number {
+  const scale = screenWidth / ACTION_PANEL_SRC_W;
+  const displayH = ACTION_PANEL_SRC_H * scale;
+  return GAME_HEIGHT - HUD_SAFE.bottom - displayH / 2;
+}
+
+export function actionPanelTopY(screenWidth: number): number {
+  const scale = screenWidth / ACTION_PANEL_SRC_W;
+  const displayH = ACTION_PANEL_SRC_H * scale;
+  return actionPanelCenterY(screenWidth) - displayH / 2;
+}
+
 /** Duel layout — HUD over landing bg + character. */
 export const DUEL_LAYOUT = {
   width: GAME_WIDTH,
@@ -12,12 +36,13 @@ export const DUEL_LAYOUT = {
   prompt: { y: 84, w: 660, h: 66 },
   taunt: { y: 162, maxW: 750 },
 
-  history: { x: 0, y: 2, w: 240, visibleRows: 6, pipGap: 5, pipSize: 8 },
+  history: { x: 6, y: 14, w: 228, visibleRows: 5, pipGap: 5, pipSize: 8 },
+  loadout: { gap: 10 },
 
   blindsight: {
-    panelW: 220,
-    panelH: 118,
-    panelY: 22,
+    panelW: 210,
+    panelH: 112,
+    panelY: 14,
     pad: 10,
     barH: 9,
     segments: 10,
@@ -49,11 +74,11 @@ export const DUEL_LAYOUT = {
 
   /** Top-right chrome — stacked hub buttons below blindsight panel. */
   chrome: {
-    marginX: 24,
-    skipY: 20,
-    panelY: 146,
-    buttonW: 220,
-    buttonH: 40,
+    marginX: 18,
+    skipY: 24,
+    panelY: 138,
+    buttonW: 210,
+    buttonH: 38,
     buttonGap: 8,
   },
 
@@ -64,37 +89,32 @@ export const DUEL_LAYOUT = {
    * Texts (status, choose-action, tip, desc) sit immediately above the strip.
    */
   bottomStrip: {
-    // Strip background
-    y: 620,
-    h: 100,
-    centerY: 670,
+    // y / centerY are fallbacks — SpriteActionBar uses actionPanelCenterY() at runtime.
+    y: 532,
+    h: 88,
+    centerY: 618,
 
-    // Texts above the strip — clear of player hand / revolver
-    statusY: 432,
-    chooseActionY: 458,
+    statusY: 418,
+    chooseActionY: 442,
 
-    // Life panel dimensions (same style as other HUD panels)
-    panelW: 194,
-    panelH: 86,
+    panelW: 186,
+    panelH: 82,
     panelPad: 10,
-    nameRowH: 22,
-    iconSize: 16,
+    nameRowH: 20,
+    iconSize: 15,
     iconGap: 4,
 
-    // Action buttons (FIRE, DODGE) — first button centre x
     buttonXFirst: 296,
     buttonW: 164,
     buttonH: 46,
     buttonGap: 8,
 
-    // Item chips (HUMO, ESPEJO, PLACA) — first chip centre x
     itemXFirst: 640,
     itemW: 164,
     itemH: 40,
 
-    // Character arena — more vertical room with strip anchored at bottom
-    arenaY: 295,
-    characterMaxH: 460,
+    arenaY: 288,
+    characterMaxH: 430,
   },
 } as const;
 

@@ -1,7 +1,7 @@
 import { PlayerAction, ZegonAction, type RoundOutcome } from "@zegon/game-core";
 import type { LocaleStrings } from "../i18n/index.js";
 import { COLORS } from "./theme.js";
-import { damageToLives } from "./damageLives.js";
+import { damageToLives, livesLabel } from "./damageLives.js";
 
 export type ActionLabelRole = "predicted" | "zegon" | "player";
 
@@ -40,11 +40,17 @@ function noDamageNote(outcome: RoundOutcome, strings: LocaleStrings): string | n
   return null;
 }
 
+export interface RoundSummaryHpInfo {
+  playerMaxHp?: number;
+  zegonMaxHp?: number;
+}
+
 export function buildRoundSummary(
   outcome: RoundOutcome,
   strings: LocaleStrings,
   labelAction: ActionLabelFn,
   deadeyeStreak = 2,
+  hpInfo?: RoundSummaryHpInfo,
 ): RoundSummaryResult {
   const predicted = labelAction(outcome.zegonDecision.predictedPlayerMove, "predicted");
   const zegonMove = labelAction(outcome.zegonDecision.zegonMove, "zegon");
@@ -90,21 +96,21 @@ export function buildRoundSummary(
   }
 
   if (outcome.playerDamage > 0) {
-    const lives = damageToLives(outcome.playerDamage);
+    const lives = damageToLives(outcome.playerDamage, hpInfo?.playerMaxHp);
     const lifeWord = lives === 1 ? strings.lifeSingular : strings.lifePlural;
     const lethal = outcome.wasDeadeye && outcome.playerDamage > 20;
     lines.push({
       text: lethal
         ? strings.roundSummaryYouLostAllLives
-        : `${strings.roundSummaryYouHit} ${strings.roundSummaryLifeLost.replace("{n}", String(lives)).replace("{word}", lifeWord)}`,
+        : `${strings.roundSummaryYouHit} ${strings.roundSummaryLifeLost.replace("{n}", livesLabel(lives)).replace("{word}", lifeWord)}`,
       role: "damage",
     });
   }
   if (outcome.zegonDamage > 0) {
-    const lives = damageToLives(outcome.zegonDamage);
+    const lives = damageToLives(outcome.zegonDamage, hpInfo?.zegonMaxHp);
     const lifeWord = lives === 1 ? strings.lifeSingular : strings.lifePlural;
     lines.push({
-      text: `${strings.roundSummaryZegonHit} ${strings.roundSummaryLifeLost.replace("{n}", String(lives)).replace("{word}", lifeWord)}`,
+      text: `${strings.roundSummaryZegonHit} ${strings.roundSummaryLifeLost.replace("{n}", livesLabel(lives)).replace("{word}", lifeWord)}`,
       role: "damage",
     });
   }

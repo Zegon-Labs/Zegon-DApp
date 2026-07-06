@@ -4,7 +4,14 @@ import { DUEL_LAYOUT as L } from "../layout.js";
 import type { RoundSummaryLine, RoundSummaryLineRole } from "../roundSummary.js";
 import { COLORS, FONT, FONT_DISPLAY } from "../theme.js";
 
-const DISMISS_DRAG_PX = 72;
+const DISMISS_DRAG_PX = 52;
+/** Flick: release speed (px/ms) that dismisses regardless of distance. */
+const FLICK_SPEED = 0.55;
+/** Tap: max movement / duration to count as a tap-to-dismiss. */
+const TAP_MAX_PX = 8;
+const TAP_MAX_MS = 250;
+/** Drag follows the pointer damped, so the card feels weighty. */
+const DRAG_FOLLOW = 0.85;
 const SWAY_PX = 11;
 const LINE_GAP = 6;
 
@@ -45,8 +52,14 @@ export class RoundResultToast {
   private dragging = false;
   private dragStartX = 0;
   private dragStartY = 0;
+  private dragStartTime = 0;
   private containerStartX = 0;
   private containerStartY = 0;
+  private lastMoveX = 0;
+  private lastMoveY = 0;
+  private lastMoveTime = 0;
+  private velX = 0;
+  private velY = 0;
   private onDismissed: (() => void) | null = null;
   private dismissNotified = false;
 
@@ -144,13 +157,24 @@ export class RoundResultToast {
       this.dragging = true;
       this.dragStartX = pointer.x;
       this.dragStartY = pointer.y;
+      this.dragStartTime = pointer.event?.timeStamp ?? performance.now();
       this.containerStartX = this.container.x;
       this.containerStartY = this.container.y;
+      this.lastMoveX = pointer.x;
+      this.lastMoveY = pointer.y;
+      this.lastMoveTime = this.dragStartTime;
+      this.velX = 0;
+      this.velY = 0;
       scene.input.setDefaultCursor("grabbing");
     });
     this.container.add(this.dragHit);
 
-    this.container.setVisible(true).setAlpha(1).setX(this.anchorX).setY(this.anchorY);
+    this.container
+      .setVisible(true)
+      .setAlpha(1)
+      .setAngle(0)
+      .setX(this.anchorX)
+      .setY(this.anchorY);
     this.scheduleHintAnimations(lines.length);
   }
 
@@ -195,56 +219,90 @@ export class RoundResultToast {
 
     const dx = pointer.x - this.dragStartX;
     const dy = pointer.y - this.dragStartY;
-    this.container.setPosition(this.containerStartX + dx, this.containerStartY + dy);
+    // Damped follow — the card trails the pointer slightly, feels weightier.
+    this.container.setPosition(
+      this.containerStartX + dx * DRAG_FOLLOW,
+      this.containerStartY + dy * DRAG_FOLLOW,
+    );
 
     const dist = Math.hypot(dx, dy);
     this.container.setAlpha(Phaser.Math.Clamp(1 - dist / 220, 0.4, 1));
+    this.container.setAngle(Phaser.Math.Clamp(dx * 0.03, -5, 5));
+
+    // Smoothed release velocity (px/ms) for flick detection.
+    const now = pointer.event?.timeStamp ?? performance.now();
+    const dt = Math.max(now - this.lastMoveTime, 1);
+    const instVx = (pointer.x - this.lastMoveX) / dt;
+    const instVy = (pointer.y - this.lastMoveY) / dt;
+    this.velX = this.velX * 0.7 + instVx * 0.3;
+    this.velY = this.velY * 0.7 + instVy * 0.3;
+    this.lastMoveX = pointer.x;
+    this.lastMoveY = pointer.y;
+    this.lastMoveTime = now;
   };
 
-  private handlePointerUp = (): void => {
+  private handlePointerUp = (pointer: Phaser.Input.Pointer): void => {
     if (!this.dragging || !this.container.visible) return;
 
     this.dragging = false;
     this.container.scene.input.setDefaultCursor("default");
 
-    const dx = this.container.x - this.containerStartX;
-    const dy = this.container.y - this.containerStartY;
-    const dist = Math.hypot(dx, dy);
+    const rawDx = pointer.x - this.dragStartX;
+    const rawDy = pointer.y - this.dragStartY;
+    const dist = Math.hypot(rawDx, rawDy);
+    const elapsed =
+      (pointer.event?.timeStamp ?? performance.now()) - this.dragStartTime;
+    const speed = Math.hypot(this.velX, this.velY);
 
-    if (dist >= DISMISS_DRAG_PX) {
-      this.dismissDragged(dx, dy);
+    // Tap → dismiss (quick, no drag needed).
+    if (dist < TAP_MAX_PX && elapsed < TAP_MAX_MS) {
+      this.hide(true);
       return;
     }
 
+    // Distance threshold or velocity flick → dismiss with inertia.
+    if (dist >= DISMISS_DRAG_PX || speed >= FLICK_SPEED) {
+      this.dismissDragged(rawDx, rawDy, speed);
+      return;
+    }
+
+    // Snap back to the anchor (both axes) and resume the hint sway.
     const scene = this.container.scene;
     scene.tweens.add({
       targets: this.container,
       x: this.anchorX,
-      y: this.containerStartY,
+      y: this.anchorY,
+      angle: 0,
       alpha: 1,
-      duration: 220,
+      duration: 260,
       ease: "Back.easeOut",
       onComplete: () => this.startHintAnimations(),
     });
   };
 
-  private dismissDragged(dx: number, dy: number): void {
+  private dismissDragged(dx: number, dy: number, speed = 0): void {
     this.killEntryTweens();
     this.stopHintAnimations();
     this.dragging = false;
 
-    const len = Math.max(Math.hypot(dx, dy), 1);
-    const nx = dx / len;
-    const ny = dy / len;
+    // Exit along the gesture direction, carried by the release velocity.
+    const useVel = speed >= FLICK_SPEED;
+    const dirX = useVel ? this.velX : dx;
+    const dirY = useVel ? this.velY : dy;
+    const len = Math.max(Math.hypot(dirX, dirY), 0.001);
+    const nx = dirX / len;
+    const ny = dirY / len;
+    const throwDist = Phaser.Math.Clamp(140 + speed * 260, 140, 420);
     const scene = this.container.scene;
 
     scene.tweens.add({
       targets: this.container,
-      x: this.container.x + nx * 140,
-      y: this.container.y + ny * 90,
+      x: this.container.x + nx * throwDist,
+      y: this.container.y + ny * throwDist * 0.65,
+      angle: Phaser.Math.Clamp(nx * 8, -8, 8),
       alpha: 0,
-      duration: 240,
-      ease: "Sine.In",
+      duration: 220,
+      ease: "Cubic.Out",
       onComplete: () => this.finishHide(true),
     });
   }
@@ -252,7 +310,12 @@ export class RoundResultToast {
   private finishHide(notify: boolean): void {
     this.stopHintAnimations();
     this.clearLines();
-    this.container.setVisible(false).setAlpha(1).setX(this.anchorX).setY(this.anchorY);
+    this.container
+      .setVisible(false)
+      .setAlpha(1)
+      .setAngle(0)
+      .setX(this.anchorX)
+      .setY(this.anchorY);
     if (notify && !this.dismissNotified) {
       this.dismissNotified = true;
       this.onDismissed?.();

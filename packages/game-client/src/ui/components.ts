@@ -16,80 +16,44 @@ export function drawScanlines(
   return g;
 }
 
-export function drawGlitchOverlay(
+/** Soft vignette when ZEGON's read streak rises — prefer ReadingTensionLayer in scenes. */
+export function drawBlindsightTensionOverlay(
   scene: Phaser.Scene,
   intensity: number,
   depth = 99,
 ): Phaser.GameObjects.Container {
   const container = scene.add.container(0, 0).setDepth(depth);
-  const { width, height } = scene.scale;
-  const i = Math.max(0, Math.min(1, intensity));
-
-  const offset = Math.floor(4 + i * 14);
-
-  const cyanLayer = scene.add.graphics();
-  cyanLayer.fillStyle(C.cyan, 0.06 + i * 0.14);
-  cyanLayer.fillRect(-offset, 0, width, height);
-
-  const magentaLayer = scene.add.graphics();
-  magentaLayer.fillStyle(0xff2e88, 0.05 + i * 0.12);
-  magentaLayer.fillRect(offset, 0, width, height);
-
-  const emberLayer = scene.add.graphics();
-  if (i > 0.35) {
-    emberLayer.fillStyle(C.blood, 0.04 * (i - 0.35));
-    emberLayer.fillRect(0, 0, width, height);
-  }
-
-  const tears = scene.add.graphics();
-  if (i > 0.2) {
-    const tearCount = Math.floor(3 + i * 10);
-    tears.lineStyle(1, C.ember, 0.1 + i * 0.25);
-    for (let n = 0; n < tearCount; n++) {
-      const yy = ((n * 53 + Math.floor(i * 80)) % (height - 20)) + 10;
-      const sliceH = 2 + Math.floor(i * 4);
-      tears.fillStyle(C.void, 0.15 * i);
-      tears.fillRect(0, yy, width, sliceH);
-      tears.lineBetween(0, yy, width, yy);
-    }
-  }
-
-  const noise = scene.add.graphics();
-  if (i > 0.55) {
-    noise.lineStyle(1, C.fog, 0.08 * i);
-    for (let x = 0; x < width; x += 24) {
-      const jitter = Math.sin(x * 0.1 + i * 10) * i * 6;
-      noise.lineBetween(x, 0, x + jitter, height);
-    }
-  }
-
-  container.add([cyanLayer, magentaLayer, emberLayer, tears, noise]);
-  container.setAlpha(0.35 + i * 0.55);
+  container.setAlpha(intensity > 0.02 ? 0.2 + intensity * 0.4 : 0);
   return container;
 }
 
-/** Scanline alpha tied to blindsight 0–100. */
+/** @deprecated Use drawBlindsightTensionOverlay — kept for imports that still reference it. */
+export function drawGlitchOverlay(
+  scene: Phaser.Scene,
+  intensity: number,
+  depth = 99,
+): Phaser.GameObjects.Container {
+  return drawBlindsightTensionOverlay(scene, intensity, depth);
+}
+
+/** Scanline alpha — rises gently with blindsight. */
 export function scanlineAlphaForBlindsight(blindsight: number): number {
-  return 0.04 + (blindsight / 100) * 0.22;
+  return 0.04 + (blindsight / 100) * 0.12;
 }
 
-/** Pulse scanline opacity — ramps with blindsight, faster blink at higher values. */
-export function scanlinePulseAlpha(blindsight: number, phase: number): number {
-  const base = scanlineAlphaForBlindsight(blindsight);
-  if (blindsight < 18) return base;
-  const intensity = (blindsight - 18) / 82;
-  const speed = 1.5 + intensity * 4.2;
-  const pulse = 0.3 + 0.7 * Math.abs(Math.sin(phase * speed));
-  return base * (0.45 + intensity * pulse * 1.15);
+/** Pulse scanline opacity — static when enabled; no breathing overlay. */
+export function scanlinePulseAlpha(
+  blindsight: number,
+  _phase: number,
+  scanlinesEnabled = true,
+): number {
+  if (!scanlinesEnabled) return 0;
+  return 0.035 + (blindsight / 100) * 0.04;
 }
 
-/** Full-screen blink alpha — whole-screen pulse scales with blindsight. */
-export function blindsightBlinkAlpha(blindsight: number, phase: number): number {
-  if (blindsight < 10) return 0;
-  const t = (blindsight - 10) / 90;
-  const speed = 1.2 + t * 3.8;
-  const wave = Math.abs(Math.sin(phase * speed));
-  return wave * t * (0.05 + t * 0.28);
+/** Disabled — full-screen ember wash removed in favour of scope tension FX. */
+export function blindsightBlinkAlpha(_blindsight: number, _phase: number): number {
+  return 0;
 }
 
 export interface BlindsightShakeParams {
@@ -98,20 +62,20 @@ export interface BlindsightShakeParams {
   intensity: number;
 }
 
-/** Periodic camera shake — null below threshold. */
+/** Periodic camera shake — only at high blindsight, gentle cadence. */
 export function blindsightShakeParams(blindsight: number): BlindsightShakeParams | null {
-  if (blindsight < 22) return null;
-  const t = (blindsight - 22) / 78;
+  if (blindsight < 52) return null;
+  const t = (blindsight - 52) / 48;
   return {
-    intervalMs: 1200 - t * 820,
-    durationMs: 65 + t * 95,
-    intensity: 0.0012 + t * 0.0055,
+    intervalMs: 2400 - t * 1100,
+    durationMs: 70 + t * 80,
+    intensity: 0.001 + t * 0.0022,
   };
 }
 
-/** One-shot surge when blindsight rises after a round. */
+/** One-shot surge when blindsight rises — felt but not punishing. */
 export function blindsightSurgeStrength(delta: number): number {
-  return Math.min(1, Math.max(0, delta / 22));
+  return Math.min(0.7, Math.max(0, delta / 28));
 }
 
 export interface CenterPopupOptions {

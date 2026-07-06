@@ -8,13 +8,15 @@ import {
 import { DuelItemId, getEffectiveDeadeyeStreak, ITEM, PlayerAction } from "@zegon/game-core";
 import type { DuelEvent, RoundOutcome } from "@zegon/game-core";
 import {
-  blindsightBlinkAlpha,
   blindsightShakeParams,
   blindsightSurgeStrength,
-  drawGlitchOverlay,
   drawScanlines,
-  scanlinePulseAlpha,
 } from "../ui/components.js";
+import {
+  deadeyeShakeParams,
+  ReadingTensionLayer,
+  scanlinePulseAlpha,
+} from "../ui/readingTensionFx.js";
 import {
   ArenaView,
   CombatHud,
@@ -36,6 +38,7 @@ import {
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
+import { safeShake } from "../ui/safeShake.js";
 import { C, COLORS, FONT_DISPLAY } from "../ui/theme.js";
 import { gameBridge } from "../game/bridge.js";
 import {
@@ -47,6 +50,7 @@ import {
   stopAllSfxLoops,
   stopSfxLoop,
 } from "../services/sfx.js";
+import { getPreferences } from "../services/preferences.js";
 import {
   getPracticeForRound,
   LESSON_COUNT,
@@ -105,11 +109,9 @@ export class TutorialScene extends Phaser.Scene {
   private arenaView!: ArenaView;
   private statusLineText!: Phaser.GameObjects.Text;
   private chooseActionText!: Phaser.GameObjects.Text;
-  private glitchOverlay!: Phaser.GameObjects.Container;
+  private readingTension!: ReadingTensionLayer;
   private scanlines!: Phaser.GameObjects.Graphics;
-  private blinkOverlay!: Phaser.GameObjects.Rectangle;
-  private glitchPulse = 0;
-  private glitchIntensityCache = -1;
+  private readingFxPhase = 0;
   private lastShakeAt = 0;
   private modalLayer!: Phaser.GameObjects.Container;
   private gameLayer!: Phaser.GameObjects.Container;
@@ -134,18 +136,13 @@ export class TutorialScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { width, height } = this.scale;
+    const { width } = this.scale;
     const strings = t();
 
     this.cameras.main.setBackgroundColor(C.void);
     createLandingBackdrop(this, 0, { duel: true });
-    this.scanlines = drawScanlines(this, 98, 0.06);
-    this.glitchOverlay = drawGlitchOverlay(this, 0, 97);
-    this.blinkOverlay = this.add
-      .rectangle(width / 2, height / 2, width, height, C.blood, 1)
-      .setDepth(96)
-      .setAlpha(0)
-      .setBlendMode(Phaser.BlendModes.ADD);
+    this.scanlines = drawScanlines(this, 98, 0);
+    this.readingTension = new ReadingTensionLayer(this, 97);
 
     this.modalLayer = this.add.container(0, 0).setDepth(110);
     this.gameLayer = this.add.container(0, 0).setDepth(10);
@@ -222,13 +219,11 @@ export class TutorialScene extends Phaser.Scene {
     this.spriteActionBar.setVisible(visible);
     this.playerHandSprite.setVisible(visible);
     if (!visible) {
-      this.glitchOverlay.setVisible(false);
+      this.readingTension.container.setVisible(false);
       this.scanlines.setVisible(false);
-      this.blinkOverlay.setVisible(false);
     } else {
-      this.glitchOverlay.setVisible(true);
+      this.readingTension.container.setVisible(true);
       this.scanlines.setVisible(true);
-      this.blinkOverlay.setVisible(true);
     }
   }
 
@@ -633,7 +628,7 @@ export class TutorialScene extends Phaser.Scene {
       duration: 280,
       onComplete: () => flash.destroy(),
     });
-    this.cameras.main.shake(100, 0.003);
+    safeShake(this, 90, 0.002);
   }
 
   private playFireFlash(): void {
@@ -643,57 +638,54 @@ export class TutorialScene extends Phaser.Scene {
   private playZegonHitFlash(): void {
     this.playArenaFlash(C.blood, 0.82, 72);
     this.cameras.main.flash(200, 179, 18, 43);
-    this.cameras.main.shake(130, 0.0045);
+    safeShake(this, 110, 0.003);
     this.arenaView.pulseHit();
   }
 
   private triggerBlindsightSurge(delta: number): void {
     const strength = blindsightSurgeStrength(delta);
     if (strength <= 0) return;
-    this.cameras.main.shake(100 + strength * 120, 0.0025 + strength * 0.007);
-    this.cameras.main.flash(140, 179, 18, 43, false, undefined, 0.06 + strength * 0.2);
-    this.glitchPulse += 0.8 + strength * 1.4;
-  }
-
-  private syncGlitchOverlay(intensity: number): void {
-    const bucket = Math.round(intensity * 20) / 20;
-    if (bucket === this.glitchIntensityCache) return;
-    this.glitchIntensityCache = bucket;
-    this.glitchOverlay.destroy();
-    this.glitchOverlay = drawGlitchOverlay(this, intensity, 97);
+    safeShake(this, 90 + strength * 80, 0.002 + strength * 0.003);
+    this.cameras.main.flash(130, 179, 18, 43, false, undefined, 0.04 + strength * 0.06);
+    this.readingFxPhase += 1.2 + strength * 1.5;
   }
 
   update(_time: number, delta: number): void {
     if (!this.adapter || !this.duelStarted || !this.gameLayer.visible) return;
 
+    const prefs = getPreferences();
     const blindsight = this.adapter.getBlindsight();
-    const intensity = blindsight / 100;
+    const state = this.adapter.getState();
+    const deadeyeStreak = getEffectiveDeadeyeStreak(state.config.modifiers);
+    const deadeye = this.adapter.getReadingStreak() >= deadeyeStreak;
 
-    this.syncGlitchOverlay(intensity);
-    this.glitchPulse += (0.001 + intensity * 0.006) * delta;
+    this.readingFxPhase += (0.002 + (blindsight / 100) * 0.004) * delta;
+    this.readingTension.update({
+      blindsight,
+      deadeye,
+      phase: this.readingFxPhase,
+      enabled: prefs.glitchEffects,
+    });
 
-    this.scanlines.setAlpha(scanlinePulseAlpha(blindsight, this.glitchPulse));
-    this.blinkOverlay.setAlpha(blindsightBlinkAlpha(blindsight, this.glitchPulse));
+    this.scanlines.setAlpha(
+      prefs.scanlines ? scanlinePulseAlpha(blindsight, 0, true) : 0,
+    );
 
-    const overlayBase = 0.22 + intensity * 0.68;
-    if (intensity > 0.18) {
-      const flicker = 0.86 + Math.sin(this.glitchPulse * 3.4) * 0.14 * intensity;
-      this.glitchOverlay.setAlpha(overlayBase * flicker);
+    if (deadeye && prefs.glitchEffects) {
+      const shake = deadeyeShakeParams(blindsight);
+      if (this.time.now - this.lastShakeAt >= shake.intervalMs) {
+        this.lastShakeAt = this.time.now;
+        safeShake(this, shake.durationMs, shake.intensity);
+      }
     } else {
-      this.glitchOverlay.setAlpha(overlayBase);
+      const shake = blindsightShakeParams(blindsight);
+      if (shake && this.time.now - this.lastShakeAt >= shake.intervalMs) {
+        this.lastShakeAt = this.time.now;
+        safeShake(this, shake.durationMs, shake.intensity);
+      }
     }
 
-    const shake = blindsightShakeParams(blindsight);
-    if (shake && this.time.now - this.lastShakeAt >= shake.intervalMs) {
-      this.lastShakeAt = this.time.now;
-      this.cameras.main.shake(shake.durationMs, shake.intensity);
-    }
-
-    if (intensity > 0.5) {
-      this.cameras.main.setZoom(1 + (intensity - 0.5) * 0.045);
-    } else {
-      this.cameras.main.setZoom(1);
-    }
+    this.cameras.main.setZoom(1);
   }
 
   private updateHud(): void {

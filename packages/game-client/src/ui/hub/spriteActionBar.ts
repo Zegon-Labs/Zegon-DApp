@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { PlayerAction } from "@zegon/game-core";
 import type { DuelItemId } from "@zegon/game-core";
-import { DUEL_LAYOUT as L } from "../layout.js";
+import { actionPanelCenterY } from "../layout.js";
 import { COLORS, FONT_DISPLAY } from "../theme.js";
 import { playActionHover, playUiClick } from "../../services/sfx.js";
 
@@ -81,8 +81,9 @@ export class SpriteActionBar {
     const panelLeftEdge = -(22 * panelScale);
 
     if (scene.textures.exists(ACTION_PANEL_KEY)) {
+      const centerY = actionPanelCenterY(width);
       this.panel = scene.add
-        .image(width / 2, L.bottomStrip.centerY, ACTION_PANEL_KEY)
+        .image(width / 2, centerY, ACTION_PANEL_KEY)
         .setOrigin(0.5, 0.5)
         .setScale(panelScale)
         .setDepth(depth - 4);
@@ -94,7 +95,7 @@ export class SpriteActionBar {
 
     const slotDisplayW = SLOT_INTERIOR_W_SRC * panelScale;
     this.btnScale = (slotDisplayW * 0.85) / BTN_FRAME_W;
-    const y = L.bottomStrip.centerY;
+    const y = actionPanelCenterY(width);
 
     const btnDisplayW = BTN_FRAME_W * this.btnScale;
     const fontSize = Math.max(10, Math.min(14, Math.floor(btnDisplayW * 0.10)));

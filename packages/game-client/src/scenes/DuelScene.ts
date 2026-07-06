@@ -4,23 +4,27 @@ import {
   DuelPhase,
 } from "../adapters/GameCoreAdapter.js";
 import { shouldUseServerApi, apiBaseUrl } from "../services/apiMode.js";
-import { onLanguageChange, t } from "../i18n/index.js";
+import { onLanguageChange, t, format, getLanguage } from "../i18n/index.js";
 import type { ChallengeMeta, DuelConfig, DuelEvent, RoundOutcome, ZegonArchetypeId } from "@zegon/game-core";
 import {
   ActionValidationError,
+  COMBAT,
   DuelItemId,
   getEffectiveDeadeyeStreak,
-  ITEM,
+  getItemCooldownRounds,
+  previewSaloonStatsFromConfig,
   PlayerAction,
 } from "@zegon/game-core";
 import {
-  blindsightBlinkAlpha,
   blindsightShakeParams,
   blindsightSurgeStrength,
-  drawGlitchOverlay,
   drawScanlines,
-  scanlinePulseAlpha,
 } from "../ui/components.js";
+import {
+  deadeyeShakeParams,
+  ReadingTensionLayer,
+  scanlinePulseAlpha,
+} from "../ui/readingTensionFx.js";
 import {
   ArenaView,
   CombatHud,
@@ -39,14 +43,19 @@ import {
   preloadActionAssets,
   TopHudBar,
   preloadTopHudBar,
+  SaloonLoadoutPanel,
+  type SaloonLoadoutPanelLabels,
   type SpriteActionEntry,
 } from "../ui/hub/index.js";
 import { DUEL_LAYOUT as L } from "../ui/layout.js";
 import { buildRoundSummary, type ActionLabelRole } from "../ui/roundSummary.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
+import { safeShake } from "../ui/safeShake.js";
 import { C, COLORS, FONT_DISPLAY } from "../ui/theme.js";
 import { gameBridge } from "../game/bridge.js";
-import { getCachedProfile } from "../services/profile.js";
+import { fetchProfile, getCachedProfile } from "../services/profile.js";
+import { shotDamageMultiplierLabel } from "../utils/damageFormat.js";
+import { consumeEquippedOnServer } from "../services/upgrades.js";
 import { getWalletAddress } from "../services/wallet.js";
 import { getPreferences } from "../services/preferences.js";
 import {
@@ -107,11 +116,9 @@ export class DuelScene extends Phaser.Scene {
   private adapter!: GameCoreAdapter;
   private arenaView!: ArenaView;
   private spriteActionBar!: SpriteActionBar;
-  private glitchOverlay!: Phaser.GameObjects.Container;
+  private readingTension!: ReadingTensionLayer;
   private scanlines!: Phaser.GameObjects.Graphics;
-  private blinkOverlay!: Phaser.GameObjects.Rectangle;
-  private glitchPulse = 0;
-  private glitchIntensityCache = -1;
+  private readingFxPhase = 0;
   private lastShakeAt = 0;
   private historyLog!: DuelHistoryLog;
   private statusLineText!: Phaser.GameObjects.Text;
@@ -124,6 +131,7 @@ export class DuelScene extends Phaser.Scene {
   private lastRoundOutcome: RoundOutcome | null = null;
   private confirmModal: Phaser.GameObjects.Container | null = null;
   private topHudBar!: TopHudBar;
+  private saloonLoadout!: SaloonLoadoutPanel;
   private combatHud!: CombatHud;
   private bootToken = 0;
   private zegonReadingActive = false;
@@ -143,15 +151,18 @@ export class DuelScene extends Phaser.Scene {
     archetypeId?: ZegonArchetypeId;
     challengeConfig?: Partial<DuelConfig>;
     challengeMeta?: ChallengeMeta;
+    tiebreakRounds?: number;
   }): void {
     this.mode = data.mode ?? "standard";
     this.archetypeId = (data.challengeConfig?.archetype as ZegonArchetypeId) ?? data.archetypeId ?? "reader";
     this.challengeConfig = data.challengeConfig;
     this.challengeMeta = data.challengeMeta;
+    this.tiebreakRounds = data.tiebreakRounds;
     this.showingRoundResult = false;
   }
 
   private archetypeId: ZegonArchetypeId = "reader";
+  private tiebreakRounds?: number;
 
   preload(): void {
     preloadLandingBackdrop(this);
@@ -165,18 +176,13 @@ export class DuelScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { width, height } = this.scale;
+    const { width } = this.scale;
     const strings = t();
 
     this.cameras.main.setBackgroundColor(C.void);
     createLandingBackdrop(this, 0, { duel: true });
-    this.scanlines = drawScanlines(this, 98, 0.06);
-    this.glitchOverlay = drawGlitchOverlay(this, 0, 97);
-    this.blinkOverlay = this.add
-      .rectangle(width / 2, height / 2, width, height, C.blood, 1)
-      .setDepth(96)
-      .setAlpha(0)
-      .setBlendMode(Phaser.BlendModes.ADD);
+    this.scanlines = drawScanlines(this, 98, 0);
+    this.readingTension = new ReadingTensionLayer(this, 97);
 
     this.arenaView = new ArenaView(this, 5, {
       y: L.bottomStrip.arenaY,
@@ -195,6 +201,14 @@ export class DuelScene extends Phaser.Scene {
     });
 
     this.historyLog = new DuelHistoryLog(this, strings.history, 12);
+    this.saloonLoadout = new SaloonLoadoutPanel(
+      this,
+      L.history.x,
+      L.history.y + this.historyLog.panelHeight + L.loadout.gap,
+      L.history.w,
+      this.loadoutPanelLabels(),
+      12,
+    );
     this.roundResultToast = new RoundResultToast(this, 14);
 
     this.statusLineText = this.add.text(width / 2, L.bottomStrip.statusY, "", {
@@ -262,6 +276,16 @@ export class DuelScene extends Phaser.Scene {
       this.showSurrenderConfirm();
     }
     this.roundResultToast.refreshLocale();
+    if (this.adapter) {
+      const profile = getCachedProfile(getWalletAddress() ?? "");
+      this.saloonLoadout.refreshLocale(
+        this.loadoutPanelLabels(),
+        this.adapter.getState().config,
+        profile?.upgrades,
+        profile?.equippedConsumable,
+        getLanguage(),
+      );
+    }
   }
 
   private refreshPhaseStatus(): void {
@@ -280,9 +304,8 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private buildRoundSummaryFor(outcome: RoundOutcome) {
-    const deadeyeStreak = getEffectiveDeadeyeStreak(
-      this.adapter.getState().config.modifiers,
-    );
+    const config = this.adapter.getState().config;
+    const deadeyeStreak = getEffectiveDeadeyeStreak(config.modifiers);
     return buildRoundSummary(
       outcome,
       t(),
@@ -294,6 +317,10 @@ export class DuelScene extends Phaser.Scene {
         return actionLabel(action, outcome.itemUsed ?? this.adapter.getEquippedItem());
       },
       deadeyeStreak,
+      {
+        playerMaxHp: config.initialPlayerHp,
+        zegonMaxHp: config.initialZegonHp,
+      },
     );
   }
 
@@ -322,6 +349,20 @@ export class DuelScene extends Phaser.Scene {
     return strings.duelTipDefault;
   }
 
+  private loadoutPanelLabels(): SaloonLoadoutPanelLabels {
+    const strings = t();
+    return {
+      title: strings.duelLoadoutTitle,
+      upgradesSection: strings.duelLoadoutUpgrades,
+      relicsSection: strings.duelLoadoutRelics,
+      hits: strings.duelUpgradeBadgeHits,
+      shot: strings.duelUpgradeBadgeShot,
+      deadeye: strings.duelUpgradeBadgeDeadeye,
+      cooldown: strings.duelUpgradeBadgeCooldown,
+      ammo: strings.duelUpgradeBadgeAmmo,
+    };
+  }
+
   private buildActionHelpTexts(): string[] {
     const strings = t();
     const tip = this.computeDuelTip();
@@ -330,10 +371,19 @@ export class DuelScene extends Phaser.Scene {
       this.adapter?.getItemCooldown() <= 0 && this.adapter?.isAwaitingPlayer()
         ? `\n\n${strings.duelTipItemReady}`
         : "";
-    const cooldown = `\n\n${strings.itemCooldownNote.replace("{n}", String(ITEM.COOLDOWN_ROUNDS))}`;
+    const config = this.adapter?.getState().config;
+    const cooldownRounds = config ? getItemCooldownRounds(config) : 4;
+    const cooldown = `\n\n${format(strings.itemCooldownNote, { n: cooldownRounds })}`;
+    const stats = config ? previewSaloonStatsFromConfig(config) : null;
+    const fireDesc =
+      stats && stats.shotDamage > COMBAT.HIT_DAMAGE
+        ? format(strings.actionDescFireUpgraded, {
+            dmg: shotDamageMultiplierLabel(stats.shotDamage),
+          })
+        : strings.actionDescFire;
 
     return [
-      `${strings.actionDescFire}${tipBlock}`,
+      `${fireDesc}${tipBlock}`,
       `${strings.actionDescDodge}${tipBlock}`,
       `${strings.itemDescSmoke}${cooldown}${itemTip}`,
       `${strings.itemDescMirror}${cooldown}${itemTip}`,
@@ -366,13 +416,26 @@ export class DuelScene extends Phaser.Scene {
 
   private async bootDuel(): Promise<void> {
     const token = ++this.bootToken;
+    const address = getWalletAddress() ?? "";
+    const profile = getCachedProfile(address);
+    const equipped = profile?.equippedConsumable ?? null;
     try {
+      // Duel length only applies to standard duels; daily stays fixed and
+      // challenges inherit the challenger's config.
+      const lengthConfig =
+        this.mode === "standard" && !this.challengeConfig && this.tiebreakRounds
+          ? { tiebreakRounds: this.tiebreakRounds }
+          : undefined;
       await this.adapter.initDuel(this.mode, {
         archetypeId: this.mode === "standard" ? this.archetypeId : undefined,
-        config: this.challengeConfig,
-        upgradeLevels: getCachedProfile(getWalletAddress() ?? "")?.upgrades,
+        config: this.challengeConfig ?? lengthConfig,
+        upgradeLevels: profile?.upgrades,
+        equippedConsumable: equipped,
       });
       if (token !== this.bootToken) return;
+      if (address && equipped) {
+        void consumeEquippedOnServer(address).then(() => fetchProfile(address));
+      }
       this.duelStartTime = Date.now();
       resetVoiceState();
       playSfx("duel_start");
@@ -409,7 +472,7 @@ export class DuelScene extends Phaser.Scene {
       duration: 280,
       onComplete: () => flash.destroy(),
     });
-    this.cameras.main.shake(100, 0.003);
+    safeShake(this, 90, 0.002);
   }
 
   private playFireFlash(): void {
@@ -419,7 +482,7 @@ export class DuelScene extends Phaser.Scene {
   private playZegonHitFlash(): void {
     this.playArenaFlash(C.blood, 0.82, 72);
     this.cameras.main.flash(200, 179, 18, 43);
-    this.cameras.main.shake(130, 0.0045);
+    safeShake(this, 110, 0.003);
     this.arenaView.pulseHit();
   }
 
@@ -448,13 +511,27 @@ export class DuelScene extends Phaser.Scene {
     }
     if (outcome.playerDamage > 0) {
       const anchor = this.combatHud.playerDamageAnchor();
-      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.playerDamage, "player");
+      showFloatingDamage(
+        this,
+        anchor.x,
+        anchor.y - 18,
+        outcome.playerDamage,
+        "player",
+        state.config.initialPlayerHp,
+      );
       this.combatHud.playPlayerHit(prevPlayerHp, playerHpNow, state.config.initialPlayerHp);
       this.arenaView.pulsePlayerHit();
     }
     if (outcome.zegonDamage > 0) {
       const anchor = this.combatHud.zegonDamageAnchor();
-      showFloatingDamage(this, anchor.x, anchor.y - 18, outcome.zegonDamage, "zegon");
+      showFloatingDamage(
+        this,
+        anchor.x,
+        anchor.y - 18,
+        outcome.zegonDamage,
+        "zegon",
+        state.config.initialZegonHp,
+      );
       this.combatHud.playZegonHit(prevZegonHp, zegonHpNow, state.config.initialZegonHp);
       this.playZegonHitFlash();
     } else if (
@@ -493,6 +570,9 @@ export class DuelScene extends Phaser.Scene {
       } else if (phase === DuelPhase.AWAITING_PLAYER) {
         stopSfxLoop("zegon_thinking");
         this.setZegonReadingActive(false);
+        if (this.showingRoundResult) {
+          this.roundResultToast.hide(true);
+        }
         playSfx("your_turn");
         const taunt = this.adapter.getPendingTaunt();
         if (!playTauntVoice(taunt)) {
@@ -508,7 +588,7 @@ export class DuelScene extends Phaser.Scene {
         playVoice("deadeye", { delayMs: 220 });
         this.statusLineText.setText(strings.deadeye).setColor(COLORS.ember);
         this.cameras.main.flash(280, 255, 77, 46);
-        this.cameras.main.shake(200, 0.008);
+        safeShake(this, 120, 0.0025);
       }
     }
 
@@ -517,6 +597,10 @@ export class DuelScene extends Phaser.Scene {
     }
 
     if (event.type === "duelEnd") {
+      if (this.showingRoundResult) {
+        this.showingRoundResult = false;
+        this.roundResultToast.hide(false);
+      }
       const address = getWalletAddress();
       const profile = address ? getCachedProfile(address) : null;
       const scoreOptions = {
@@ -536,6 +620,7 @@ export class DuelScene extends Phaser.Scene {
           scoreOptions,
           challengeMeta: this.challengeMeta,
           duelStartTime: this.duelStartTime,
+          tiebreakRounds: this.adapter.getState().config.tiebreakRounds,
         });
       });
     }
@@ -548,34 +633,39 @@ export class DuelScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     if (!this.adapter) return;
 
+    const prefs = getPreferences();
     const blindsight = this.adapter.getBlindsight();
-    const intensity = blindsight / 100;
+    const state = this.adapter.getState();
+    const deadeyeStreak = getEffectiveDeadeyeStreak(state.config.modifiers);
+    const deadeye = this.adapter.getReadingStreak() >= deadeyeStreak;
 
-    this.syncGlitchOverlay(intensity);
-    this.glitchPulse += (0.001 + intensity * 0.006) * delta;
+    this.readingFxPhase += (0.002 + (blindsight / 100) * 0.004) * delta;
+    this.readingTension.update({
+      blindsight,
+      deadeye,
+      phase: this.readingFxPhase,
+      enabled: prefs.glitchEffects,
+    });
 
-    this.scanlines.setAlpha(scanlinePulseAlpha(blindsight, this.glitchPulse));
-    this.blinkOverlay.setAlpha(blindsightBlinkAlpha(blindsight, this.glitchPulse));
+    this.scanlines.setAlpha(
+      prefs.scanlines ? scanlinePulseAlpha(blindsight, 0, true) : 0,
+    );
 
-    const overlayBase = 0.22 + intensity * 0.68;
-    if (intensity > 0.18) {
-      const flicker = 0.86 + Math.sin(this.glitchPulse * 3.4) * 0.14 * intensity;
-      this.glitchOverlay.setAlpha(overlayBase * flicker);
+    if (deadeye && prefs.glitchEffects) {
+      const shake = deadeyeShakeParams(blindsight);
+      if (this.time.now - this.lastShakeAt >= shake.intervalMs) {
+        this.lastShakeAt = this.time.now;
+        safeShake(this, shake.durationMs, shake.intensity);
+      }
     } else {
-      this.glitchOverlay.setAlpha(overlayBase);
+      const shake = blindsightShakeParams(blindsight);
+      if (shake && this.time.now - this.lastShakeAt >= shake.intervalMs) {
+        this.lastShakeAt = this.time.now;
+        safeShake(this, shake.durationMs, shake.intensity);
+      }
     }
 
-    const shake = blindsightShakeParams(blindsight);
-    if (shake && this.time.now - this.lastShakeAt >= shake.intervalMs) {
-      this.lastShakeAt = this.time.now;
-      this.cameras.main.shake(shake.durationMs, shake.intensity);
-    }
-
-    if (intensity > 0.5) {
-      this.cameras.main.setZoom(1 + (intensity - 0.5) * 0.045);
-    } else {
-      this.cameras.main.setZoom(1);
-    }
+    this.cameras.main.setZoom(1);
 
     this.tickZegonReadingAnim(delta);
     this.syncGlitchAmbient(blindsight);
@@ -583,10 +673,10 @@ export class DuelScene extends Phaser.Scene {
 
   private syncGlitchAmbient(blindsight: number): void {
     const prefs = getPreferences();
-    const shouldPlay = prefs.glitchEffects && blindsight > 60;
+    const shouldPlay = prefs.glitchEffects && blindsight > 55;
     if (shouldPlay && !this.glitchAmbientOn) {
       this.glitchAmbientOn = true;
-      startSfxLoop("glitch_ambient", { volume: 0.22 });
+      startSfxLoop("glitch_ambient", { volume: 0.14 });
     } else if (!shouldPlay && this.glitchAmbientOn) {
       this.glitchAmbientOn = false;
       stopSfxLoop("glitch_ambient");
@@ -624,25 +714,17 @@ export class DuelScene extends Phaser.Scene {
       this.statusLineText.setText(`${this.zegonReadingBase()}${dots}`);
     }
 
-    const pulse = 0.72 + 0.28 * Math.sin(this.time.now * 0.008);
+    const pulse = 0.92 + 0.08 * Math.sin(this.time.now * 0.004);
     this.statusLineText.setAlpha(pulse);
-    this.chooseActionText.setAlpha(0.22 + pulse * 0.18);
-  }
-
-  private syncGlitchOverlay(intensity: number): void {
-    const bucket = Math.round(intensity * 20) / 20;
-    if (bucket === this.glitchIntensityCache) return;
-    this.glitchIntensityCache = bucket;
-    this.glitchOverlay.destroy();
-    this.glitchOverlay = drawGlitchOverlay(this, intensity, 97);
+    this.chooseActionText.setAlpha(0.72);
   }
 
   private triggerBlindsightSurge(delta: number): void {
     const strength = blindsightSurgeStrength(delta);
     if (strength <= 0) return;
-    this.cameras.main.shake(100 + strength * 120, 0.0025 + strength * 0.007);
-    this.cameras.main.flash(140, 179, 18, 43, false, undefined, 0.06 + strength * 0.2);
-    this.glitchPulse += 0.8 + strength * 1.4;
+    safeShake(this, 90 + strength * 80, 0.002 + strength * 0.003);
+    this.cameras.main.flash(130, 179, 18, 43, false, undefined, 0.04 + strength * 0.06);
+    this.readingFxPhase += 1.2 + strength * 1.5;
   }
 
   private updateArena(): void {
@@ -655,7 +737,6 @@ export class DuelScene extends Phaser.Scene {
       this.adapter.getZegonHp(),
       state.config.initialZegonHp,
     );
-    this.syncGlitchOverlay(blindsight / 100);
   }
 
   private updateHud(): void {
@@ -677,11 +758,30 @@ export class DuelScene extends Phaser.Scene {
     const deadeyeStreak = getEffectiveDeadeyeStreak(state.config.modifiers);
 
     const itemCooldown = this.adapter.getItemCooldown();
+    const stats = previewSaloonStatsFromConfig(state.config);
+    const hitsRemaining = Math.max(0, Math.ceil(this.adapter.getPlayerHp() / COMBAT.HIT_DAMAGE));
+    const playerHitsLabel =
+      stats.maxHits > Math.ceil(COMBAT.INITIAL_HP / COMBAT.HIT_DAMAGE)
+        ? format(strings.duelHitsRemaining, {
+            current: hitsRemaining,
+            max: stats.maxHits,
+          })
+        : undefined;
+
+    const profile = getCachedProfile(getWalletAddress() ?? "");
+    this.saloonLoadout.update(
+      state.config,
+      profile?.upgrades,
+      profile?.equippedConsumable,
+      getLanguage(),
+    );
+
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
       playerMaxHp: state.config.initialPlayerHp,
       zegonMaxHp: state.config.initialZegonHp,
+      playerHitsLabel,
       blindsight,
       readingStreak,
       deadeyeStreak,
@@ -746,6 +846,7 @@ export class DuelScene extends Phaser.Scene {
     this.confirmModal?.destroy(true);
     this.confirmModal = null;
     this.topHudBar?.destroy();
+    this.saloonLoadout?.destroy();
     this.combatHud?.destroy();
     this.adapter?.destroy();
     this.spriteActionBar?.destroy();

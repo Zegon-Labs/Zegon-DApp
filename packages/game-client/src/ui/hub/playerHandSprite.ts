@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { DUEL_LAYOUT as L } from "../layout.js";
+import { actionPanelTopY } from "../layout.js";
 
 export const PLAYER_HAND_KEY = "player-hand";
 
@@ -60,7 +60,8 @@ export class PlayerHandSprite {
 
     // Position below strip top so the bottom of the arms clips behind the strip bg.
     const x = width / 2;
-    const y = L.bottomStrip.y + Math.round(FRAME_H * scale * 0.06);
+    const stripTop = actionPanelTopY(width);
+    const y = stripTop + Math.round(FRAME_H * scale * 0.16);
 
     this.originX = x;
     this.originY = y;
