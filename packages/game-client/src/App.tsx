@@ -136,12 +136,7 @@ export default function App() {
           <ProfilePanel />
         </>
       )}
-      {!inGame && view.type === "saloon" && (
-        <>
-          <HeroHub />
-          <UpgradeSaloon />
-        </>
-      )}
+      {!inGame && view.type === "saloon" && <UpgradeSaloon />}
       <PhaserHost visible={inGame} />
       {replayOverlay}
       {inGame && inGameSettings && (

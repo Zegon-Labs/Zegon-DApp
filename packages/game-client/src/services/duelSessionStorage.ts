@@ -24,3 +24,33 @@ export function verifyApiUrl(duelId: string, apiBaseUrl = ""): string {
   if (!token) return base;
   return `${base}?token=${encodeURIComponent(token)}`;
 }
+
+const ROUNDS_PREFIX = "zegon-duel-rounds:";
+
+export interface StoredDuelRound {
+  roundIndex: number;
+  playerAction: string;
+  itemUsed?: string;
+  predictionCorrect?: boolean;
+  predictedMove?: string;
+  zegonMove?: string;
+}
+
+export function saveDuelRoundLogs(duelId: string, rounds: StoredDuelRound[]): void {
+  try {
+    sessionStorage.setItem(`${ROUNDS_PREFIX}${duelId}`, JSON.stringify(rounds));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getDuelRoundLogs(duelId: string): StoredDuelRound[] | null {
+  try {
+    const raw = sessionStorage.getItem(`${ROUNDS_PREFIX}${duelId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredDuelRound[];
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}

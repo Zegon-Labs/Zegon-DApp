@@ -11,7 +11,19 @@ type NavigateListener = (view: AppView) => void;
 type SceneListener = (scene: string, data?: Record<string, unknown>) => void;
 type SettingsOverlayListener = (open: boolean) => void;
 type WalletRequestListener = () => void;
-type ReplayListener = (duelId: string) => void;
+type ReplayListener = (request: ReplayRequest) => void;
+
+export type ReplayRequest =
+  | { kind: "api"; duelId: string }
+  | { kind: "local"; rounds: Array<{
+      roundIndex: number;
+      predictedMove?: string;
+      zegonMove?: string;
+      playerAction?: string;
+      itemUsed?: string;
+      predictionCorrect?: boolean;
+      taunt?: string;
+    }> };
 type ProfileSetupRequest = {
   address: string;
   required?: boolean;
@@ -56,8 +68,8 @@ export const gameBridge = {
     profileSetupListener?.(req);
   },
 
-  openReplay(duelId: string) {
-    replayListener?.(duelId);
+  openReplay(request: ReplayRequest) {
+    replayListener?.(request);
   },
 
   onOpenReplay(listener: ReplayListener) {

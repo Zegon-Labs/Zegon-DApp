@@ -10,6 +10,8 @@ export { ActionBar } from "./actionBar.js";
 export { ItemSelector, itemCooldownLabel, itemDescription } from "./itemSelector.js";
 export { DuelHistoryLog, preloadHistoryPanel, HISTORY_PANEL_KEY } from "./duelHistoryLog.js";
 export { RoundResultToast } from "./roundResultToast.js";
+export { SaloonLoadoutPanel, type SaloonLoadoutPanelLabels } from "./saloonLoadoutPanel.js";
+export { UpgradeHudStrip, type UpgradeHudStripLabels } from "./upgradeHudStrip.js";
 export { ArenaView } from "./arenaView.js";
 export { PlayerHandSprite, preloadPlayerHand, PLAYER_HAND_KEY } from "./playerHandSprite.js";
 export { SpriteActionBar, preloadActionAssets, ACTION_PANEL_KEY, ACTION_BTN_KEY, type SpriteActionEntry } from "./spriteActionBar.js";

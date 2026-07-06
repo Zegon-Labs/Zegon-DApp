@@ -1,5 +1,5 @@
 import { getLanguage } from "../i18n/index.js";
-import { saveDuelSessionToken } from "../services/duelSessionStorage.js";
+import { saveDuelSessionToken, saveDuelRoundLogs } from "../services/duelSessionStorage.js";
 import {
   assertCanPerformAction,
   DuelConfig,
@@ -22,9 +22,10 @@ import {
   decodeChallenge,
   decodeChallengeCompact,
   createStandardDuelWithArchetype,
-  applyPlayerUpgradesToConfig,
+  applySaloonLoadoutToConfig,
   type ZegonArchetypeId,
   type UpgradeLevels,
+  type SaloonRelicId,
   withUniqueDuelSeed,
 } from "@zegon/game-core";
 
@@ -114,6 +115,8 @@ class ApiZegonBrain implements IZegonBrain {
     const data = (await res.json()) as {
       taunt: string;
       sessionToken: string;
+      predictedPlayerMove?: string;
+      confidence?: number;
       attestationHash?: string;
       commitTxHash?: string;
       brainMode?: "tee" | "dummy";
@@ -136,9 +139,10 @@ class ApiZegonBrain implements IZegonBrain {
     });
 
     return {
-      predictedPlayerMove: PlayerAction.FIRE,
+      predictedPlayerMove:
+        (data.predictedPlayerMove as PlayerAction) ?? PlayerAction.FIRE,
       zegonMove: ZegonAction.DODGE,
-      confidence: 0,
+      confidence: data.confidence ?? 0,
       taunt: data.taunt,
     };
   }
@@ -227,29 +231,41 @@ export class GameCoreAdapter {
       config?: Partial<DuelConfig>;
       archetypeId?: string;
       upgradeLevels?: UpgradeLevels;
+      equippedConsumable?: SaloonRelicId | null;
     },
   ): Promise<void> {
     let mergedConfig: Partial<DuelConfig> = { ...options?.config };
 
+    const applyLoadout = (cfg: DuelConfig) =>
+      applySaloonLoadoutToConfig(
+        cfg,
+        options?.upgradeLevels,
+        options?.equippedConsumable ?? null,
+      );
+
     if (mode === "daily") {
       mergedConfig = { ...mergedConfig, ...createDailyDuel() };
+      mergedConfig = applyLoadout(mergedConfig as DuelConfig);
     }
 
     if (mode === "standard") {
-      mergedConfig = {
-        ...mergedConfig,
-        ...createStandardDuelWithArchetype(
-          (options?.archetypeId ?? "reader") as ZegonArchetypeId,
-        ),
-      };
-      mergedConfig = applyPlayerUpgradesToConfig(
-        mergedConfig as DuelConfig,
-        options?.upgradeLevels,
-      );
+      const isChallenge = mergedConfig.mode === "challenge";
+      if (!isChallenge) {
+        mergedConfig = {
+          ...mergedConfig,
+          ...createStandardDuelWithArchetype(
+            (options?.archetypeId ?? "reader") as ZegonArchetypeId,
+          ),
+        };
+        mergedConfig = applyLoadout(mergedConfig as DuelConfig);
+      }
     }
 
     const useApi = this.brainMode === "api" && !this.offline && mode !== "tutorial";
-    if (!useApi && mode !== "tutorial") {
+    const isClonedChallenge =
+      mergedConfig.mode === "challenge" && Boolean(mergedConfig.seed);
+
+    if (!useApi && mode !== "tutorial" && !isClonedChallenge) {
       const base = mergedConfig as DuelConfig;
       mergedConfig = withUniqueDuelSeed(
         { ...DEFAULT_DUEL_CONFIG, ...base, mode: base.mode ?? mode } as DuelConfig,
@@ -372,6 +388,8 @@ export class GameCoreAdapter {
     assertCanPerformAction(state, action);
 
     if (this.brainMode === "api" && !this.offline && this._duelId) {
+      const itemUsed =
+        action === PlayerAction.USE_ITEM ? state.equippedItem : undefined;
       const res = await fetch(`${this.apiBaseUrl}/api/duel/round/reveal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -379,6 +397,7 @@ export class GameCoreAdapter {
           duelId: this._duelId,
           roundIndex: state.roundIndex,
           playerAction: action,
+          itemUsed,
           playerActionTimestamp: Date.now(),
           sessionToken: this._sessionToken ?? undefined,
         }),
@@ -422,6 +441,18 @@ export class GameCoreAdapter {
       `${this._duelId}-${result.score}`.padEnd(64, "0").slice(0, 64);
 
     try {
+      saveDuelRoundLogs(
+        this._duelId,
+        result.roundLogs.map((log) => ({
+          roundIndex: log.roundIndex,
+          playerAction: log.playerAction,
+          itemUsed: log.itemUsed,
+          predictionCorrect: log.predictionCorrect,
+          predictedMove: log.zegonDecision.predictedPlayerMove,
+          zegonMove: log.zegonDecision.zegonMove,
+        })),
+      );
+
       const res = await fetch(`${this.apiBaseUrl}/api/duel/record`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -430,6 +461,14 @@ export class GameCoreAdapter {
           result: resultCode,
           attestationHash,
           sessionToken: this._sessionToken ?? undefined,
+          roundLogs: result.roundLogs.map((log) => ({
+            roundIndex: log.roundIndex,
+            playerAction: log.playerAction,
+            itemUsed: log.itemUsed,
+            predictionCorrect: log.predictionCorrect,
+            predictedMove: log.zegonDecision.predictedPlayerMove,
+            zegonMove: log.zegonDecision.zegonMove,
+          })),
         }),
       });
       if (res.ok) {

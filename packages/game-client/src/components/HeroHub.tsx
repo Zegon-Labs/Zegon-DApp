@@ -25,10 +25,12 @@ import { fetchHealth } from "../services/health.js";
 import { playSfx } from "../services/sfx.js";
 import { trackMetric } from "../services/metrics.js";
 import { HeroCharacter } from "./HeroCharacter.js";
+import { NotchBalance } from "./NotchCoin.js";
 import { DailyStakeModal } from "./DailyStakeModal.js";
 import { ScoreInfoModal } from "./ScoreInfoModal.js";
 import { ArchetypePickerModal } from "./ArchetypePickerModal.js";
-import type { ZegonArchetypeId } from "@zegon/game-core";
+import { DUEL_LENGTH_PRESETS } from "@zegon/game-core";
+import type { DuelLengthId, ZegonArchetypeId } from "@zegon/game-core";
 
 const STAKE_ERROR_KEYS: Record<DailyStakeErrorCode, keyof LocaleStrings> = {
   NO_WALLET: "stakeErrNoWallet",
@@ -245,9 +247,13 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     setShowArchetypePicker(true);
   }
 
-  function launchDuel(archetypeId: ZegonArchetypeId) {
+  function launchDuel(archetypeId: ZegonArchetypeId, duelLength: DuelLengthId) {
     setShowArchetypePicker(false);
-    gameBridge.startScene("DuelScene", { mode: "standard", archetypeId });
+    gameBridge.startScene("DuelScene", {
+      mode: "standard",
+      archetypeId,
+      tiebreakRounds: DUEL_LENGTH_PRESETS[duelLength],
+    });
   }
 
   function acceptChallenge() {
@@ -323,10 +329,22 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
 
           <div className="hero__actions">
           {pendingChallenge && challengeScore > 0 && (
-            <div className="challenge-banner" role="status">
+            <div className="challenge-banner challenge-banner--card" role="status">
+              <p className="challenge-banner__title">
+                {format(strings.challengeCardTitle, { name: challengeName })}
+              </p>
               <p className="challenge-banner__text">
                 {format(strings.challengeBanner, { name: challengeName, score: challengeScore })}
               </p>
+              {pendingChallenge.meta.challengerTimesRead != null &&
+                pendingChallenge.meta.challengerRounds != null && (
+                  <p className="challenge-banner__stats">
+                    {format(strings.challengeStats, {
+                      reads: pendingChallenge.meta.challengerTimesRead,
+                      rounds: pendingChallenge.meta.challengerRounds,
+                    })}
+                  </p>
+                )}
               <div className="challenge-banner__actions">
                 <button
                   type="button"
@@ -355,19 +373,38 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             <span className="btn__subtitle">{strings.heroPlaySubtitle}</span>
           </button>
 
-          <div className="daily-card">
-            <p className="daily-card__title">{strings.dailyBlindDraw}</p>
-            <p className="daily-card__meta">
-              {dailyArchName} · {strings.dailyPoolLabel}{" "}
-              {poolInfo?.totalStaked ?? "0"} OG · {poolInfo?.entrants ?? 0}{" "}
-              {strings.dailyEntrants}
-            </p>
-            <p className="daily-card__countdown">
+          <div className="daily-feature">
+            <div className="daily-feature__head">
+              <span className="daily-feature__icon" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M3 12c0-4.2 3.6-8 9-8s9 3.8 9 8-3.6 8-9 8-9-3.8-9-8Z"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  />
+                  <path
+                    d="M3 12h18M12 4c-2.2 2.4-3.5 5.6-3.5 8s1.3 5.6 3.5 8M12 4c2.2 2.4 3.5 5.6 3.5 8s-1.3 5.6-3.5 8"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <div className="daily-feature__copy">
+                <p className="daily-feature__title">{strings.dailyBlindDraw}</p>
+                <p className="daily-feature__meta">
+                  {dailyArchName} · {strings.dailyPoolLabel}{" "}
+                  {poolInfo?.totalStaked ?? "0"} OG · {poolInfo?.entrants ?? 0}{" "}
+                  {strings.dailyEntrants}
+                </p>
+              </div>
+            </div>
+            <p className="daily-feature__countdown">
               {strings.dailyCountdownLabel} <strong>{countdown}</strong> UTC
             </p>
             {dailyTop.length > 0 && (
-              <div className="daily-card__top">
-                <p className="daily-card__top-title">{strings.dailyTopScores}</p>
+              <div className="daily-feature__top">
+                <p className="daily-feature__top-title">{strings.dailyTopScores}</p>
                 <ul>
                   {dailyTop.map((entry, i) => (
                     <li key={`${entry.playerId}-${i}`}>
@@ -380,29 +417,29 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             {canStake && (
               <button
                 type="button"
-                className="btn btn--secondary btn--stake btn--stake-emphasis"
+                className="btn btn--secondary btn--stake btn--stake-emphasis daily-feature__action"
                 onClick={openStakeModal}
               >
                 {strings.dailyEnterPool} ({poolInfo?.minStake ?? "0.01"} OG)
               </button>
             )}
-            {staked && <p className="daily-card__staked">{strings.dailyPrizeEligible}</p>}
+            {staked && <p className="daily-feature__staked">{strings.dailyPrizeEligible}</p>}
             {needsWallet && (
-              <p className="daily-card__hint" role="status">
+              <p className="daily-feature__hint" role="status">
                 {strings.dailyPlayFreeRank}
               </p>
             )}
             <button
               type="button"
-              className="btn btn--secondary btn--daily-play btn--stake-emphasis"
+              className="btn btn--secondary btn--daily-play btn--stake-emphasis daily-feature__action"
               onClick={startDaily}
             >
               <span>{strings.dailyPlay}</span>
             </button>
-            <div className="daily-card__links">
+            <div className="daily-feature__links">
               <button
                 type="button"
-                className="daily-card__link-btn"
+                className="daily-feature__link-btn"
                 onClick={() => {
                   playSfx("ui_modal_open");
                   setShowScoreInfo(true);
@@ -412,7 +449,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
               </button>
               <button
                 type="button"
-                className="daily-card__link-btn"
+                className="daily-feature__link-btn"
                 onClick={shareDailyDraw}
               >
                 {strings.dailyShareToday}
@@ -470,11 +507,13 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
               <span className="saloon-feature__subtitle">{strings.saloonTitle}</span>
             </span>
             {wallet && (
-              <span className="saloon-feature__cta">
-                {format(strings.profileNotches, {
-                  n: getCachedProfile(wallet)?.notches ?? 0,
-                })}
-              </span>
+              <NotchBalance
+                amount={getCachedProfile(wallet)?.notches ?? 0}
+                size="sm"
+                showLabel={false}
+                className="saloon-feature__cta"
+                compact
+              />
             )}
           </button>
 
@@ -511,43 +550,72 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           <div className="hero__menu-grid">
             <button
               type="button"
-              className="btn btn--menu"
+              className="hub-nav-btn hub-nav-btn--profile"
               onClick={() => gameBridge.navigate({ type: "profile" })}
             >
-              {strings.profileMenu}
+              <span className="hub-nav-btn__icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span className="hub-nav-btn__title">{strings.profileMenu}</span>
             </button>
             <button
               type="button"
-              className="btn btn--menu"
+              className="hub-nav-btn hub-nav-btn--achievements"
               onClick={() => gameBridge.navigate({ type: "achievements" })}
             >
-              {strings.achievementsMenu}
+              <span className="hub-nav-btn__icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M8 4h8l1 4 4 2-1.5 4L16 18H8L4.5 14 3 10l4-2 1-4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M9 18v2h6v-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span className="hub-nav-btn__title">{strings.achievementsMenu}</span>
             </button>
             <button
               type="button"
-              className="btn btn--menu"
+              className="hub-nav-btn hub-nav-btn--ranking"
               onClick={() => gameBridge.navigate({ type: "leaderboard" })}
             >
-              {strings.leaderboard}
+              <span className="hub-nav-btn__icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 20V10M12 20V4M19 20v-8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span className="hub-nav-btn__title">{strings.leaderboard}</span>
             </button>
-            {seasonClaimable && (
+            {seasonClaimable ? (
               <button
                 type="button"
-                className="btn btn--menu btn--menu-emphasis"
+                className="hub-nav-btn hub-nav-btn--season"
                 onClick={() => notify.info(strings.seasonClaimable)}
               >
-                {strings.seasonClaim}
+                <span className="hub-nav-btn__icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 3 4 7v6c0 4.5 3.4 7.7 8 9 4.6-1.3 8-4.5 8-9V7l-8-4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span className="hub-nav-btn__title">{strings.seasonClaim}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="hub-nav-btn hub-nav-btn--settings"
+                aria-label={strings.settings}
+                title={strings.settings}
+                onClick={() => gameBridge.navigate({ type: "settings" })}
+              >
+                <span className="hub-nav-btn__icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <span className="hub-nav-btn__title">{strings.settings}</span>
               </button>
             )}
-            <button
-              type="button"
-              className="hero__settings-gear"
-              aria-label={strings.settings}
-              title={strings.settings}
-              onClick={() => gameBridge.navigate({ type: "settings" })}
-            >
-              {"\u2699"}
-            </button>
           </div>
 
           <p className="hero__guest-note">

@@ -1,4 +1,4 @@
-import type { UpgradeLevels } from "@zegon/game-core";
+import type { UpgradeLevels, SaloonRelicLevels, SaloonRelicId } from "@zegon/game-core";
 
 export interface PlayerProfile {
   address: string;
@@ -9,6 +9,8 @@ export interface PlayerProfile {
   level?: number;
   notches?: number;
   upgrades?: UpgradeLevels;
+  relics?: SaloonRelicLevels;
+  equippedConsumable?: SaloonRelicId | null;
   achievements?: string[];
   unlocks?: string[];
   stats?: {
