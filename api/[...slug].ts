@@ -87,6 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (slug[0] === "season" && slug[1] === "claim" && req.method === "POST") {
       return res.status(200).json(await h.handleSeasonClaim(req.body));
     }
+    if (slug[0] === "auth" && slug[1] === "nonce" && req.method === "GET") {
       const address = String(req.query.address ?? "");
       return res.status(200).json(await h.handleAuthNonce(address));
     }
