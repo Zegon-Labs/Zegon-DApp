@@ -4,6 +4,7 @@ import {
   DuelWinner,
   RoundContext,
 } from "../types/index.js";
+import { getItemCooldownRounds } from "../progression/upgrades.js";
 
 const VALID_TRANSITIONS: Record<DuelPhase, DuelPhase[]> = {
   [DuelPhase.IDLE]: [DuelPhase.ZEGON_THINKING],
@@ -52,6 +53,7 @@ export function buildRoundContext(state: DuelState): RoundContext {
     readingStreak: state.readingStreak,
     equippedItem: state.equippedItem,
     itemCooldown: state.itemCooldown,
+    itemCooldownRounds: getItemCooldownRounds(state.config),
     isDeadeye: state.isDeadeye,
     modifiers: state.config.modifiers,
     archetype: state.config.archetype,

@@ -58,9 +58,14 @@ export interface RoundContext {
   readingStreak: number;
   equippedItem: DuelItemId;
   itemCooldown: number;
+  /** Max item cooldown for this duel (player upgrades). */
+  itemCooldownRounds?: number;
   isDeadeye: boolean;
   modifiers?: DuelModifiers;
   archetype?: string;
+  timesReadSoFar?: number;
+  itemUsageCounts?: Partial<Record<DuelItemId, number>>;
+  itemHistory?: readonly DuelItemId[];
 }
 
 export interface ZegonDecision {
@@ -115,6 +120,8 @@ export interface DuelModifiers {
   blindsightOnCorrectReduction?: number;
   deadeyeThreshold?: number;
   deadeyeStreak?: number;
+  /** Extra consecutive reads required before DEADEYE (player upgrades). */
+  deadeyeStreakBonus?: number;
   zegonDodgeBias?: number;
   zegonDamageMultiplier?: number;
   playerDamageMultiplier?: number;
@@ -131,6 +138,8 @@ export interface DuelConfig {
   modifiers?: DuelModifiers;
   startingAmmoBonus?: number;
   itemCooldownReduction?: number;
+  /** Round limit before the rounds-won tie-break (default DUEL.MAX_ROUNDS_TIEBREAK). */
+  tiebreakRounds?: number;
 }
 
 export interface DuelState {

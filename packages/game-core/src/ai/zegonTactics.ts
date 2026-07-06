@@ -69,6 +69,7 @@ export function pickZegonMove(
   predicted: PlayerAction,
   ctx: RoundContext,
   rng: () => number,
+  confidence = 0.5,
 ): ZegonAction {
   if (ctx.isDeadeye) {
     if (ctx.archetype === "gambler" && rng() < 0.12) {
@@ -78,20 +79,27 @@ export function pickZegonMove(
   }
 
   const dodgeBias = ctx.modifiers?.zegonDodgeBias ?? 0;
+  const confBoost = Math.min(0.12, (confidence - 0.4) * 0.2);
+  const roundAggro = ctx.roundIndex >= 8 ? 0.06 : 0;
 
   let move: ZegonAction;
   if (predicted === PlayerAction.FIRE) {
-    const dodgeChance = Math.min(0.72, 0.52 + dodgeBias);
+    const dodgeChance = Math.min(0.78, 0.48 + dodgeBias + confBoost - roundAggro);
     move = rng() < dodgeChance ? ZegonAction.DODGE : ZegonAction.FIRE;
   } else if (predicted === PlayerAction.DODGE) {
-    move = rng() < 0.68 + dodgeBias * 0.1 ? ZegonAction.FIRE : ZegonAction.DODGE;
+    const fireChance = Math.min(0.82, 0.62 + dodgeBias * 0.12 + confBoost + roundAggro);
+    move = rng() < fireChance ? ZegonAction.FIRE : ZegonAction.DODGE;
   } else if (predicted === PlayerAction.USE_ITEM) {
-    move = rng() < 0.58 ? ZegonAction.FIRE : ZegonAction.DODGE;
+    move = rng() < 0.62 + confBoost ? ZegonAction.FIRE : ZegonAction.DODGE;
   } else {
     move = pickRandom(ALL_ZEGON_ACTIONS, rng);
   }
 
-  if (ctx.archetype === "gambler" && rng() < 0.38) {
+  if (ctx.archetype === "phantom" && confidence >= 0.65 && rng() < 0.2) {
+    move = ZegonAction.DODGE;
+  }
+
+  if (ctx.archetype === "gambler" && rng() < 0.25) {
     move = pickRandom(ALL_ZEGON_ACTIONS, rng);
   }
 

@@ -1,10 +1,10 @@
 import {
   ALL_PLAYER_ACTIONS,
-  PlayerAction,
   RoundContext,
   ZegonDecision,
 } from "../types/index.js";
 import { IZegonBrain } from "./IZegonBrain.js";
+import { analyzePlayerPattern } from "./patternAnalyzer.js";
 import { createRoundRng, pickZegonMove } from "./zegonTactics.js";
 
 export type BrainLocale = "en" | "es";
@@ -15,16 +15,19 @@ const TAUNTS: Record<BrainLocale, { high: string[]; mid: string[]; low: string[]
       "I smell your pattern, stranger.",
       "The blindfold cracks. I see your rhythm.",
       "Same move twice? Predictable.",
+      "Your rhythm is a dead man's march.",
     ],
     mid: [
       "Your soul whispers.",
       "Interesting... but not enough.",
       "The dust remembers your steps.",
+      "A flicker — not yet a flame.",
     ],
     low: [
       "Silence. Good.",
       "Nothing to read yet.",
       "The void gives nothing away.",
+      "Chaos suits you. For now.",
     ],
   },
   es: {
@@ -32,58 +35,25 @@ const TAUNTS: Record<BrainLocale, { high: string[]; mid: string[]; low: string[]
       "Huelo tu patrón, forastero.",
       "La venda se agrieta. Veo tu ritmo.",
       "¿La misma jugada otra vez? Predecible.",
+      "Tu ritmo es un paso de muerto.",
     ],
     mid: [
       "Tu alma susurra.",
       "Interesante... pero no basta.",
       "El polvo recuerda tus pasos.",
+      "Un destello — aún no es llama.",
     ],
     low: [
       "Silencio. Bien.",
       "Nada que leer aún.",
       "El vacío no revela nada.",
+      "El caos te favorece. Por ahora.",
     ],
   },
 };
 
 function pickRandom<T>(arr: readonly T[], rng: () => number): T {
   return arr[Math.floor(rng() * arr.length)]!;
-}
-
-function detectPattern(
-  history: readonly PlayerAction[],
-  windowSize = 5,
-): { action: PlayerAction; frequency: number } | null {
-  if (history.length === 0) {
-    return null;
-  }
-
-  const window = history.slice(-windowSize);
-  const counts = new Map<PlayerAction, number>();
-
-  for (const action of window) {
-    counts.set(action, (counts.get(action) ?? 0) + 1);
-  }
-
-  let best: PlayerAction | null = null;
-  let bestCount = 0;
-
-  for (const [action, count] of counts) {
-    if (count > bestCount) {
-      best = action;
-      bestCount = count;
-    }
-  }
-
-  if (!best) {
-    return null;
-  }
-
-  return { action: best, frequency: bestCount / window.length };
-}
-
-function confidenceFromFrequency(frequency: number): number {
-  return Math.min(1, Math.max(0.2, frequency));
 }
 
 function tauntForConfidence(
@@ -116,20 +86,26 @@ export class DummyZegonBrain implements IZegonBrain {
 
   async decide(ctx: RoundContext): Promise<ZegonDecision> {
     const rng = createRoundRng(this.baseSeed, ctx);
-    const pattern = detectPattern(ctx.playerHistory);
 
-    let predicted: PlayerAction;
-    let confidence: number;
-
-    if (!pattern || ctx.playerHistory.length < 2) {
-      predicted = pickRandom(ALL_PLAYER_ACTIONS, rng);
-      confidence = 0.2 + rng() * 0.2;
-    } else {
-      predicted = pattern.action;
-      confidence = confidenceFromFrequency(pattern.frequency);
+    if (ctx.archetype === "gambler" && rng() < 0.25) {
+      const randomPred = pickRandom(ALL_PLAYER_ACTIONS, rng);
+      return {
+        predictedPlayerMove: randomPred,
+        zegonMove: pickZegonMove(randomPred, ctx, rng),
+        confidence: 0.15 + rng() * 0.25,
+        taunt: tauntForConfidence(0.3, rng, this.locale),
+      };
     }
 
-    const zegonMove = pickZegonMove(predicted, ctx, rng);
+    const analysis = analyzePlayerPattern(ctx, rng);
+    let predicted = analysis.action;
+    let confidence = analysis.confidence;
+
+    if (ctx.archetype === "deadeye" && (ctx.timesReadSoFar ?? 0) >= 2) {
+      confidence = Math.min(0.95, confidence + 0.12);
+    }
+
+    const zegonMove = pickZegonMove(predicted, ctx, rng, confidence);
     const taunt = tauntForConfidence(confidence, rng, this.locale);
 
     return {

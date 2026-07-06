@@ -18,6 +18,7 @@ const baseCtx = {
   readingStreak: 0,
   equippedItem: DuelItemId.SMOKE,
   itemCooldown: 0,
+  itemCooldownRounds: 4,
   isDeadeye: false,
 };
 

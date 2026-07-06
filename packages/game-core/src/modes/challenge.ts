@@ -6,6 +6,11 @@ export interface ChallengeMeta {
   challengerScore?: number;
   challengerName?: string;
   challengerDuelId?: string;
+  challengerTimesRead?: number;
+  challengerRounds?: number;
+  challengerWon?: boolean;
+  /** Full duel seed from challenger (for cloned ZEGON). */
+  challengerSeed?: string;
 }
 
 export type ChallengePayload = Partial<DuelConfig> & ChallengeMeta;
@@ -49,6 +54,26 @@ export function extractChallengeMeta(payload: ChallengePayload): ChallengeMeta {
     challengerScore: payload.challengerScore,
     challengerName: payload.challengerName,
     challengerDuelId: payload.challengerDuelId,
+    challengerTimesRead: payload.challengerTimesRead,
+    challengerRounds: payload.challengerRounds,
+    challengerWon: payload.challengerWon,
+    challengerSeed: payload.seed,
+  };
+}
+
+export function payloadFromChallengeDuel(
+  config: DuelConfig,
+  meta: ChallengeMeta,
+): ChallengePayload {
+  return {
+    ...config,
+    seed: config.seed ?? meta.challengerSeed,
+    challengerScore: meta.challengerScore,
+    challengerName: meta.challengerName,
+    challengerDuelId: meta.challengerDuelId,
+    challengerTimesRead: meta.challengerTimesRead,
+    challengerRounds: meta.challengerRounds,
+    challengerWon: meta.challengerWon,
   };
 }
 
@@ -56,8 +81,15 @@ export function payloadFromParts(
   payload: ChallengePayload,
 ): { config: DuelConfig; meta: ChallengeMeta } {
   const meta = extractChallengeMeta(payload);
-  const { challengerScore: _s, challengerName: _n, challengerDuelId: _d, ...configFields } =
-    payload;
+  const {
+    challengerScore: _s,
+    challengerName: _n,
+    challengerDuelId: _d,
+    challengerTimesRead: _tr,
+    challengerRounds: _rp,
+    challengerWon: _w,
+    ...configFields
+  } = payload;
   return {
     config: {
       ...createStandardDuel(),

@@ -213,7 +213,7 @@ export function resolveRound(
 
   const itemCooldownAfter =
     playerAction === PlayerAction.USE_ITEM
-      ? ITEM.COOLDOWN_ROUNDS
+      ? (ctx.itemCooldownRounds ?? ITEM.COOLDOWN_ROUNDS)
       : Math.max(0, ctx.itemCooldown - 1);
 
   const log: RoundLogEntry = {

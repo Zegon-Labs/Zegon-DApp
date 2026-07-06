@@ -1,5 +1,6 @@
-import { COMBAT } from "../constants/index.js";
-import { DuelConfig, DuelModifiers } from "../types/index.js";
+import { COMBAT, ITEM, READING } from "../constants/index.js";
+import { isUpgradeUnlocked } from "./saloonProgression.js";
+import { DuelConfig, DuelModifiers, WeaponId } from "../types/index.js";
 
 export type UpgradeId =
   | "fine_lead"
@@ -26,8 +27,8 @@ export const UPGRADE_DEFINITIONS: Record<UpgradeId, UpgradeDefinition> = {
     id: "fine_lead",
     nameEn: "Fine Lead",
     nameEs: "Plomo fino",
-    descEn: "+10% shot damage per level",
-    descEs: "+10% daño por disparo por nivel",
+    descEn: "+0.1 damage per shot each level (base shot ×1.0)",
+    descEs: "+0.1 de daño por disparo por nivel (disparo base ×1.0)",
     maxLevel: 5,
     costs: [50, 100, 200, 350, 500],
   },
@@ -35,8 +36,8 @@ export const UPGRADE_DEFINITIONS: Record<UpgradeId, UpgradeDefinition> = {
     id: "hardened_leather",
     nameEn: "Hardened Leather",
     nameEs: "Cuero endurecido",
-    descEn: "+5 starting HP per level",
-    descEs: "+5 PS iniciales por nivel",
+    descEn: "+1 extra hit before empty (same 5 life slots)",
+    descEs: "+1 golpe extra antes de quedar sin vidas (5 slots)",
     maxLevel: 3,
     costs: [40, 80, 150],
   },
@@ -44,8 +45,8 @@ export const UPGRADE_DEFINITIONS: Record<UpgradeId, UpgradeDefinition> = {
     id: "instinct",
     nameEn: "Instinct",
     nameEs: "Instinto",
-    descEn: "Blindsight rises slower when read",
-    descEs: "Ciego-vista sube menos al leerte",
+    descEn: "+1 read before DEADEYE per level",
+    descEs: "+1 lectura extra antes de DEADEYE por nivel",
     maxLevel: 3,
     costs: [60, 120, 200],
     minPlayerLevel: 2,
@@ -105,6 +106,7 @@ export function canPurchaseUpgrade(
   const current = getUpgradeLevel(levels, id);
   const cost = getUpgradeCost(id, current);
   if (cost === null) return { ok: false, reason: "MAX_LEVEL" };
+  if (!isUpgradeUnlocked(id, levels)) return { ok: false, reason: "LOCKED" };
   const def = UPGRADE_DEFINITIONS[id];
   if (def.minPlayerLevel && playerLevel < def.minPlayerLevel) {
     return { ok: false, reason: "LEVEL_REQUIRED" };
@@ -113,12 +115,24 @@ export function canPurchaseUpgrade(
   return { ok: true, cost };
 }
 
+export const LIFE_SLOT_COUNT = 5;
+
 export interface UpgradeCombatBonuses {
   playerDamageMultiplier: number;
   initialHpBonus: number;
-  blindsightOnCorrectReduction: number;
+  deadeyeStreakBonus: number;
   itemCooldownReduction: number;
   startingAmmoBonus: number;
+}
+
+export function damageToLifeSlots(
+  damage: number,
+  maxHp: number,
+  slots = LIFE_SLOT_COUNT,
+): number {
+  if (damage <= 0) return 0;
+  const perLife = maxHp / slots;
+  return Math.max(1, Math.ceil(damage / perLife));
 }
 
 export function computeUpgradeBonuses(
@@ -132,11 +146,74 @@ export function computeUpgradeBonuses(
 
   return {
     playerDamageMultiplier: 1 + fineLead * 0.1,
-    initialHpBonus: leather * 5,
-    blindsightOnCorrectReduction: instinct * 2,
+    initialHpBonus: leather * COMBAT.HIT_DAMAGE,
+    deadeyeStreakBonus: instinct,
     itemCooldownReduction: hands,
     startingAmmoBonus: powder,
   };
+}
+
+export interface SaloonPreviewStats {
+  lifeSlots: number;
+  maxHits: number;
+  shotDamage: number;
+  shotSlotsLost: number;
+  deadeyeAfterReads: number;
+  itemCooldownRounds: number;
+  extraAmmo: number;
+}
+
+export function getItemCooldownRounds(
+  config: Pick<DuelConfig, "itemCooldownReduction">,
+): number {
+  return Math.max(
+    1,
+    ITEM.COOLDOWN_ROUNDS - (config.itemCooldownReduction ?? 0),
+  );
+}
+
+export function previewSaloonStatsFromConfig(
+  config: DuelConfig,
+): SaloonPreviewStats {
+  const maxHp = config.initialPlayerHp;
+  const deadeyeBonus = config.modifiers?.deadeyeStreakBonus ?? 0;
+  const dmgMult = config.modifiers?.playerDamageMultiplier ?? 1;
+  const shotDamage = Math.round(COMBAT.HIT_DAMAGE * dmgMult);
+  return {
+    lifeSlots: LIFE_SLOT_COUNT,
+    maxHits: Math.ceil(maxHp / COMBAT.HIT_DAMAGE),
+    shotDamage,
+    shotSlotsLost: damageToLifeSlots(shotDamage, COMBAT.INITIAL_HP),
+    deadeyeAfterReads: READING.DEADEYE_STREAK + deadeyeBonus,
+    itemCooldownRounds: getItemCooldownRounds(config),
+    extraAmmo: config.startingAmmoBonus ?? 0,
+  };
+}
+
+export function previewSaloonStats(
+  levels: UpgradeLevels | undefined,
+): SaloonPreviewStats {
+  const bonuses = computeUpgradeBonuses(levels);
+  return previewSaloonStatsFromConfig({
+    maxRounds: 999,
+    initialPlayerHp: COMBAT.INITIAL_HP + bonuses.initialHpBonus,
+    initialZegonHp: COMBAT.INITIAL_HP,
+    weapon: WeaponId.REVOLVER,
+    mode: "standard",
+    startingAmmoBonus: bonuses.startingAmmoBonus,
+    itemCooldownReduction: bonuses.itemCooldownReduction,
+    modifiers: upgradesToModifiers(levels, true),
+  });
+}
+
+export function hasActiveUpgrades(config: DuelConfig): boolean {
+  return (
+    config.initialPlayerHp > COMBAT.INITIAL_HP ||
+    (config.modifiers?.playerDamageMultiplier ?? 1) > 1 ||
+    (config.modifiers?.deadeyeStreakBonus ?? 0) > 0 ||
+    (config.itemCooldownReduction ?? 0) > 0 ||
+    (config.startingAmmoBonus ?? 0) > 0
+  );
 }
 
 export function upgradesToModifiers(
@@ -147,7 +224,7 @@ export function upgradesToModifiers(
   const b = computeUpgradeBonuses(levels);
   return {
     playerDamageMultiplier: b.playerDamageMultiplier,
-    blindsightOnCorrectReduction: b.blindsightOnCorrectReduction,
+    deadeyeStreakBonus: b.deadeyeStreakBonus,
   };
 }
 
@@ -169,9 +246,9 @@ export function applyPlayerUpgradesToConfig(
       playerDamageMultiplier:
         (existing.playerDamageMultiplier ?? 1) *
         (upgradeMods.playerDamageMultiplier ?? 1),
-      blindsightOnCorrectReduction:
-        (existing.blindsightOnCorrectReduction ?? 0) +
-        (upgradeMods.blindsightOnCorrectReduction ?? 0),
+      deadeyeStreakBonus:
+        (existing.deadeyeStreakBonus ?? 0) +
+        (upgradeMods.deadeyeStreakBonus ?? 0),
     },
   };
 }
@@ -182,5 +259,5 @@ export function previewPlayerDamage(levels: UpgradeLevels | undefined): number {
 }
 
 export function upgradesEnabledForMode(mode: string | undefined): boolean {
-  return mode === "standard" || mode === "challenge";
+  return mode === "standard" || mode === "challenge" || mode === "daily";
 }

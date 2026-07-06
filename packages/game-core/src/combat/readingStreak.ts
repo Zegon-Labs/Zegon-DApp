@@ -8,7 +8,10 @@ export function getEffectiveDeadeyeStreak(modifiers?: DuelModifiers): number {
   if (modifiers?.deadeyeThreshold != null && modifiers.deadeyeThreshold <= 85) {
     return 1;
   }
-  return READING.DEADEYE_STREAK;
+  return Math.max(
+    1,
+    READING.DEADEYE_STREAK + (modifiers?.deadeyeStreakBonus ?? 0),
+  );
 }
 
 /** Maps reading streak to 0–100 for legacy visuals (venda / glitch). */

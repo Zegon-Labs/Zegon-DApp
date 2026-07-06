@@ -117,5 +117,8 @@ export function dailyStreakMultiplier(streakDays: number): number {
 }
 
 export function surpriseComboBonus(surpriseStreak: number): number {
-  return surpriseStreak >= 2 ? 3 : 0;
+  if (surpriseStreak >= 4) return 20;
+  if (surpriseStreak === 3) return 12;
+  if (surpriseStreak >= 2) return 8;
+  return 0;
 }
