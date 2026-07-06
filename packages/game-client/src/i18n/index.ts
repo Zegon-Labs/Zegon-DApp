@@ -27,6 +27,7 @@ export interface LocaleStrings {
   actionDodge: string;
   actionUseItem: string;
   actionDescFire: string;
+  actionDescFireUpgraded: string;
   actionDescDodge: string;
   actionDescUseItem: string;
   actionUseItemShort: string;
@@ -53,7 +54,10 @@ export interface LocaleStrings {
   zegonWins: string;
   draw: string;
   rounds: string;
+  resultTiebreakNote: string;
+  resultRoundsWon: string;
   timesRead: string;
+  finalReadStreak: string;
   finalBlindsight: string;
   score: string;
   verifyOnChain: string;
@@ -153,6 +157,11 @@ export interface LocaleStrings {
   scoreSubmitted: string;
   scoreSubmitNoWallet: string;
   pickArchetype: string;
+  duelLengthTitle: string;
+  duelLengthQuick: string;
+  duelLengthStandard: string;
+  duelLengthLong: string;
+  duelLengthRounds: string;
   dailyPoolLabel: string;
   dailyEntrants: string;
   dailyStake: string;
@@ -230,6 +239,11 @@ export interface LocaleStrings {
   roundSummaryLifeLost: string;
   roundSummaryYouLostAllLives: string;
   scoreBreakdownTitle: string;
+  scoreLineUnread: string;
+  scoreLineReadPenalty: string;
+  scoreLineReadStreak: string;
+  scoreLineCleanVictory: string;
+  scoreLineHpBonus: string;
   scoreLineRounds: string;
   scoreLineBlindsight: string;
   scoreLineTimesRead: string;
@@ -259,11 +273,17 @@ export interface LocaleStrings {
   dailyShareToday: string;
   dailyTopScores: string;
   challengeBanner: string;
+  challengeCardTitle: string;
+  challengeStats: string;
   challengeAccept: string;
   challengeDismiss: string;
   challengeBeat: string;
   challengeLost: string;
   challengeTie: string;
+  challengeCompareTitle: string;
+  challengeCompareYou: string;
+  challengeCompareThem: string;
+  challengeCompareWin: string;
   copiedChallenge: string;
   winsVsZegon: string;
   achievementsWins: string;
@@ -317,7 +337,43 @@ export interface LocaleStrings {
   saloonTitle: string;
   saloonBuy: string;
   saloonOwned: string;
+  saloonEffectLives: string;
+  saloonEffectShot: string;
+  saloonEffectDeadeye: string;
+  saloonEffectCooldown: string;
+  saloonEffectAmmo: string;
+  saloonUpgradeCurrent: string;
+  saloonUpgradeNext: string;
+  saloonNowTag: string;
+  saloonNextTag: string;
   saloonDamagePreview: string;
+  duelHitsRemaining: string;
+  duelUpgradeBadgeHits: string;
+  duelUpgradeBadgeShot: string;
+  duelUpgradeBadgeDeadeye: string;
+  duelUpgradeBadgeCooldown: string;
+  duelUpgradeBadgeAmmo: string;
+  duelLoadoutTitle: string;
+  duelLoadoutUpgrades: string;
+  duelLoadoutRelics: string;
+  saloonSectionUpgrades: string;
+  saloonSectionRelics: string;
+  saloonRelicBuy: string;
+  saloonLoadoutPreview: string;
+  saloonCurrentLoadout: string;
+  saloonTreeRoot: string;
+  saloonLevelRequired: string;
+  saloonTabTree: string;
+  saloonTabSatchel: string;
+  saloonTreeHint: string;
+  saloonConsumableHint: string;
+  saloonConsumableUnlock: string;
+  saloonEquip: string;
+  saloonUnequip: string;
+  saloonUnlockRequires: string;
+  saloonUpgradeAction: string;
+  saloonBuyAction: string;
+  notchCurrencyName: string;
   boardScore: string;
   boardHunter: string;
   boardVeteran: string;
@@ -332,6 +388,12 @@ export interface LocaleStrings {
   replayRound: string;
   replayPredicted: string;
   replayYouPlayed: string;
+  replayZegonPlayed: string;
+  replayReadCorrect: string;
+  replayReadWrong: string;
+  replaySealedOk: string;
+  replaySealedBad: string;
+  replayEmpty: string;
   progressEarned: string;
   progressLevelUp: string;
   archetypeDifficulty: string;
@@ -367,6 +429,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     actionDodge: "DODGE",
     actionUseItem: "USE ITEM",
     actionDescFire: "Shoot · hits if ZEGON mispredicted · −1 life (not lethal unless DEADEYE).",
+    actionDescFireUpgraded: "Shoot · ×{dmg} damage · hits if ZEGON mispredicted · −1 life slot per connect.",
     actionDescDodge: "Dodge · blocks normal shots · useless if DEADEYE reads you.",
     actionDescUseItem: "Use item · tap HUMO, ESPEJO, or PLACA.",
     actionUseItemShort: "USE ITEM",
@@ -393,7 +456,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     zegonWins: "ZEGON WINS",
     draw: "DRAW",
     rounds: "Rounds",
+    resultTiebreakNote: "{rounds}-round limit · winner takes it on rounds won",
+    resultRoundsWon: "Rounds won · you {you} − ZEGON {zegon}",
     timesRead: "Times read",
+    finalReadStreak: "Final read streak",
     finalBlindsight: "Final Blindsight",
     score: "Score",
     verifyOnChain: "VERIFY ON-CHAIN",
@@ -429,16 +495,16 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryDeadeyeUsed: "DEADEYE spent",
     roundSummaryDeadeyeStillActive: "DEADEYE still active · only an item cancels it",
     roundSummaryStreak: "Read streak",
-    roundSummaryDragHint: "← swipe to continue →",
+    roundSummaryDragHint: "← swipe or tap to continue →",
     errorItemCooldown: "Item on cooldown.",
     tutorial: "TUTORIAL",
     tutorialTitle: "Welcome to the duel",
     tutorialDoneBadge: "✓ DONE",
     tutorialIntro:
-      "ZEGON is a blind gunslinger AI · it cannot see your current move.\n\nIt reads patterns in your history. Repeat the same choice twice and its read streak rises. First to 0 HP loses.",
+      "ZEGON is a blind gunslinger AI · it cannot see your current move.\n\nIt reads patterns in your history. Repeat the same choice twice and its read streak rises.\n\nFirst to 0 lives loses. If both are still standing at the round limit (20 in a standard duel), whoever won more rounds takes it.",
     tutorialHpTitle: "Lives",
     tutorialHpBody:
-      "You and ZEGON each have 5 lives (bottom corners).\n\nOne hit removes 1 life. At 0 lives you lose.",
+      "You and ZEGON each have 5 lives (bottom corners).\n\nA normal hit removes 1 life — Saloon upgrades can raise your shot to 1.1 lives or more.\n\nAt 0 lives you lose. At the round limit (20 by default, pick 10/20/30 before the duel) with both alive, whoever won more rounds takes the duel (a round is won by dealing more damage than you take).",
     tutorialBlindsightTitle: "Read streak",
     tutorialBlindsightBody:
       "Top-right shows how many times ZEGON read you in a row.\n\n• Wrong prediction · streak resets\n• Two reads in a row · DEADEYE warning\n\nVary SHOOT and DODGE so it cannot lock onto you.",
@@ -524,6 +590,11 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreSubmitted: "Score submitted to daily board",
     scoreSubmitNoWallet: "Connect wallet to save your daily score",
     pickArchetype: "Choose your ZEGON",
+    duelLengthTitle: "Duel length",
+    duelLengthQuick: "Quick",
+    duelLengthStandard: "Standard",
+    duelLengthLong: "Long",
+    duelLengthRounds: "rounds",
     dailyPoolLabel: "Pool",
     dailyEntrants: "entrants",
     dailyStake: "Stake to enter",
@@ -585,6 +656,11 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryLifeLost: "−{n} {word}",
     roundSummaryYouLostAllLives: "You lost all your lives",
     scoreBreakdownTitle: "Score breakdown",
+    scoreLineUnread: "+{points} · {count} rounds unread",
+    scoreLineReadPenalty: "−{points} · read {count}×",
+    scoreLineReadStreak: "−{points} · final read streak {count}",
+    scoreLineCleanVictory: "+{points} · clean victory (never read)",
+    scoreLineHpBonus: "+{points} · HP remaining bonus",
     scoreLineRounds: "+{points} · {count} rounds played",
     scoreLineBlindsight: "+{points} · low read streak bonus",
     scoreLineTimesRead: "−{points} · read {count}×",
@@ -593,7 +669,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreLineDailyMult: "+{points} · daily streak ×{mult}",
     scoreRankingTipsTitle: "Climb the ranking",
     scoreRankingTip1: "Vary SHOOT and DODGE — repeats get read.",
-    scoreRankingTip2: "Win the duel for +100 bonus points.",
+    scoreRankingTip2: "Win the duel for +80 bonus points.",
     scoreRankingTip3: "Surprise ZEGON 2+ rounds for combo bonus.",
     scoreRankingTip4: "Verify on-chain after duels for trust.",
     connectWalletRanking: "CONNECT WALLET",
@@ -614,11 +690,17 @@ const LOCALES: Record<Language, LocaleStrings> = {
     dailyShareToday: "Share today's draw",
     dailyTopScores: "Today's top scores",
     challengeBanner: "{name} scored {score}. Can you outdraw them?",
+    challengeCardTitle: "Challenge from {name}",
+    challengeStats: "They read {reads}× in {rounds} rounds",
     challengeAccept: "Accept challenge",
     challengeDismiss: "Dismiss",
     challengeBeat: "You beat {name}'s {score}!",
     challengeLost: "{name} still leads with {score}.",
     challengeTie: "Tied with {name} at {score}.",
+    challengeCompareTitle: "— Challenge —",
+    challengeCompareYou: "You · {score} pts · read {reads}× · {rounds} rounds",
+    challengeCompareThem: "{name} · {score} pts · read {reads}× · {rounds} rounds",
+    challengeCompareWin: "You won the challenge!",
     copiedChallenge: "Challenge link copied",
     winsVsZegon: "Wins vs ZEGON: {wins} / {played} duels",
     achievementsWins: "Duels won: {wins} · played: {played}",
@@ -672,7 +754,43 @@ const LOCALES: Record<Language, LocaleStrings> = {
     saloonTitle: "UPGRADE YOUR DRAW",
     saloonBuy: "Upgrade ({cost} N)",
     saloonOwned: "MAX",
-    saloonDamagePreview: "Shot damage: {dmg}",
+    saloonEffectLives: "{slots} life slots · survive {hits} hits",
+    saloonEffectShot: "Damage ×{dmg} per shot",
+    saloonEffectDeadeye: "DEADEYE after {reads} reads in a row",
+    saloonEffectCooldown: "Item cooldown: {rounds} rounds",
+    saloonEffectAmmo: "+{extra} starting ammo",
+    saloonUpgradeCurrent: "Now: {effect}",
+    saloonUpgradeNext: "Next: {effect}",
+    saloonNowTag: "Now",
+    saloonNextTag: "Next",
+    saloonDamagePreview: "Damage ×{dmg}",
+    duelHitsRemaining: "{current}/{max} hits",
+    duelUpgradeBadgeHits: "{hits} hits · {slots} slots",
+    duelUpgradeBadgeShot: "Shot ×{dmg}",
+    duelUpgradeBadgeDeadeye: "DEADEYE @ {reads}",
+    duelUpgradeBadgeCooldown: "Item {rounds}r CD",
+    duelUpgradeBadgeAmmo: "+{extra} ammo",
+    duelLoadoutTitle: "LOADOUT",
+    duelLoadoutUpgrades: "Upgrades",
+    duelLoadoutRelics: "Relics",
+    saloonSectionUpgrades: "Permanent upgrades",
+    saloonSectionRelics: "Duel relics",
+    saloonRelicBuy: "Buy ({cost} N)",
+    saloonLoadoutPreview: "Active in your next duel",
+    saloonCurrentLoadout: "Current loadout",
+    saloonTreeRoot: "Your draw",
+    saloonLevelRequired: "Requires player level {level}",
+    saloonTabTree: "Tree",
+    saloonTabSatchel: "Satchel",
+    saloonTreeHint: "Tap a node to inspect and upgrade",
+    saloonConsumableHint: "Tap a relic to inspect, equip, or buy",
+    saloonConsumableUnlock: "Unlock after {name}",
+    saloonEquip: "Equip",
+    saloonUnequip: "Unequip",
+    saloonUnlockRequires: "Requires {name} at max level",
+    saloonUpgradeAction: "Upgrade",
+    saloonBuyAction: "Buy",
+    notchCurrencyName: "Notches",
     boardScore: "Score",
     boardHunter: "Hunter",
     boardVeteran: "Veteran",
@@ -687,6 +805,12 @@ const LOCALES: Record<Language, LocaleStrings> = {
     replayRound: "Round {n}",
     replayPredicted: "ZEGON predicted: {move}",
     replayYouPlayed: "You played: {move}",
+    replayZegonPlayed: "ZEGON played: {move}",
+    replayReadCorrect: "ZEGON read you correctly",
+    replayReadWrong: "You surprised ZEGON",
+    replaySealedOk: "✓ ZEGON sealed before your move",
+    replaySealedBad: "✗ Seal order unclear",
+    replayEmpty: "No rounds to replay.",
     progressEarned: "+{xp} XP · +{notches} Notches",
     progressLevelUp: "Level {from} → {to}!",
     archetypeDifficulty: "Difficulty",
@@ -720,6 +844,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     actionDodge: "ESQUIVAR",
     actionUseItem: "USAR OBJETO",
     actionDescFire: "Dispará · pegás si ZEGON predijo mal · −1 vida (no letal salvo DEADEYE).",
+    actionDescFireUpgraded: "Dispará · ×{dmg} de daño · pegás si ZEGON predijo mal · −1 slot por impacto.",
     actionDescDodge: "Esquivá · bloquea disparos normales · no sirve si DEADEYE te leyó.",
     actionDescUseItem: "Usá un objeto · tocá HUMO, ESPEJO o PLACA.",
     actionUseItemShort: "USAR OBJETO",
@@ -746,7 +871,10 @@ const LOCALES: Record<Language, LocaleStrings> = {
     zegonWins: "GANA ZEGON",
     draw: "EMPATE",
     rounds: "Rondas",
+    resultTiebreakNote: "Límite de {rounds} rondas · gana quien ganó más rondas",
+    resultRoundsWon: "Rondas ganadas · vos {you} − ZEGON {zegon}",
     timesRead: "Veces leído",
+    finalReadStreak: "Racha final de lectura",
     finalBlindsight: "Ciego-vista final",
     score: "Puntuación",
     verifyOnChain: "VERIFICAR EN CADENA",
@@ -782,16 +910,16 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryDeadeyeUsed: "DEADEYE consumido",
     roundSummaryDeadeyeStillActive: "DEADEYE sigue activo · solo un objeto lo cancela",
     roundSummaryStreak: "Racha de lectura",
-    roundSummaryDragHint: "← deslizá para continuar →",
+    roundSummaryDragHint: "← deslizá o tocá para continuar →",
     errorItemCooldown: "Objeto en enfriamiento.",
     tutorial: "TUTORIAL",
     tutorialTitle: "Bienvenido al duelo",
     tutorialDoneBadge: "✓ HECHO",
     tutorialIntro:
-      "ZEGON es un pistolero IA ciego · no puede ver tu jugada actual.\n\nLee patrones en tu historial. Repetí la misma elección dos veces y sube su racha. El primero en 0 PS pierde.",
+      "ZEGON es un pistolero IA ciego · no puede ver tu jugada actual.\n\nLee patrones en tu historial. Repetí la misma elección dos veces y sube su racha.\n\nEl primero en 0 vidas pierde. Si al límite de rondas (20 en el duelo estándar) siguen los dos en pie, gana quien ganó más rondas.",
     tutorialHpTitle: "Vidas",
     tutorialHpBody:
-      "Vos y ZEGON tienen 5 vidas cada uno (esquinas abajo).\n\nCada golpe quita 1 vida. A 0 vidas perdés.",
+      "Vos y ZEGON tienen 5 vidas cada uno (esquinas abajo).\n\nUn golpe normal quita 1 vida — con mejoras del Saloon tu disparo puede quitar 1.1 vidas o más.\n\nA 0 vidas perdés. Al llegar al límite de rondas (20 por defecto, elegís 10/20/30 antes del duelo) con ambos vivos, gana quien ganó más rondas (una ronda se gana haciendo más daño del que recibís).",
     tutorialBlindsightTitle: "Racha de lectura",
     tutorialBlindsightBody:
       "Arriba a la derecha ves cuántas veces seguidas te leyó ZEGON.\n\n• Predicción fallida · racha a cero\n• Dos lecturas seguidas · aviso DEADEYE\n\nAlterná DISPARAR y ESQUIVAR para que no te lea.",
@@ -877,6 +1005,11 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreSubmitted: "Puntaje enviado al ranking diario",
     scoreSubmitNoWallet: "Conectá wallet para guardar tu puntaje diario",
     pickArchetype: "Elegí tu ZEGON",
+    duelLengthTitle: "Duración del duelo",
+    duelLengthQuick: "Rápido",
+    duelLengthStandard: "Estándar",
+    duelLengthLong: "Largo",
+    duelLengthRounds: "rondas",
     dailyPoolLabel: "Pool",
     dailyEntrants: "entrantes",
     dailyStake: "Apostar para entrar",
@@ -938,6 +1071,11 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryLifeLost: "−{n} {word}",
     roundSummaryYouLostAllLives: "Perdiste todas tus vidas",
     scoreBreakdownTitle: "Desglose de puntos",
+    scoreLineUnread: "+{points} · {count} rondas sin leer",
+    scoreLineReadPenalty: "−{points} · leído {count}×",
+    scoreLineReadStreak: "−{points} · racha final de lectura {count}",
+    scoreLineCleanVictory: "+{points} · victoria limpia (nunca leído)",
+    scoreLineHpBonus: "+{points} · bonus por PS restantes",
     scoreLineRounds: "+{points} · {count} rondas jugadas",
     scoreLineBlindsight: "+{points} · bonus por racha baja",
     scoreLineTimesRead: "−{points} · leído {count}×",
@@ -946,7 +1084,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreLineDailyMult: "+{points} · racha diaria ×{mult}",
     scoreRankingTipsTitle: "Cómo subir en el ranking",
     scoreRankingTip1: "Variá DISPARAR y ESQUIVAR — repetir te delata.",
-    scoreRankingTip2: "Ganá el duelo para +100 puntos extra.",
+    scoreRankingTip2: "Ganá el duelo para +80 puntos extra.",
     scoreRankingTip3: "Sorprendé a ZEGON 2+ rondas seguidas por combo.",
     scoreRankingTip4: "Verificá on-chain después del duelo.",
     connectWalletRanking: "CONECTAR WALLET",
@@ -967,11 +1105,17 @@ const LOCALES: Record<Language, LocaleStrings> = {
     dailyShareToday: "Compartir el draw de hoy",
     dailyTopScores: "Top del día",
     challengeBanner: "{name} hizo {score}. ¿Podés superarlo?",
+    challengeCardTitle: "Desafío de {name}",
+    challengeStats: "Leyó {reads}× en {rounds} rondas",
     challengeAccept: "Aceptar desafío",
     challengeDismiss: "Cerrar",
     challengeBeat: "¡Superaste a {name} ({score})!",
     challengeLost: "{name} sigue arriba con {score}.",
     challengeTie: "Empate con {name} en {score}.",
+    challengeCompareTitle: "— Desafío —",
+    challengeCompareYou: "Vos · {score} pts · leído {reads}× · {rounds} rondas",
+    challengeCompareThem: "{name} · {score} pts · leído {reads}× · {rounds} rondas",
+    challengeCompareWin: "¡Ganaste el desafío!",
     copiedChallenge: "Link de desafío copiado",
     winsVsZegon: "Victorias vs ZEGON: {wins} / {played} duelos",
     achievementsWins: "Duelos ganados: {wins} · jugados: {played}",
@@ -1025,7 +1169,43 @@ const LOCALES: Record<Language, LocaleStrings> = {
     saloonTitle: "MEJORA TU DISPARO",
     saloonBuy: "Mejorar ({cost} N)",
     saloonOwned: "MÁX",
-    saloonDamagePreview: "Daño del disparo: {dmg}",
+    saloonEffectLives: "{slots} slots de vida · aguantás {hits} golpes",
+    saloonEffectShot: "Daño ×{dmg} por disparo",
+    saloonEffectDeadeye: "DEADEYE tras {reads} lecturas seguidas",
+    saloonEffectCooldown: "Cooldown de ítem: {rounds} rondas",
+    saloonEffectAmmo: "+{extra} munición inicial",
+    saloonUpgradeCurrent: "Ahora: {effect}",
+    saloonUpgradeNext: "Siguiente: {effect}",
+    saloonNowTag: "Ahora",
+    saloonNextTag: "Sig.",
+    saloonDamagePreview: "Daño ×{dmg}",
+    duelHitsRemaining: "{current}/{max} golpes",
+    duelUpgradeBadgeHits: "{hits} golpes · {slots} slots",
+    duelUpgradeBadgeShot: "Disparo ×{dmg}",
+    duelUpgradeBadgeDeadeye: "DEADEYE @ {reads}",
+    duelUpgradeBadgeCooldown: "Ítem {rounds}r CD",
+    duelUpgradeBadgeAmmo: "+{extra} balas",
+    duelLoadoutTitle: "EQUIPO",
+    duelLoadoutUpgrades: "Mejoras",
+    duelLoadoutRelics: "Reliquias",
+    saloonSectionUpgrades: "Mejoras permanentes",
+    saloonSectionRelics: "Reliquias de duelo",
+    saloonRelicBuy: "Comprar ({cost} N)",
+    saloonLoadoutPreview: "Activo en tu próximo duelo",
+    saloonCurrentLoadout: "Equipo actual",
+    saloonTreeRoot: "Tu disparo",
+    saloonLevelRequired: "Requiere nivel {level}",
+    saloonTabTree: "Árbol",
+    saloonTabSatchel: "Morral",
+    saloonTreeHint: "Tocá un nodo para ver detalles y mejorar",
+    saloonConsumableHint: "Tocá una reliquia para ver, equipar o comprar",
+    saloonConsumableUnlock: "Se desbloquea con {name}",
+    saloonEquip: "Equipar",
+    saloonUnequip: "Quitar",
+    saloonUnlockRequires: "Requiere {name} al máximo",
+    saloonUpgradeAction: "Mejorar",
+    saloonBuyAction: "Comprar",
+    notchCurrencyName: "Notches",
     boardScore: "Puntaje",
     boardHunter: "Cazador",
     boardVeteran: "Veterano",
@@ -1040,6 +1220,12 @@ const LOCALES: Record<Language, LocaleStrings> = {
     replayRound: "Ronda {n}",
     replayPredicted: "ZEGON predijo: {move}",
     replayYouPlayed: "Jugaste: {move}",
+    replayZegonPlayed: "ZEGON jugó: {move}",
+    replayReadCorrect: "ZEGON te leyó bien",
+    replayReadWrong: "Sorprendiste a ZEGON",
+    replaySealedOk: "✓ ZEGON selló antes de tu jugada",
+    replaySealedBad: "✗ Orden de sellado incierto",
+    replayEmpty: "No hay rondas para el replay.",
     progressEarned: "+{xp} XP · +{notches} Notches",
     progressLevelUp: "¡Nivel {from} → {to}!",
     archetypeDifficulty: "Dificultad",
@@ -1100,7 +1286,11 @@ export function t(): LocaleStrings {
   return LOCALES[currentLanguage];
 }
 
-export function format(template: string, vars: Record<string, string | number>): string {
+export function format(
+  template: string | undefined,
+  vars: Record<string, string | number>,
+): string {
+  if (!template) return "";
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? ""));
 }
 

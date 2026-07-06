@@ -122,6 +122,9 @@ export function buildChallengePayloadFromResult(
     challengerScore: result.score,
     challengerName,
     challengerDuelId: options.duelId ?? undefined,
+    challengerTimesRead: result.timesRead,
+    challengerRounds: result.roundsPlayed,
+    challengerWon: result.winner === DuelWinner.PLAYER,
   };
 }
 
