@@ -15,6 +15,9 @@ export interface ZegonArchetype {
   advantageEs: string;
   tradeoffEn: string;
   tradeoffEs: string;
+  difficultyStars: number;
+  westernTagEn: string;
+  westernTagEs: string;
   modifiers: DuelModifiers;
   initialPlayerHpDelta?: number;
 }
@@ -31,6 +34,9 @@ const ARCHETYPES: Record<ZegonArchetypeId, ZegonArchetype> = {
     advantageEs: "Ciego-vista sube más rápido (+18 al leerte)",
     tradeoffEn: "Starts with −10 HP",
     tradeoffEs: "Empieza con −10 PS",
+    difficultyStars: 2,
+    westernTagEn: "The classic. Reads your soul.",
+    westernTagEs: "El clásico. Lee tu alma.",
     modifiers: { blindsightOnCorrect: 18 },
     initialPlayerHpDelta: -10,
   },
@@ -45,6 +51,9 @@ const ARCHETYPES: Record<ZegonArchetypeId, ZegonArchetype> = {
     advantageEs: "Esquiva más seguido (+15% sesgo)",
     tradeoffEn: "ZEGON shots deal −15% damage",
     tradeoffEs: "Sus disparos hacen −15% daño",
+    difficultyStars: 4,
+    westernTagEn: "Ghost — slips through bullets like smoke.",
+    westernTagEs: "Fantasma — se escurre entre balas.",
     modifiers: { zegonDodgeBias: 0.15, zegonDamageMultiplier: 0.85 },
   },
   deadeye: {
@@ -58,6 +67,9 @@ const ARCHETYPES: Record<ZegonArchetypeId, ZegonArchetype> = {
     advantageEs: "DEADEYE al 85% ciego-vista",
     tradeoffEn: "Starts with +10 HP",
     tradeoffEs: "Empieza con +10 PS",
+    difficultyStars: 5,
+    westernTagEn: "Aggressor — DEADEYE comes early.",
+    westernTagEs: "Agresor — DEADEYE llega pronto.",
     modifiers: { deadeyeStreak: 1 },
     initialPlayerHpDelta: 10,
   },
@@ -72,6 +84,9 @@ const ARCHETYPES: Record<ZegonArchetypeId, ZegonArchetype> = {
     advantageEs: "Contraataques impredecibles",
     tradeoffEn: "Wild weapon rotation",
     tradeoffEs: "Rotación de armas errática",
+    difficultyStars: 3,
+    westernTagEn: "Chaos is the only pattern.",
+    westernTagEs: "El caos es el único patrón.",
     modifiers: { zegonDodgeBias: -0.1 },
   },
 };
@@ -143,6 +158,14 @@ export function applyZegonDamageMultiplier(
   modifiers?: DuelModifiers,
 ): number {
   const mult = modifiers?.zegonDamageMultiplier ?? 1;
+  return Math.round(damage * mult);
+}
+
+export function applyPlayerDamageMultiplier(
+  damage: number,
+  modifiers?: DuelModifiers,
+): number {
+  const mult = modifiers?.playerDamageMultiplier ?? 1;
   return Math.round(damage * mult);
 }
 

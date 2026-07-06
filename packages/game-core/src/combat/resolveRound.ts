@@ -1,5 +1,5 @@
 import { COMBAT, ITEM } from "../constants/index.js";
-import { applyZegonDamageMultiplier } from "../modes/zegonArchetypes.js";
+import { applyZegonDamageMultiplier, applyPlayerDamageMultiplier } from "../modes/zegonArchetypes.js";
 import {
   computeReadingStreakAfter,
   getEffectiveDeadeyeStreak,
@@ -178,8 +178,8 @@ export function resolveRound(
 
   if (playerHits) {
     zegonDamage = mirrorReflected
-      ? mirrorDamageToZegon(ctx, true)
-      : COMBAT.HIT_DAMAGE;
+      ? applyPlayerDamageMultiplier(mirrorDamageToZegon(ctx, true), ctx.modifiers)
+      : applyPlayerDamageMultiplier(COMBAT.HIT_DAMAGE, ctx.modifiers);
   }
 
   const deadeyeConsumed =

@@ -1,3 +1,5 @@
+import type { UpgradeLevels } from "@zegon/game-core";
+
 export interface PlayerProfile {
   address: string;
   nickname: string;
@@ -5,14 +7,23 @@ export interface PlayerProfile {
   updatedAt: number;
   xp?: number;
   level?: number;
+  notches?: number;
+  upgrades?: UpgradeLevels;
   achievements?: string[];
   unlocks?: string[];
   stats?: {
     duelsWon: number;
     duelsPlayed: number;
     bestDailyScore: number;
+    bestGlobalScore: number;
     timesReadTotal: number;
+    totalRoundsPlayed: number;
+    maxReadingStreak: number;
+    totalPlayTimeMs: number;
+    fastestWinMs: number | null;
+    verifiedDuels: number;
     streakDays: number;
+    lastDuelDay?: string;
   };
 }
 
@@ -85,10 +96,13 @@ export async function saveProfile(
   const check = validateNickname(nickname);
   if (!check.ok) throw new Error(check.key);
 
+  const { withSiweAuth } = await import("./siwe.js");
+  const payload = await withSiweAuth({ address, nickname: nickname.trim() });
+
   const res = await fetch("/api/player/profile", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ address, nickname: nickname.trim() }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
@@ -105,39 +119,68 @@ const DEFAULT_STATS = {
   duelsWon: 0,
   duelsPlayed: 0,
   bestDailyScore: 0,
+  bestGlobalScore: 0,
   timesReadTotal: 0,
+  totalRoundsPlayed: 0,
+  maxReadingStreak: 0,
+  totalPlayTimeMs: 0,
+  fastestWinMs: null as number | null,
+  verifiedDuels: 0,
   streakDays: 0,
 };
 
-/**
- * Update the locally cached profile after a duel. The client cache is the
- * source of truth for achievements/stats display because server storage is
- * ephemeral on serverless. No-op if the wallet has no profile yet.
- */
 export function recordLocalProgress(
   address: string,
   update: {
     won?: boolean;
     timesRead?: number;
+    roundsPlayed?: number;
+    maxReadingStreak?: number;
     xpGain?: number;
+    notchesGain?: number;
     dailyScore?: number;
+    globalScore?: number;
     achievements?: readonly string[];
     unlocks?: readonly string[];
+    lastDuelDay?: string;
+    verifiedOnChain?: boolean;
+    playTimeMs?: number;
   },
 ): PlayerProfile | null {
   const cached = getCachedProfile(address);
   if (!cached?.nickname) return null;
 
   const stats = { ...DEFAULT_STATS, ...cached.stats };
-  if (update.won !== undefined || update.timesRead !== undefined) {
+  if (update.won !== undefined || update.timesRead !== undefined || update.roundsPlayed !== undefined) {
     stats.duelsPlayed += 1;
     if (update.won) stats.duelsWon += 1;
   }
   if (update.timesRead !== undefined) {
     stats.timesReadTotal += update.timesRead;
   }
+  if (update.roundsPlayed !== undefined) {
+    stats.totalRoundsPlayed += update.roundsPlayed;
+  }
+  if (update.maxReadingStreak !== undefined) {
+    stats.maxReadingStreak = Math.max(stats.maxReadingStreak, update.maxReadingStreak);
+  }
+  if (update.playTimeMs !== undefined) {
+    stats.totalPlayTimeMs += update.playTimeMs;
+    if (update.won && (stats.fastestWinMs === null || update.playTimeMs < stats.fastestWinMs)) {
+      stats.fastestWinMs = update.playTimeMs;
+    }
+  }
+  if (update.verifiedOnChain) {
+    stats.verifiedDuels += 1;
+  }
+  if (update.lastDuelDay) {
+    stats.lastDuelDay = update.lastDuelDay;
+  }
   if (update.dailyScore !== undefined) {
     stats.bestDailyScore = Math.max(stats.bestDailyScore, update.dailyScore);
+  }
+  if (update.globalScore !== undefined) {
+    stats.bestGlobalScore = Math.max(stats.bestGlobalScore, update.globalScore);
   }
 
   const achievements = new Set(cached.achievements ?? []);
@@ -150,6 +193,7 @@ export function recordLocalProgress(
     ...cached,
     xp,
     level: Math.floor(xp / 500) + 1,
+    notches: (cached.notches ?? 0) + (update.notchesGain ?? 0),
     stats,
     achievements: [...achievements],
     unlocks: [...unlocks],
@@ -167,4 +211,10 @@ export function onProfileChange(listener: ProfileListener): () => void {
 export function displayNameFor(address: string, nickname?: string | null): string {
   if (nickname) return nickname;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
+export function xpProgress(xp: number): { level: number; current: number; next: number; pct: number } {
+  const level = Math.floor(xp / 500) + 1;
+  const current = xp % 500;
+  return { level, current, next: 500, pct: (current / 500) * 100 };
 }

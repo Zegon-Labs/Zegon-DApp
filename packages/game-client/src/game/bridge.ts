@@ -3,12 +3,15 @@ export type AppView =
   | { type: "settings" }
   | { type: "leaderboard" }
   | { type: "achievements" }
+  | { type: "profile" }
+  | { type: "saloon" }
   | { type: "game" };
 
 type NavigateListener = (view: AppView) => void;
 type SceneListener = (scene: string, data?: Record<string, unknown>) => void;
 type SettingsOverlayListener = (open: boolean) => void;
 type WalletRequestListener = () => void;
+type ReplayListener = (duelId: string) => void;
 type ProfileSetupRequest = {
   address: string;
   required?: boolean;
@@ -21,6 +24,7 @@ let sceneListener: SceneListener | null = null;
 let settingsOverlayListener: SettingsOverlayListener | null = null;
 let walletRequestListener: WalletRequestListener | null = null;
 let profileSetupListener: ProfileSetupListener | null = null;
+let replayListener: ReplayListener | null = null;
 
 export const gameBridge = {
   navigate(view: AppView) {
@@ -50,6 +54,17 @@ export const gameBridge = {
 
   requestProfileSetup(req: ProfileSetupRequest) {
     profileSetupListener?.(req);
+  },
+
+  openReplay(duelId: string) {
+    replayListener?.(duelId);
+  },
+
+  onOpenReplay(listener: ReplayListener) {
+    replayListener = listener;
+    return () => {
+      if (replayListener === listener) replayListener = null;
+    };
   },
 
   onNavigate(listener: NavigateListener) {

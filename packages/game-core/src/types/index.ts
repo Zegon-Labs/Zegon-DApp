@@ -112,10 +112,12 @@ export interface RoundOutcome {
 
 export interface DuelModifiers {
   blindsightOnCorrect?: number;
+  blindsightOnCorrectReduction?: number;
   deadeyeThreshold?: number;
   deadeyeStreak?: number;
   zegonDodgeBias?: number;
   zegonDamageMultiplier?: number;
+  playerDamageMultiplier?: number;
 }
 
 export interface DuelConfig {
@@ -127,6 +129,8 @@ export interface DuelConfig {
   mode: "standard" | "daily" | "challenge";
   archetype?: string;
   modifiers?: DuelModifiers;
+  startingAmmoBonus?: number;
+  itemCooldownReduction?: number;
 }
 
 export interface DuelState {

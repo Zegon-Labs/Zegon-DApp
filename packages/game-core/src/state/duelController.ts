@@ -48,13 +48,14 @@ function resolveWeaponForRound(
 
 function buildInitialState(config: DuelConfig): DuelState {
   const weapon = resolveWeaponForRound(config, 0);
+  const ammoBonus = config.startingAmmoBonus ?? 0;
   return {
     phase: DuelPhase.IDLE,
     roundIndex: 0,
     playerHp: config.initialPlayerHp,
     zegonHp: config.initialZegonHp,
     weapon,
-    ammo: getStartingAmmo(weapon),
+    ammo: getStartingAmmo(weapon) + ammoBonus,
     blindsight: 0,
     readingStreak: 0,
     equippedItem: DuelItemId.SMOKE,

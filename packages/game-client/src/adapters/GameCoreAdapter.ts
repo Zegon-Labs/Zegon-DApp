@@ -22,7 +22,9 @@ import {
   decodeChallenge,
   decodeChallengeCompact,
   createStandardDuelWithArchetype,
+  applyPlayerUpgradesToConfig,
   type ZegonArchetypeId,
+  type UpgradeLevels,
   withUniqueDuelSeed,
 } from "@zegon/game-core";
 
@@ -221,7 +223,11 @@ export class GameCoreAdapter {
 
   async initDuel(
     mode: "standard" | "daily" | "tutorial" = "standard",
-    options?: { config?: Partial<DuelConfig>; archetypeId?: string },
+    options?: {
+      config?: Partial<DuelConfig>;
+      archetypeId?: string;
+      upgradeLevels?: UpgradeLevels;
+    },
   ): Promise<void> {
     let mergedConfig: Partial<DuelConfig> = { ...options?.config };
 
@@ -236,6 +242,10 @@ export class GameCoreAdapter {
           (options?.archetypeId ?? "reader") as ZegonArchetypeId,
         ),
       };
+      mergedConfig = applyPlayerUpgradesToConfig(
+        mergedConfig as DuelConfig,
+        options?.upgradeLevels,
+      );
     }
 
     const useApi = this.brainMode === "api" && !this.offline && mode !== "tutorial";

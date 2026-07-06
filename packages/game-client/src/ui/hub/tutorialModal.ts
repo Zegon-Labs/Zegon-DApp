@@ -24,6 +24,18 @@ export interface HubTutorialModalOptions {
   centerY?: number;
   maxWidth?: number;
   depth?: number;
+  /** When true, uses cyan “learning mode” styling. Defaults to true for tutorial modals. */
+  tutorialStyle?: boolean;
+}
+
+function parseLessonProgress(badge?: string): { current: number; total: number } | null {
+  if (!badge) return null;
+  const match = badge.match(/(\d+)\s*\/\s*(\d+)/);
+  if (!match) return null;
+  const current = Number(match[1]);
+  const total = Number(match[2]);
+  if (!Number.isFinite(current) || !Number.isFinite(total) || total <= 0) return null;
+  return { current, total };
 }
 
 /** Full-screen dim + hub-styled readable modal. */
@@ -33,6 +45,7 @@ export function createHubTutorialModal(
 ): Phaser.GameObjects.Container {
   const { width, height } = scene.scale;
   const depth   = options.depth ?? 120;
+  const tutorialStyle = options.tutorialStyle !== false;
   const PANEL_W = options.maxWidth ?? 660;
   // INNER_W is fixed independently of PANEL_W so the text wrap width stays
   // constant regardless of how wide the frame grows.
@@ -46,6 +59,8 @@ export function createHubTutorialModal(
   const VTX_GAP = 45;
   const BADGE_H   = options.badge ? 18 : 0;
   const BADGE_GAP = options.badge ? 8  : 0;
+  const PROGRESS_H = tutorialStyle && parseLessonProgress(options.badge) ? 8 : 0;
+  const PROGRESS_GAP = PROGRESS_H ? 10 : 0;
   const cx = options.centerX ?? width  / 2;
   const cy = options.centerY ?? height / 2 - 10;
 
@@ -73,15 +88,19 @@ export function createHubTutorialModal(
   // utility_table's silver border is ~10.8 % from top and ~10.0 % from bottom
   // (calibrated from the result panel at ~600 px height).
   const rawH = Math.min(
-    65 + BADGE_H + BADGE_GAP + titleH + TITLE_GAP + bodyH + VTX_BUF + BTN_H + 55,
+    65 + BADGE_H + BADGE_GAP + PROGRESS_H + PROGRESS_GAP + titleH + TITLE_GAP + bodyH + VTX_BUF + BTN_H + 55,
     740,
   );
   const INNER_PAD_T = Math.max(55, Math.round(rawH * 0.108));
   const INNER_PAD_B = Math.max(50, Math.round(rawH * 0.100));
   const panelH = Math.min(
-    INNER_PAD_T + BADGE_H + BADGE_GAP + titleH + TITLE_GAP + bodyH + VTX_BUF + BTN_H + INNER_PAD_B,
+    INNER_PAD_T + BADGE_H + BADGE_GAP + PROGRESS_H + PROGRESS_GAP + titleH + TITLE_GAP + bodyH + VTX_BUF + BTN_H + INNER_PAD_B,
     740,
   );
+
+  const titleColor = tutorialStyle ? COLORS.cyan : COLORS.ember;
+  const badgeColor = tutorialStyle ? COLORS.cyan : COLORS.dust;
+  const lessonProgress = parseLessonProgress(options.badge);
 
   const root = scene.add.container(0, 0).setDepth(depth);
   const dim  = scene.add
@@ -102,17 +121,47 @@ export function createHubTutorialModal(
     panel.add(createHubPanelGraphics(scene, PANEL_W, panelH));
   }
 
-  let y = -panelH / 2 + INNER_PAD_T;
+  if (tutorialStyle) {
+    const accentY = -panelH / 2 + Math.max(18, Math.round(panelH * 0.04));
+    panel.add(
+      scene.add.rectangle(0, accentY, PANEL_W - 96, 3, 0x2ee6d6, 0.85),
+    );
+    panel.add(
+      scene.add.text(0, accentY + 16, "◈ TUTORIAL", {
+        fontFamily: FONT_DISPLAY,
+        fontSize: "12px",
+        color: COLORS.cyan,
+        letterSpacing: 3,
+      }).setOrigin(0.5, 0).setResolution(2),
+    );
+  }
+
+  let y = -panelH / 2 + INNER_PAD_T + (tutorialStyle ? 10 : 0);
 
   // ── Badge (e.g. "TIP · Lección 1/9") ─────────────────────────────────────
   if (options.badge) {
     panel.add(
       scene.add.text(-INNER_W / 2 + 36, y + 16, options.badge, {
         fontFamily: FONT, fontSize: "14px",
-        color: COLORS.dust, letterSpacing: 1,
+        color: badgeColor, letterSpacing: 1,
       }).setOrigin(0, 0).setResolution(2),
     );
     y += BADGE_H + BADGE_GAP;
+  }
+
+  if (lessonProgress) {
+    const barW = INNER_W - 8;
+    const barX = -barW / 2;
+    const barY = y + 2;
+    panel.add(
+      scene.add.rectangle(barX + barW / 2, barY + PROGRESS_H / 2, barW, PROGRESS_H, 0x1a1824, 0.95)
+        .setStrokeStyle(1, 0x2ee6d6, 0.35),
+    );
+    const fillW = Math.max(8, (barW * lessonProgress.current) / lessonProgress.total);
+    panel.add(
+      scene.add.rectangle(barX + fillW / 2, barY + PROGRESS_H / 2, fillW, PROGRESS_H - 2, 0x2ee6d6, 0.85),
+    );
+    y += PROGRESS_H + PROGRESS_GAP;
   }
 
   // ── Title ─────────────────────────────────────────────────────────────────
@@ -120,7 +169,7 @@ export function createHubTutorialModal(
     panel.add(
       scene.add.text(0, y + titleH / 2, options.title, {
         fontFamily: FONT_DISPLAY, fontSize: "28px",
-        color: COLORS.ember, align: "center",
+        color: titleColor, align: "center",
         wordWrap: { width: INNER_W }, letterSpacing: 2,
       }).setOrigin(0.5, 0.5).setResolution(2),
     );
@@ -165,7 +214,7 @@ export function createHubTutorialModal(
   panel.add(
     scene.add.text(0, btnY, options.buttonLabel, {
       fontFamily: FONT_DISPLAY, fontSize: "11px",
-      color: COLORS.ember, letterSpacing: 2,
+      color: tutorialStyle ? COLORS.cyan : COLORS.ember, letterSpacing: 2,
     }).setOrigin(0.5, 0.5).setResolution(2),
   );
 
@@ -376,7 +425,7 @@ export function createHubPracticeStrip(
     scene.add.text(textX, badgeY, options.badge, {
       fontFamily: FONT,
       fontSize: "16px",
-      color: COLORS.dust,
+      color: COLORS.cyan,
       wordWrap: { width: textW },
     }).setOrigin(0, 0).setResolution(2),
   );

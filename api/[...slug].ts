@@ -77,10 +77,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(await h.handleSubmitScore(req.body));
     }
     if (slug[0] === "global" && slug[1] === "leaderboard" && req.method === "GET") {
-      return res.status(200).json(await h.handleGlobalLeaderboard());
+      const address = typeof req.query.address === "string" ? req.query.address : undefined;
+      const board = typeof req.query.board === "string" ? req.query.board : undefined;
+      return res.status(200).json(await h.handleGlobalLeaderboard({ board, address }));
     }
     if (slug[0] === "global" && slug[1] === "submit" && req.method === "POST") {
       return res.status(200).json(await h.handleGlobalSubmit(req.body));
+    }
+    if (slug[0] === "season" && slug[1] === "claim" && req.method === "POST") {
+      return res.status(200).json(await h.handleSeasonClaim(req.body));
+    }
+      const address = String(req.query.address ?? "");
+      return res.status(200).json(await h.handleAuthNonce(address));
+    }
+    if (slug[0] === "player" && slug[1] === "upgrade" && req.method === "POST") {
+      return res.status(200).json(await h.handlePurchaseUpgrade(req.body));
+    }
+    if (slug[0] === "duel" && slug[2] === "replay" && req.method === "GET") {
+      const duelId = slug[1] ?? "";
+      const token = typeof req.query.token === "string" ? req.query.token : undefined;
+      return res.status(200).json(await h.handleDuelReplay(duelId, token));
     }
     if (slug[0] === "challenge" && slug[1] === "create" && req.method === "POST") {
       return res.status(200).json(await h.handleCreateChallengeLink(req.body));
@@ -114,8 +130,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(await h.handleUpdateProfileStats(req.body));
     }
     if (slug[0] === "player" && slug[1] === "profile" && req.method === "GET") {
-      const address = String(req.query.address ?? slug[2] ?? "");
-      return res.status(200).json(await h.handleGetPlayerProfile(address));
+      const address = typeof req.query.address === "string" ? req.query.address : undefined;
+      const nickname = typeof req.query.nickname === "string" ? req.query.nickname : undefined;
+      if (slug[2] === "public" || nickname) {
+        return res.status(200).json(await h.handleGetPublicProfile({ address, nickname }));
+      }
+      return res.status(200).json(await h.handleGetPlayerProfile(String(address ?? slug[2] ?? "")));
     }
     if (slug[0] === "player" && slug[1] === "profile" && req.method === "POST") {
       return res.status(200).json(await h.handleSetPlayerProfile(req.body));

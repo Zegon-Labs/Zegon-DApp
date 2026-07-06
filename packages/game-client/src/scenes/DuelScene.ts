@@ -48,7 +48,6 @@ import { C, COLORS, FONT_DISPLAY } from "../ui/theme.js";
 import { gameBridge } from "../game/bridge.js";
 import { getCachedProfile } from "../services/profile.js";
 import { getWalletAddress } from "../services/wallet.js";
-import { persistDuelProgression } from "../services/duelProgression.js";
 import { getPreferences } from "../services/preferences.js";
 import {
   playActionSfx,
@@ -128,6 +127,7 @@ export class DuelScene extends Phaser.Scene {
   private combatHud!: CombatHud;
   private bootToken = 0;
   private zegonReadingActive = false;
+  private duelStartTime = 0;
   private readingDotsPhase = 0;
   private readingDotsElapsed = 0;
   private glitchAmbientOn = false;
@@ -370,8 +370,10 @@ export class DuelScene extends Phaser.Scene {
       await this.adapter.initDuel(this.mode, {
         archetypeId: this.mode === "standard" ? this.archetypeId : undefined,
         config: this.challengeConfig,
+        upgradeLevels: getCachedProfile(getWalletAddress() ?? "")?.upgrades,
       });
       if (token !== this.bootToken) return;
+      this.duelStartTime = Date.now();
       resetVoiceState();
       playSfx("duel_start");
       playVoice("step_into_dust", { delayMs: 420 });
@@ -522,11 +524,6 @@ export class DuelScene extends Phaser.Scene {
         surpriseStreak: this.adapter.getSurpriseStreak(),
       };
       const result = this.adapter.getResult(scoreOptions);
-      if (address) {
-        void persistDuelProgression(address, result, {
-          surpriseStreak: this.adapter.getSurpriseStreak(),
-        });
-      }
       this.time.delayedCall(800, () => {
         if (!this.scene.isActive()) return;
         this.scene.start("ResultScene", {
@@ -538,6 +535,7 @@ export class DuelScene extends Phaser.Scene {
           brainMode: this.adapter.getBrainMode(),
           scoreOptions,
           challengeMeta: this.challengeMeta,
+          duelStartTime: this.duelStartTime,
         });
       });
     }

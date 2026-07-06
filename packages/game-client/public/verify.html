@@ -54,6 +54,40 @@
       .btn:hover { background: rgba(179, 18, 43, 0.12); color: var(--ember); border-color: var(--ember); }
       .btn.primary { background: rgba(179, 18, 43, 0.15); }
       .meta { color: var(--dust); font-size: 18px; word-break: break-all; margin: 12px 0; }
+      .duel-id-box {
+        border: 1px solid var(--fog);
+        background: rgba(10, 9, 17, 0.65);
+        padding: 10px 12px;
+        margin: 12px 0 8px;
+      }
+      .duel-id-box__label {
+        font-size: 14px;
+        color: var(--dust);
+        margin-bottom: 4px;
+      }
+      .duel-id-box__value {
+        font-size: 22px;
+        color: var(--cyan);
+        letter-spacing: 0.06em;
+        word-break: break-all;
+      }
+      .duel-id-box__hint {
+        margin-top: 6px;
+        font-size: 16px;
+        color: var(--dust);
+        line-height: 1.35;
+      }
+      .duel-id-box__copy {
+        margin-top: 8px;
+        padding: 4px 10px;
+        border: 1px solid var(--fog);
+        background: transparent;
+        color: var(--bone);
+        font-family: inherit;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .duel-id-box__copy:hover { border-color: var(--blood); color: var(--ember); }
       .round {
         border: 1px solid var(--fog);
         background: var(--ash);
@@ -65,6 +99,35 @@
       .round a { color: var(--blood); word-break: break-all; }
       .round a:hover { color: var(--ember); }
       .round .links { margin-top: 8px; line-height: 1.6; }
+      .race {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin: 12px 0;
+      }
+      .race-lane {
+        background: rgba(10, 9, 17, 0.6);
+        border: 1px solid var(--fog);
+        padding: 8px;
+        min-height: 56px;
+        position: relative;
+        overflow: hidden;
+      }
+      .race-lane__label {
+        font-size: 14px;
+        color: var(--dust);
+        margin-bottom: 6px;
+      }
+      .race-bar {
+        height: 10px;
+        border-radius: 2px;
+        width: 0;
+        transition: width 0.8s ease-out;
+      }
+      .race-bar--zegon { background: var(--cyan); }
+      .race-bar--player { background: var(--ember); }
+      .race-lane--win { border-color: var(--verified); }
+      .race-lane--lose { opacity: 0.75; }
       .loading { color: var(--dust); font-size: 24px; }
       .error { color: var(--ember); }
       code { color: var(--dust); font-size: 16px; }
@@ -94,6 +157,10 @@
           openContract: "Abrir contrato en Chainscan",
           openRecord: "Ver registro final del duelo",
           duelId: "ID del duelo",
+          duelIdHint: "Código corto de esta partida (32 caracteres). No es la prueba en sí: la prueba está en cada ronda de abajo.",
+          duelIdCopy: "Copiar ID",
+          duelIdCopied: "Copiado",
+          duelIdBadParam: "El enlace parece incorrecto (token en lugar de ID). Abrí VERIFY desde el botón al final de la partida.",
           contract: "Contrato",
           round: "Ronda",
           zegonMove: "Movimiento de ZEGON",
@@ -126,6 +193,10 @@
           openContract: "Open contract on Chainscan",
           openRecord: "View final duel record tx",
           duelId: "Duel ID",
+          duelIdHint: "Short code for this match (32 characters). This is not the proof itself — the proof is in each round below.",
+          duelIdCopy: "Copy ID",
+          duelIdCopied: "Copied",
+          duelIdBadParam: "This link looks wrong (token instead of ID). Open VERIFY from the end-of-match button.",
           contract: "Contract",
           round: "Round",
           zegonMove: "ZEGON move",
@@ -159,9 +230,47 @@
         return T.actions[key] || key || "—";
       }
 
+      function decodeBase64Url(value) {
+        const pad = value.length % 4 === 0 ? "" : "=".repeat(4 - (value.length % 4));
+        return atob(value.replace(/-/g, "+").replace(/_/g, "/") + pad);
+      }
+
+      function resolveDuelId(raw) {
+        if (!raw) return { id: null, badParam: false };
+        if (/^[a-f0-9]{32}$/i.test(raw)) return { id: raw, badParam: false };
+        try {
+          const parsed = JSON.parse(decodeBase64Url(raw));
+          if (parsed && typeof parsed.id === "string" && /^[a-f0-9]{32}$/i.test(parsed.id)) {
+            return { id: parsed.id, badParam: true };
+          }
+        } catch {
+          /* ignore */
+        }
+        if (raw.length > 40) return { id: raw, badParam: true };
+        return { id: raw, badParam: false };
+      }
+
+      function formatDuelId(id) {
+        if (!id) return "—";
+        if (id.length <= 24) return id;
+        return `${id.slice(0, 8)}…${id.slice(-8)}`;
+      }
+
+      function duelIdBlock(id, badParam) {
+        const safeId = id ?? "—";
+        return `
+          <div class="duel-id-box">
+            <div class="duel-id-box__label">${T.duelId}</div>
+            <div class="duel-id-box__value" title="${safeId}">${formatDuelId(safeId)}</div>
+            <p class="duel-id-box__hint">${badParam ? T.duelIdBadParam : T.duelIdHint}</p>
+            <button type="button" class="duel-id-box__copy" data-copy-id="${safeId}">${T.duelIdCopy}</button>
+          </div>`;
+      }
+
       async function main() {
         const params = new URLSearchParams(location.search);
-        const duelId = params.get("duel");
+        const rawDuelId = params.get("duel");
+        const { id: duelId, badParam } = resolveDuelId(rawDuelId);
         const content = document.getElementById("content");
 
         if (!duelId) {
@@ -206,8 +315,8 @@
             </a>`;
           }
 
+          html += duelIdBlock(data.duelId, badParam);
           html += `
-            <p class="meta"><strong>${T.duelId}:</strong> <code>${data.duelId}</code></p>
             <p class="meta"><strong>${T.contract}:</strong> <code>${data.contractAddress}</code></p>`;
 
           if (data.teeVerified) {
@@ -218,9 +327,22 @@
           }
 
           for (const r of data.rounds) {
+            const zTs = r.commitTsOnChain ? r.commitTsOnChain * 1000 : r.commitTimestamp || 0;
+            const pTs = r.playerActionTimestamp || 0;
+            const zegonWins = r.commitBeforePlayer;
             html += `
-              <div class="round">
+              <div class="round" data-round="${r.roundIndex}">
                 <h3>${T.round} ${r.roundIndex + 1}</h3>
+                <div class="race">
+                  <div class="race-lane ${zegonWins ? "race-lane--win" : "race-lane--lose"}">
+                    <div class="race-lane__label">ZEGON seal</div>
+                    <div class="race-bar race-bar--zegon" data-bar="zegon" data-ts="${zTs}"></div>
+                  </div>
+                  <div class="race-lane ${!zegonWins ? "race-lane--win" : "race-lane--lose"}">
+                    <div class="race-lane__label">Your input</div>
+                    <div class="race-bar race-bar--player" data-bar="player" data-ts="${pTs}"></div>
+                  </div>
+                </div>
                 <p>${T.zegonMove}: <strong>${moveLabel(r.zegonMove)}</strong></p>
                 <p class="proof">${T.commitBefore}: <strong>${r.commitBeforePlayer ? T.yes : T.no}</strong></p>
                 ${r.attestationHash ? `<p class="meta"><strong>TEE attestation:</strong> <code>${r.attestationHash.slice(0, 16)}…</code></p>` : ""}
@@ -232,6 +354,32 @@
           }
 
           content.innerHTML = html;
+
+          content.querySelectorAll("[data-copy-id]").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const value = btn.getAttribute("data-copy-id") ?? "";
+              try {
+                await navigator.clipboard.writeText(value);
+                btn.textContent = T.duelIdCopied;
+              } catch {
+                /* ignore */
+              }
+            });
+          });
+
+          requestAnimationFrame(() => {
+            document.querySelectorAll(".round").forEach((roundEl, idx) => {
+              setTimeout(() => {
+                const zBar = roundEl.querySelector('[data-bar="zegon"]');
+                const pBar = roundEl.querySelector('[data-bar="player"]');
+                const zTs = Number(zBar?.getAttribute("data-ts") || 0);
+                const pTs = Number(pBar?.getAttribute("data-ts") || 0);
+                const max = Math.max(zTs, pTs, 1);
+                if (zBar) zBar.style.width = `${Math.max(8, (zTs / max) * 100)}%`;
+                if (pBar) pBar.style.width = `${Math.max(8, (pTs / max) * 100)}%`;
+              }, idx * 400);
+            });
+          });
         } catch {
           content.innerHTML = `<p class="error">${T.error}</p>`;
         }

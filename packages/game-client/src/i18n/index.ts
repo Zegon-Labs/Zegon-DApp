@@ -303,6 +303,40 @@ export interface LocaleStrings {
   scoreInfoBlindsight: string;
   shareImageCopied: string;
   shareImageDownloaded: string;
+  profileMenu: string;
+  profileTitle: string;
+  profileReadStat: string;
+  profileMaxStreak: string;
+  profileBestScore: string;
+  profileLevel: string;
+  profileNotches: string;
+  profileStatWins: string;
+  profileStatDuels: string;
+  profileStatStreak: string;
+  saloonMenu: string;
+  saloonTitle: string;
+  saloonBuy: string;
+  saloonOwned: string;
+  saloonDamagePreview: string;
+  boardScore: string;
+  boardHunter: string;
+  boardVeteran: string;
+  boardGhost: string;
+  boardSpeed: string;
+  boardVerified: string;
+  boardYourRank: string;
+  boardSeasonRemaining: string;
+  boardPrizePool: string;
+  replayTitle: string;
+  replayWatch: string;
+  replayRound: string;
+  replayPredicted: string;
+  replayYouPlayed: string;
+  progressEarned: string;
+  progressLevelUp: string;
+  archetypeDifficulty: string;
+  seasonClaim: string;
+  seasonClaimable: string;
 }
 
 const LOCALES: Record<Language, LocaleStrings> = {
@@ -624,6 +658,40 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreInfoBlindsight: "Keep ZEGON's read streak low to avoid penalties",
     shareImageCopied: "Card copied — paste it (Ctrl+V) into your X post",
     shareImageDownloaded: "Card downloaded — attach it to your X post",
+    profileMenu: "PROFILE",
+    profileTitle: "GUNSLINGER PROFILE",
+    profileReadStat: "ZEGON read you {read} times in {rounds} rounds",
+    profileMaxStreak: "Max read streak: {streak}",
+    profileBestScore: "Best score: {score}",
+    profileLevel: "Level {level}",
+    profileNotches: "{n} Notches",
+    profileStatWins: "Wins",
+    profileStatDuels: "Duels",
+    profileStatStreak: "Max streak",
+    saloonMenu: "THE SMITH",
+    saloonTitle: "UPGRADE YOUR DRAW",
+    saloonBuy: "Upgrade ({cost} N)",
+    saloonOwned: "MAX",
+    saloonDamagePreview: "Shot damage: {dmg}",
+    boardScore: "Score",
+    boardHunter: "Hunter",
+    boardVeteran: "Veteran",
+    boardGhost: "Ghost",
+    boardSpeed: "Speed",
+    boardVerified: "Verified",
+    boardYourRank: "Your rank: #{rank} · Top {pct}%",
+    boardSeasonRemaining: "Season · {days}d left",
+    boardPrizePool: "Prize pool: {pool} OG",
+    replayTitle: "DUEL REPLAY",
+    replayWatch: "Watch replay",
+    replayRound: "Round {n}",
+    replayPredicted: "ZEGON predicted: {move}",
+    replayYouPlayed: "You played: {move}",
+    progressEarned: "+{xp} XP · +{notches} Notches",
+    progressLevelUp: "Level {from} → {to}!",
+    archetypeDifficulty: "Difficulty",
+    seasonClaim: "Claim season reward",
+    seasonClaimable: "You earned a season prize!",
   },
   es: {
     pageTitle: "ZEGON · Supera al ciego",
@@ -943,6 +1011,40 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreInfoBlindsight: "Mantené baja la racha de lectura de ZEGON para evitar penalización",
     shareImageCopied: "Tarjeta copiada — pegala (Ctrl+V) en tu post de X",
     shareImageDownloaded: "Tarjeta descargada — adjuntala a tu post de X",
+    profileMenu: "PERFIL",
+    profileTitle: "PERFIL DEL PISTOLERO",
+    profileReadStat: "ZEGON te leyó {read} veces en {rounds} rondas",
+    profileMaxStreak: "Racha máxima de lectura: {streak}",
+    profileBestScore: "Mejor puntaje: {score}",
+    profileLevel: "Nivel {level}",
+    profileNotches: "{n} Notches",
+    profileStatWins: "Victorias",
+    profileStatDuels: "Duelos",
+    profileStatStreak: "Racha máx.",
+    saloonMenu: "EL HERRERO",
+    saloonTitle: "MEJORA TU DISPARO",
+    saloonBuy: "Mejorar ({cost} N)",
+    saloonOwned: "MÁX",
+    saloonDamagePreview: "Daño del disparo: {dmg}",
+    boardScore: "Puntaje",
+    boardHunter: "Cazador",
+    boardVeteran: "Veterano",
+    boardGhost: "Fantasma",
+    boardSpeed: "Veloz",
+    boardVerified: "Verificado",
+    boardYourRank: "Tu puesto: #{rank} · Top {pct}%",
+    boardSeasonRemaining: "Temporada · {days}d restantes",
+    boardPrizePool: "Premio: {pool} OG",
+    replayTitle: "REPLAY DEL DUELO",
+    replayWatch: "Ver replay",
+    replayRound: "Ronda {n}",
+    replayPredicted: "ZEGON predijo: {move}",
+    replayYouPlayed: "Jugaste: {move}",
+    progressEarned: "+{xp} XP · +{notches} Notches",
+    progressLevelUp: "¡Nivel {from} → {to}!",
+    archetypeDifficulty: "Dificultad",
+    seasonClaim: "Reclamar premio de temporada",
+    seasonClaimable: "¡Ganaste un premio de temporada!",
   },
 };
 

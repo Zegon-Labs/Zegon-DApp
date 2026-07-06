@@ -27,6 +27,8 @@ import { trackMetric } from "../services/metrics.js";
 import { HeroCharacter } from "./HeroCharacter.js";
 import { DailyStakeModal } from "./DailyStakeModal.js";
 import { ScoreInfoModal } from "./ScoreInfoModal.js";
+import { ArchetypePickerModal } from "./ArchetypePickerModal.js";
+import type { ZegonArchetypeId } from "@zegon/game-core";
 
 const STAKE_ERROR_KEYS: Record<DailyStakeErrorCode, keyof LocaleStrings> = {
   NO_WALLET: "stakeErrNoWallet",
@@ -88,6 +90,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   const [duelsPlayed, setDuelsPlayed] = useState(0);
   const [showStakeModal, setShowStakeModal] = useState(false);
   const [showScoreInfo, setShowScoreInfo] = useState(false);
+  const [showArchetypePicker, setShowArchetypePicker] = useState(false);
+  const [seasonClaimable, setSeasonClaimable] = useState(false);
 
   const dailyArch = getDailyArchetype();
   const dailyArchName = lang === "es" ? dailyArch.nameEs : dailyArch.nameEn;
@@ -139,6 +143,21 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   }, [wallet, poolInfo?.seed]);
 
   useEffect(() => {
+    if (!wallet) {
+      setSeasonClaimable(false);
+      return;
+    }
+    void fetch("/api/season/claim", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: wallet }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { claimable?: boolean } | null) => setSeasonClaimable(Boolean(data?.claimable)))
+      .catch(() => setSeasonClaimable(false));
+  }, [wallet]);
+
+  useEffect(() => {
     function syncStats(address: string | null) {
       const profile = address ? getCachedProfile(address) : null;
       setWins(profile?.stats?.duelsWon ?? 0);
@@ -152,9 +171,6 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   }, [wallet]);
 
   const tutorialDone = isTutorialDone();
-  const tutorialLabel = tutorialDone
-    ? `${strings.tutorial} ${strings.tutorialDoneBadge}`
-    : strings.tutorial;
 
 
   async function handleConnectWallet() {
@@ -225,7 +241,13 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   }
 
   function startStandardDuel() {
-    gameBridge.startScene("DuelScene", { mode: "standard", archetypeId: "reader" });
+    playSfx("ui_modal_open");
+    setShowArchetypePicker(true);
+  }
+
+  function launchDuel(archetypeId: ZegonArchetypeId) {
+    setShowArchetypePicker(false);
+    gameBridge.startScene("DuelScene", { mode: "standard", archetypeId });
   }
 
   function acceptChallenge() {
@@ -322,12 +344,6 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
                 </button>
               </div>
             </div>
-          )}
-
-          {!tutorialDone && (
-            <p className="hero__tutorial-callout" role="status">
-              {strings.heroTutorialFirst}
-            </p>
           )}
 
           <button
@@ -438,13 +454,67 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             </button>
           )}
 
+          <button
+            type="button"
+            className="saloon-feature"
+            onClick={() => {
+              playSfx("ui_modal_open");
+              gameBridge.navigate({ type: "saloon" });
+            }}
+          >
+            <span className="saloon-feature__icon" aria-hidden="true">
+              ⚒
+            </span>
+            <span className="saloon-feature__copy">
+              <span className="saloon-feature__title">{strings.saloonMenu}</span>
+              <span className="saloon-feature__subtitle">{strings.saloonTitle}</span>
+            </span>
+            {wallet && (
+              <span className="saloon-feature__cta">
+                {format(strings.profileNotches, {
+                  n: getCachedProfile(wallet)?.notches ?? 0,
+                })}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={`tutorial-hub-btn${tutorialDone ? " tutorial-hub-btn--done" : " tutorial-hub-btn--pending"}`}
+            onClick={() => {
+              playSfx("ui_modal_open");
+              gameBridge.startScene("TutorialScene");
+            }}
+          >
+            <span className="tutorial-hub-btn__icon" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 6.5A2.5 2.5 0 0 1 6.5 4H17a2 2 0 0 1 2 2v11.8a.7.7 0 0 1-1.12.56L12 15.5l-5.88 2.86A.7.7 0 0 1 5 17.8V6.5Z"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinejoin="round"
+                />
+                <path d="M8 8h8M8 11.5h5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+            </span>
+            <span className="tutorial-hub-btn__copy">
+              <span className="tutorial-hub-btn__title">{strings.tutorial}</span>
+              <span className="tutorial-hub-btn__subtitle">
+                {tutorialDone ? strings.tutorialDoneBadge : strings.heroTutorialFirst}
+              </span>
+            </span>
+            {!tutorialDone && (
+              <span className="tutorial-hub-btn__pill">{strings.tutorialContinue}</span>
+            )}
+          </button>
+
           <div className="hero__menu-grid">
             <button
               type="button"
-              className={`btn btn--menu${tutorialDone ? "" : " btn--menu-emphasis"}`}
-              onClick={() => gameBridge.startScene("TutorialScene")}
+              className="btn btn--menu"
+              onClick={() => gameBridge.navigate({ type: "profile" })}
             >
-              {tutorialLabel}
+              {strings.profileMenu}
             </button>
             <button
               type="button"
@@ -460,6 +530,15 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             >
               {strings.leaderboard}
             </button>
+            {seasonClaimable && (
+              <button
+                type="button"
+                className="btn btn--menu btn--menu-emphasis"
+                onClick={() => notify.info(strings.seasonClaimable)}
+              >
+                {strings.seasonClaim}
+              </button>
+            )}
             <button
               type="button"
               className="hero__settings-gear"
@@ -542,6 +621,16 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           onClose={() => {
             playSfx("ui_modal_close");
             setShowScoreInfo(false);
+          }}
+        />
+      )}
+
+      {showArchetypePicker && (
+        <ArchetypePickerModal
+          onConfirm={launchDuel}
+          onClose={() => {
+            playSfx("ui_modal_close");
+            setShowArchetypePicker(false);
           }}
         />
       )}

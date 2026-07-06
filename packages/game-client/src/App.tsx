@@ -5,6 +5,9 @@ import { AchievementsPanel } from "./components/AchievementsPanel.js";
 import { LeaderboardPanel } from "./components/LeaderboardPanel.js";
 import { PhaserHost } from "./components/PhaserHost.js";
 import { ProfileSetupModal } from "./components/ProfileSetupModal.js";
+import { ProfilePanel } from "./components/ProfilePanel.js";
+import { UpgradeSaloon } from "./components/UpgradeSaloon.js";
+import { useReplayOverlay } from "./components/ReplayPanel.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
 import { gameBridge, type AppView } from "./game/bridge.js";
 import { fetchProfile, hasNickname } from "./services/profile.js";
@@ -18,6 +21,7 @@ export default function App() {
   const [profileSetupRequired, setProfileSetupRequired] = useState(false);
   const [profileSetupReady, setProfileSetupReady] = useState<(() => void) | null>(null);
   const [inGameSettings, setInGameSettings] = useState(false);
+  const { overlay: replayOverlay } = useReplayOverlay();
 
   useEffect(() => gameBridge.onNavigate(setView), []);
   useEffect(() => gameBridge.onSettingsOverlay(setInGameSettings), []);
@@ -126,7 +130,20 @@ export default function App() {
           <AchievementsPanel />
         </>
       )}
+      {!inGame && view.type === "profile" && (
+        <>
+          <HeroHub />
+          <ProfilePanel />
+        </>
+      )}
+      {!inGame && view.type === "saloon" && (
+        <>
+          <HeroHub />
+          <UpgradeSaloon />
+        </>
+      )}
       <PhaserHost visible={inGame} />
+      {replayOverlay}
       {inGame && inGameSettings && (
         <SettingsPanel overlay onClose={() => gameBridge.closeSettingsOverlay()} />
       )}

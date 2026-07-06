@@ -17,4 +17,6 @@ export * from "./social/share.js";
 export * from "./modes/zegonArchetypes.js";
 export * from "./modes/duelSeed.js";
 export * from "./progression/achievements.js";
+export * from "./progression/upgrades.js";
+export * from "./progression/notches.js";
 export * from "./score/breakdown.js";

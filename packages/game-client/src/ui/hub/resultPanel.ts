@@ -23,7 +23,7 @@ const INNER_PAD_B = 60;
 const INNER_PAD_H = 30;
 const INNER_W     = PANEL_W - INNER_PAD_H * 2;   // 460
 
-const BTN_H       = 52;
+const BTN_H       = 48;
 const BTN_GAP     = 4;
 // Narrower buttons so the sprite frame decoration is less stretched.
 const BTN_W_FULL  = 400;
@@ -31,7 +31,8 @@ const BTN_W_HALF  = (BTN_W_FULL - BTN_GAP) / 2;  // 198
 
 // Cap at 11 lines to exclude the "Cómo subir" tips section and keep the
 // panel short enough to fit on a 720 px screen.
-const MAX_STATS_LINES = 11;
+const MAX_STATS_LINES = 9;
+const PROGRESS_SLOT_H = 44;
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
 export interface HubResultPanelButton {
@@ -133,26 +134,35 @@ export function createHubResultPanel(
 
   const LOGO_H   = 20;
   const WINNER_H = 28;
-  const VERIFY_H = 20;
+
+  const verifySample = `${options.verifyPlaceholder ?? "…"}\n0/0`;
+  const verifyMeasure = scene.add.text(0, 0, verifySample, {
+    fontFamily: FONT,
+    fontSize: "12px",
+    align: "center",
+    wordWrap: { width: INNER_W - 20 },
+    lineSpacing: 2,
+  });
+  const verifyH = verifyMeasure.height;
+  verifyMeasure.destroy();
 
   const primaryBtns   = options.buttons.filter((b) =>  b.primary);
   const secondaryBtns = options.buttons.filter((b) => !b.primary);
 
   // Compute frame height from measured content
   let contentH = INNER_PAD_T;
-  contentH += LOGO_H + 36;   // lower GANASTE/PERDISTE
-  contentH += WINNER_H + 10; // +10: lower stats block
+  contentH += LOGO_H + 36;
+  contentH += WINNER_H + 10;
   contentH += statsH + 10;
-  if (options.walletHint) contentH += walletHintH + 5; // compact wallet↔verify gap
-  contentH += VERIFY_H + 8;
+  if (options.walletHint) contentH += walletHintH + 5;
+  contentH += verifyH + 6;
+  contentH += PROGRESS_SLOT_H + 8;
   contentH += primaryBtns.length * (BTN_H + BTN_GAP);
   contentH += Math.ceil(secondaryBtns.length / 2) * (BTN_H + BTN_GAP);
   contentH += INNER_PAD_B;
 
-  // +50 buffer: VT323 at 12 px may render ~4–5 px taller/line than the
-  // fallback monospace used during the synchronous measure above.
-  // 11 lines × ~4 px ≈ 44 px — the 50 px covers that variance.
-  const panelH = Math.min(contentH + 50, 690);
+  const maxPanelH = Math.min(scene.scale.height - 16, 760);
+  const panelH = Math.min(contentH + 24, maxPanelH);
   const topY   = -panelH / 2;
 
   // ── Container ─────────────────────────────────────────────────────────────
@@ -220,9 +230,9 @@ export function createHubResultPanel(
     y += walletHintH + 5;
   }
 
-  // Verify label (ember = red, not cyan)
+  // Verify + progression slots (must stay above buttons)
   const verifyLabel = scene.add
-    .text(0, y + VERIFY_H / 2, options.verifyPlaceholder ?? "…", {
+    .text(0, y, options.verifyPlaceholder ?? "…", {
       fontFamily: FONT,
       fontSize: "12px",
       color: COLORS.ember,
@@ -230,24 +240,25 @@ export function createHubResultPanel(
       wordWrap: { width: INNER_W - 20 },
       lineSpacing: 2,
     })
-    .setOrigin(0.5, 0.5)
+    .setOrigin(0.5, 0)
     .setResolution(2);
   container.add(verifyLabel);
+  y += verifyLabel.height + 6;
 
   const dailyLabel = scene.add
-    .text(0, y + VERIFY_H + 4, "", {
+    .text(0, y, "", {
       fontFamily: FONT,
       fontSize: "11px",
       color: COLORS.dust,
       align: "center",
       wordWrap: { width: INNER_W },
+      lineSpacing: 2,
     })
     .setOrigin(0.5, 0)
     .setAlpha(0)
     .setResolution(2);
   container.add(dailyLabel);
-
-  y += VERIFY_H + 8;
+  y += PROGRESS_SLOT_H + 8;
 
   // Primary buttons (full width, centered)
   for (const btn of primaryBtns) {

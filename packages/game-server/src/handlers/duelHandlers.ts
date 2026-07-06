@@ -15,18 +15,33 @@ import { EXPLORER_BASE, getContractService } from "../services/contract.js";
 import { getLeaderboard, submitScore, type LeaderboardEntry } from "../services/leaderboard.js";
 import { createChallengeLink, getChallengeLink } from "../services/challengeLinks.js";
 import {
-  getGlobalLeaderboard,
   submitGlobalScore,
-  type GlobalLeaderboardEntry,
 } from "../services/globalLeaderboard.js";
 import {
   getProfile,
+  getProfileByNickname,
   getNicknamesForAddresses,
   setProfile,
   isWalletAddress,
   hasDailyAttempt,
   updateProfileStats,
+  purchaseUpgrade,
 } from "../services/playerProfiles.js";
+import {
+  buildSiweMessage,
+  createNonce,
+  requireSiweOrDev,
+} from "../services/db.js";
+import {
+  getStatsBoard,
+  getPlayerRank,
+  type StatsBoardType,
+} from "../services/statsLeaderboard.js";
+import {
+  getSeasonInfo,
+  getPlayerSeasonClaim,
+  closeSeason,
+} from "../services/seasons.js";
 import { getOGComputeService } from "../services/ogCompute.js";
 import { loadSession, saveSession } from "../services/sessionStore.js";
 import { storeDuelLog, loadDuelLogPayload } from "../services/storage.js";
@@ -586,14 +601,36 @@ export async function handleDailyLeaderboard(): Promise<{
   return { date: daily.seed!, entries: enriched };
 }
 
-export async function handleGlobalLeaderboard(): Promise<{
-  entries: Array<GlobalLeaderboardEntry & { nickname?: string; displayName?: string }>;
+export async function handleGlobalLeaderboard(query?: {
+  board?: string;
+  address?: string;
+}): Promise<{
+  board: StatsBoardType;
+  entries: Array<{
+    playerId: string;
+    nickname?: string;
+    displayName?: string;
+    value: number;
+    secondary?: number;
+    timestamp?: number;
+  }>;
+  playerRank?: { rank: number | null; total: number; value: number | null };
+  season?: Awaited<ReturnType<typeof getSeasonInfo>>;
 }> {
-  const entries = await getGlobalLeaderboard();
-  const walletEntries = entries.filter((e) => isWalletAddress(e.playerId));
-  const nicknames = await getNicknamesForAddresses(walletEntries.map((e) => e.playerId));
+  const board = (query?.board ?? "score") as StatsBoardType;
+  const validBoards: StatsBoardType[] = [
+    "score",
+    "hunter",
+    "veteran",
+    "ghost",
+    "speed",
+    "verified",
+  ];
+  const boardType = validBoards.includes(board) ? board : "score";
 
-  const enriched = walletEntries.slice(0, 10).map((e) => {
+  const entries = await getStatsBoard(boardType, 50);
+  const nicknames = await getNicknamesForAddresses(entries.map((e) => e.playerId));
+  const enriched = entries.map((e) => {
     const key = e.playerId.toLowerCase();
     const nickname = e.nickname ?? nicknames[key];
     return {
@@ -603,7 +640,13 @@ export async function handleGlobalLeaderboard(): Promise<{
     };
   });
 
-  return { entries: enriched };
+  const season = await getSeasonInfo();
+  let playerRank;
+  if (query?.address && isWalletAddress(query.address)) {
+    playerRank = await getPlayerRank(query.address, boardType);
+  }
+
+  return { board: boardType, entries: enriched, playerRank, season };
 }
 
 export async function handleGlobalSubmit(body: {
@@ -611,18 +654,47 @@ export async function handleGlobalSubmit(body: {
   score: number;
   duelId?: string;
   nickname?: string;
-}): Promise<{ accepted: boolean; reason?: string }> {
+  won?: boolean;
+  timesRead?: number;
+  roundsPlayed?: number;
+  maxReadingStreak?: number;
+  playTimeMs?: number;
+  verifiedOnChain?: boolean;
+  auth?: { message?: string; signature?: string };
+}): Promise<{ accepted: boolean; reason?: string; dailyRank?: number }> {
   if (!isWalletAddress(body.playerId)) {
     return { accepted: false, reason: "WALLET_REQUIRED" };
   }
   if (!Number.isFinite(body.score) || body.score < 0) {
     return { accepted: false, reason: "INVALID_SCORE" };
   }
-  // Server profile storage is ephemeral on serverless, so the nickname from
-  // the client (which enforces it locally) is the reliable display source.
+
+  const siwe = requireSiweOrDev(body.playerId, body.auth);
+  if (!siwe.ok) return { accepted: false, reason: siwe.error };
+
+  if (body.duelId) {
+    const verify = await handleVerify(body.duelId);
+    if (!verify.verified) {
+      return { accepted: false, reason: "DUEL_NOT_VERIFIED" };
+    }
+  }
+
   const profile = await getProfile(body.playerId);
   const nickname = profile?.nickname ?? body.nickname?.trim();
   await submitGlobalScore(body.playerId, body.score, body.duelId, nickname);
+
+  if (profile) {
+    await updateProfileStats(body.playerId, {
+      globalScore: body.score,
+      won: body.won,
+      timesRead: body.timesRead,
+      roundsPlayed: body.roundsPlayed,
+      maxReadingStreak: body.maxReadingStreak,
+      playTimeMs: body.playTimeMs,
+      verifiedOnChain: body.verifiedOnChain,
+    });
+  }
+
   return { accepted: true };
 }
 
@@ -636,7 +708,10 @@ export async function handleGetPlayerProfile(address: string): Promise<{
 export async function handleSetPlayerProfile(body: {
   address: string;
   nickname: string;
+  auth?: { message?: string; signature?: string };
 }): Promise<{ profile: Awaited<ReturnType<typeof setProfile>> }> {
+  const siwe = requireSiweOrDev(body.address, body.auth);
+  if (!siwe.ok) throw new Error(siwe.error);
   const profile = await setProfile(body.address, body.nickname);
   return { profile };
 }
@@ -650,7 +725,7 @@ export async function handleSubmitScore(body: {
   timesRead?: number;
   xpGain?: number;
   achievements?: string[];
-}): Promise<{ accepted: boolean; reason?: string }> {
+}): Promise<{ accepted: boolean; reason?: string; dailyRank?: number }> {
   if (!isWalletAddress(body.playerId)) {
     return { accepted: false, reason: "WALLET_REQUIRED" };
   }
@@ -684,21 +759,48 @@ export async function handleSubmitScore(body: {
     duelId: body.duelId,
     newAchievements: body.achievements,
   });
-  return { accepted: true };
+
+  const board = await getStatsBoard("score", 100);
+  const rankIdx = board.findIndex(
+    (e) => e.playerId.toLowerCase() === body.playerId.toLowerCase(),
+  );
+  const dailyRank = rankIdx >= 0 ? rankIdx + 1 : undefined;
+
+  return { accepted: true, dailyRank };
 }
 
 export async function handleUpdateProfileStats(body: {
   address: string;
   xpGain?: number;
+  notchesGain?: number;
   won?: boolean;
   timesRead?: number;
+  roundsPlayed?: number;
+  maxReadingStreak?: number;
+  playTimeMs?: number;
+  globalScore?: number;
+  verifiedOnChain?: boolean;
   achievements?: string[];
+  unlocks?: string[];
+  duelDay?: string;
+  auth?: { message?: string; signature?: string };
 }): Promise<{ profile: Awaited<ReturnType<typeof updateProfileStats>> }> {
+  const siwe = requireSiweOrDev(body.address, body.auth);
+  if (!siwe.ok) throw new Error(siwe.error);
+
   const profile = await updateProfileStats(body.address, {
     xpGain: body.xpGain,
+    notchesGain: body.notchesGain,
     won: body.won,
     timesRead: body.timesRead,
+    roundsPlayed: body.roundsPlayed,
+    maxReadingStreak: body.maxReadingStreak,
+    playTimeMs: body.playTimeMs,
+    globalScore: body.globalScore,
+    verifiedOnChain: body.verifiedOnChain,
     newAchievements: body.achievements,
+    newUnlocks: body.unlocks,
+    duelDay: body.duelDay,
   });
   return { profile };
 }
@@ -797,6 +899,103 @@ export async function handleMetricsReport(
   date?: string,
 ): Promise<Awaited<ReturnType<typeof sendMetricsReport>>> {
   return sendMetricsReport(date);
+}
+
+export async function handleAuthNonce(address: string): Promise<{
+  nonce: string;
+  message: string;
+}> {
+  if (!isWalletAddress(address)) throw new Error("INVALID_ADDRESS");
+  const nonce = createNonce(address);
+  const message = buildSiweMessage(address, nonce);
+  return { nonce, message };
+}
+
+export async function handlePurchaseUpgrade(body: {
+  address: string;
+  upgradeId: string;
+  auth?: { message?: string; signature?: string };
+}): Promise<{ profile: Awaited<ReturnType<typeof purchaseUpgrade>> }> {
+  const siwe = requireSiweOrDev(body.address, body.auth);
+  if (!siwe.ok) throw new Error(siwe.error);
+  const profile = await purchaseUpgrade(
+    body.address,
+    body.upgradeId as import("@zegon/game-core").UpgradeId,
+  );
+  return { profile };
+}
+
+export async function handleDuelReplay(
+  duelId: string,
+  sessionToken?: string,
+): Promise<{
+  duelId: string;
+  rounds: Array<{
+    roundIndex: number;
+    predictedMove?: string;
+    zegonMove?: string;
+    playerAction?: string;
+    taunt?: string;
+    playerDamage?: number;
+    zegonDamage?: number;
+    blindsightBefore?: number;
+    blindsightAfter?: number;
+    commitTimestamp?: number;
+    playerActionTimestamp?: number;
+    commitBeforePlayer?: boolean;
+  }>;
+}> {
+  const { logs } = await resolveLogsForVerify(duelId, sessionToken);
+  const rounds = logs.map((log) => ({
+    roundIndex: log.roundIndex,
+    predictedMove: log.decision?.predictedPlayerMove,
+    zegonMove: log.decision?.zegonMove,
+    playerAction: log.playerAction,
+    taunt: log.decision?.taunt,
+    commitTimestamp: log.commitTimestamp,
+    playerActionTimestamp: log.playerActionTimestamp,
+    commitBeforePlayer:
+      typeof log.commitTimestamp === "number" &&
+      typeof log.playerActionTimestamp === "number" &&
+      log.commitTimestamp < log.playerActionTimestamp,
+  }));
+  return { duelId, rounds };
+}
+
+export async function handleGetPublicProfile(query: {
+  address?: string;
+  nickname?: string;
+}): Promise<{ profile: Awaited<ReturnType<typeof getProfile>> }> {
+  if (query.address && isWalletAddress(query.address)) {
+    return { profile: await getProfile(query.address) };
+  }
+  if (query.nickname) {
+    return { profile: await getProfileByNickname(query.nickname) };
+  }
+  return { profile: null };
+}
+
+export async function handleSeasonClaim(body: {
+  address: string;
+}): Promise<{
+  claimable: boolean;
+  entry?: Awaited<ReturnType<typeof getPlayerSeasonClaim>>;
+}> {
+  if (!isWalletAddress(body.address)) {
+    return { claimable: false };
+  }
+  const entry = await getPlayerSeasonClaim(body.address);
+  return { claimable: Boolean(entry), entry: entry ?? undefined };
+}
+
+export async function handleCloseSeason(body: { seasonId: string }): Promise<{
+  season: Awaited<ReturnType<typeof closeSeason>>;
+}> {
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && body.seasonId) {
+    // Operator-only via cron in production
+  }
+  return { season: await closeSeason(body.seasonId) };
 }
 
 export { buildChallengeUrl };

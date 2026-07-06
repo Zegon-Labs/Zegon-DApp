@@ -1,89 +1,77 @@
 import { useEffect, useState } from "react";
 import { gameBridge } from "../game/bridge.js";
 import { useLocale } from "../hooks/useLocale.js";
-import { fetchOnChainLeaderboard, isLeaderboardContractConfigured } from "../services/onchainLeaderboard.js";
-import { displayNameFor, fetchProfile } from "../services/profile.js";
-import { getWalletAddress, onWalletChange, truncateAddress } from "../services/wallet.js";
+import { format } from "../i18n/index.js";
+import { fetchProfile } from "../services/profile.js";
+import { getWalletAddress, onWalletChange } from "../services/wallet.js";
 
-interface LeaderboardEntry {
+type BoardId = "score" | "hunter" | "veteran" | "ghost" | "speed" | "verified";
+
+interface BoardEntry {
   playerId: string;
   nickname?: string;
   displayName?: string;
-  score: number;
+  value: number;
   timestamp?: number;
 }
 
-function formatTime(ts: number, locale: string): string {
-  try {
-    return new Date(ts).toLocaleTimeString(locale === "es" ? "es" : "en", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
+const BOARDS: BoardId[] = ["score", "hunter", "veteran", "ghost", "speed", "verified"];
+
+function boardLabel(id: BoardId, strings: ReturnType<typeof useLocale>["strings"]): string {
+  const map: Record<BoardId, string> = {
+    score: strings.boardScore,
+    hunter: strings.boardHunter,
+    veteran: strings.boardVeteran,
+    ghost: strings.boardGhost,
+    speed: strings.boardSpeed,
+    verified: strings.boardVerified,
+  };
+  return map[id];
+}
+
+function formatValue(id: BoardId, value: number): string {
+  if (id === "ghost") return `${(value * 100).toFixed(1)}%`;
+  if (id === "speed") return `${(value / 1000).toFixed(1)}s`;
+  return String(Math.round(value));
 }
 
 export function LeaderboardPanel() {
-  const { strings, language } = useLocale();
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const { strings } = useLocale();
+  const [board, setBoard] = useState<BoardId>("score");
+  const [entries, setEntries] = useState<BoardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [globalMode, setGlobalMode] = useState(false);
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
+  const [playerRank, setPlayerRank] = useState<{
+    rank: number | null;
+    total: number;
+    value: number | null;
+  } | null>(null);
+  const [seasonDays, setSeasonDays] = useState(0);
+  const [prizePool, setPrizePool] = useState("0");
 
   useEffect(() => onWalletChange(setWallet), []);
 
   useEffect(() => {
     let cancelled = false;
-
     async function load() {
       setLoading(true);
-      const onChain = isLeaderboardContractConfigured();
-      setGlobalMode(onChain);
-
-      if (onChain) {
-        const chainEntries = await fetchOnChainLeaderboard(10);
-        if (!cancelled && chainEntries && chainEntries.length > 0) {
-          const enriched = await Promise.all(
-            chainEntries.map(async (e) => {
-              const profile = await fetchProfile(e.playerId);
-              return {
-                ...e,
-                nickname: profile?.nickname,
-                displayName: profile
-                  ? displayNameFor(e.playerId, profile.nickname)
-                  : truncateAddress(e.playerId),
-              };
-            }),
-          );
-          setEntries(enriched);
-          setLoading(false);
-          return;
-        }
-      }
-
+      const params = new URLSearchParams({ board });
+      if (wallet) params.set("address", wallet);
       try {
-        const globalRes = await fetch("/api/global/leaderboard");
-        if (globalRes.ok) {
-          const globalData = (await globalRes.json()) as { entries: LeaderboardEntry[] };
-          if (!cancelled && (globalData.entries?.length ?? 0) > 0) {
-            setGlobalMode(true);
-            setEntries(globalData.entries ?? []);
-            setLoading(false);
-            return;
-          }
-        }
-      } catch {
-        // fall through to daily
-      }
-
-      try {
-        const res = await fetch("/api/daily/leaderboard");
-        if (!res.ok) throw new Error("offline");
-        const data = (await res.json()) as { entries: LeaderboardEntry[] };
-        if (!cancelled) {
-          setGlobalMode(false);
-          setEntries(data.entries ?? []);
+        const res = await fetch(`/api/global/leaderboard?${params}`);
+        if (!res.ok) throw new Error("fail");
+        const data = (await res.json()) as {
+          entries: BoardEntry[];
+          playerRank?: { rank: number | null; total: number; value: number | null };
+          season?: { msRemaining: number; season: { prizePoolWei: string } };
+        };
+        if (cancelled) return;
+        setEntries(data.entries ?? []);
+        setPlayerRank(data.playerRank ?? null);
+        if (data.season) {
+          setSeasonDays(Math.ceil(data.season.msRemaining / (24 * 60 * 60 * 1000)));
+          const wei = BigInt(data.season.season.prizePoolWei || "0");
+          setPrizePool((Number(wei) / 1e18).toFixed(2));
         }
       } catch {
         if (!cancelled) setEntries([]);
@@ -91,32 +79,41 @@ export function LeaderboardPanel() {
         if (!cancelled) setLoading(false);
       }
     }
-
     void load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [board, wallet]);
 
   const walletLower = wallet?.toLowerCase();
 
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
       <div className="hero__panel hero__panel--wide hero__panel--utility">
-        <h2 className="hero__panel-title">
-          {globalMode ? strings.globalLeaderboardTitle : strings.leaderboardTitle}
-        </h2>
+        <h2 className="hero__panel-title">{strings.globalLeaderboardTitle}</h2>
         <p className="hero__verify-copy" style={{ marginTop: 0 }}>
-          {globalMode ? strings.leaderboardGlobalSubtitle : strings.leaderboardSubtitle}
+          {format(strings.boardSeasonRemaining, { days: seasonDays })} ·{" "}
+          {format(strings.boardPrizePool, { pool: prizePool })}
         </p>
-        <p className="settings-hint" style={{ marginBottom: 14 }}>
-          {strings.leaderboardWalletOnly}
-        </p>
+
+        <div className="board-tabs">
+          {BOARDS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              className={`board-tab${board === id ? " board-tab--active" : ""}`}
+              onClick={() => setBoard(id)}
+            >
+              {boardLabel(id, strings)}
+            </button>
+          ))}
+        </div>
+
         <div className="leaderboard-table">
           <div className="leaderboard-table__head">
             <span>{strings.leaderboardColRank}</span>
             <span>{strings.leaderboardColPlayer}</span>
-            <span>{strings.leaderboardColScore}</span>
+            <span>{boardLabel(board, strings)}</span>
           </div>
 
           {loading ? (
@@ -128,9 +125,11 @@ export function LeaderboardPanel() {
               const isYou = walletLower && e.playerId.toLowerCase() === walletLower;
               const name = e.displayName ?? e.nickname ?? e.playerId.slice(0, 10);
               return (
-                <div
-                  key={`${e.playerId}-${e.timestamp ?? i}`}
-                  className={`leaderboard-table__row${isYou ? " leaderboard-table__row--you" : ""}`}
+                <button
+                  type="button"
+                  key={`${e.playerId}-${i}`}
+                  className={`leaderboard-table__row leaderboard-table__row--btn${isYou ? " leaderboard-table__row--you" : ""}`}
+                  onClick={() => void fetchProfile(e.playerId)}
                 >
                   <span>{i + 1}</span>
                   <span>
@@ -138,18 +137,22 @@ export function LeaderboardPanel() {
                     {isYou && (
                       <span className="leaderboard-table__you"> ({strings.leaderboardYou})</span>
                     )}
-                    {e.timestamp ? (
-                      <span className="leaderboard-table__time">
-                        {formatTime(e.timestamp, language)}
-                      </span>
-                    ) : null}
                   </span>
-                  <span>{e.score}</span>
-                </div>
+                  <span>{formatValue(board, e.value)}</span>
+                </button>
               );
             })
           )}
-          </div>
+        </div>
+
+        {playerRank?.rank && (
+          <p className="board-footer-rank">
+            {format(strings.boardYourRank, {
+              rank: playerRank.rank,
+              pct: Math.max(1, Math.round((playerRank.rank / Math.max(playerRank.total, 1)) * 100)),
+            })}
+          </p>
+        )}
 
         <button
           type="button"

@@ -21,6 +21,10 @@ import {
   handleDailyEnterCheck,
   handleCreateChallengeLink,
   handleGetChallengeLink,
+  handleAuthNonce,
+  handlePurchaseUpgrade,
+  handleDuelReplay,
+  handleSeasonClaim,
 } from "./handlers/duelHandlers.js";
 import { handleHealth } from "./handlers/healthHandler.js";
 
@@ -134,6 +138,39 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    const replayMatch = url.match(/^\/api\/duel\/([^/]+)\/replay$/);
+    if (replayMatch && req.method === "GET") {
+      const result = await handleDuelReplay(replayMatch[1]!);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.startsWith("/api/auth/nonce") && req.method === "GET") {
+      const parsed = new URL(url, "http://localhost");
+      const address = parsed.searchParams.get("address") ?? "";
+      const result = await handleAuthNonce(address);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/upgrade" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handlePurchaseUpgrade>[0];
+      const result = await handlePurchaseUpgrade(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/season/claim" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleSeasonClaim>[0];
+      const result = await handleSeasonClaim(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
     if (url === "/api/daily/leaderboard" && req.method === "GET") {
       const result = await handleDailyLeaderboard();
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -141,8 +178,11 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    if (url === "/api/global/leaderboard" && req.method === "GET") {
-      const result = await handleGlobalLeaderboard();
+    if (url.startsWith("/api/global/leaderboard") && req.method === "GET") {
+      const parsed = new URL(url, "http://localhost");
+      const board = parsed.searchParams.get("board") ?? undefined;
+      const address = parsed.searchParams.get("address") ?? undefined;
+      const result = await handleGlobalLeaderboard({ board: board ?? undefined, address: address ?? undefined });
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;

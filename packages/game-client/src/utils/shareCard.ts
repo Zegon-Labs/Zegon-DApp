@@ -97,6 +97,7 @@ export interface ShareCardMeta {
   archetype?: string;
   brainMode?: string;
   verifyProof?: string;
+  nickname?: string;
 }
 
 export function buildChallengePayloadFromResult(
@@ -295,31 +296,47 @@ export async function renderShareCardCanvas(
     drawHudFrame(ctx, canvas.width, canvas.height);
     drawImageContain(ctx, logo, 48, 42, 240, 78, "left");
 
+    const wallet = getWalletAddress();
+    const nickname =
+      meta.nickname ??
+      (wallet ? getCachedProfile(wallet)?.nickname : undefined);
+
+    if (nickname) {
+      ctx.fillStyle = "#E8B23A";
+      ctx.font = "32px monospace";
+      ctx.fillText(`@${nickname}`, 56, 130);
+    }
+
     ctx.fillStyle = "#E6E1D3";
-    ctx.font = "bold 44px monospace";
-    ctx.fillText(winnerHeadline(result), 56, 170);
+    ctx.font = "bold 36px monospace";
+    ctx.fillText(winnerHeadline(result), 56, nickname ? 175 : 170);
+
+    ctx.fillStyle = "#FF4D2E";
+    ctx.font = "bold 28px monospace";
+    ctx.fillText("ZEGON TE LEYÓ", 56, 230);
 
     ctx.fillStyle = "#2EE6D6";
-    ctx.font = "bold 96px monospace";
-    ctx.fillText(String(result.score), 56, 290);
+    ctx.font = "bold 88px monospace";
+    ctx.fillText(`${result.timesRead} / ${result.roundsPlayed}`, 56, 320);
 
     ctx.fillStyle = "#9A93A8";
     ctx.font = "28px monospace";
+    ctx.fillText(`SCORE · ${result.score}`, 56, 365);
+
     const resultLabel =
       result.winner === DuelWinner.PLAYER
         ? "WIN"
         : result.winner === DuelWinner.ZEGON
           ? "LOSS"
           : "DRAW";
-    ctx.fillText(`RESULT · ${resultLabel}`, 56, 340);
+    ctx.fillText(`RESULT · ${resultLabel}`, 56, 400);
     if (meta.verifyProof) {
-      ctx.fillText(`VERIFY · ${meta.verifyProof} rounds sealed first`, 56, 382);
+      ctx.fillText(`VERIFY · ${meta.verifyProof}`, 56, 435);
     }
-    ctx.fillText(`ROUNDS · ${result.roundsPlayed} · READ ×${result.timesRead}`, 56, 424);
 
     if (meta.archetype) {
       ctx.fillStyle = "#E8B23A";
-      ctx.fillText(`VS ${meta.archetype.toUpperCase()}`, 56, 468);
+      ctx.fillText(`VS ${meta.archetype.toUpperCase()}`, 56, 475);
     }
 
     ctx.fillStyle = meta.brainMode === "tee" ? "#4DF07A" : "#FF4D2E";

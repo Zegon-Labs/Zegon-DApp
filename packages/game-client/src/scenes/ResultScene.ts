@@ -9,7 +9,9 @@ import {
 } from "@zegon/game-core";
 import { format, onLanguageChange, t } from "../i18n/index.js";
 import { gameBridge } from "../game/bridge.js";
-import { getCachedProfile, hasNickname } from "../services/profile.js";
+import { getCachedProfile, hasNickname, xpProgress } from "../services/profile.js";
+import { persistDuelProgression } from "../services/duelProgression.js";
+import { withSiweAuth } from "../services/siwe.js";
 import { getWalletAddress, onWalletChange } from "../services/wallet.js";
 import {
   createHubResultPanel,
@@ -50,6 +52,8 @@ export class ResultScene extends Phaser.Scene {
   private scoreSubmitted = false;
   private verifyProof: string | undefined;
   private challengeMeta?: ChallengeMeta;
+  private duelStartTime = 0;
+  private progressionNotified = false;
   private localeUnsub: (() => void) | null = null;
   private walletUnsub: (() => void) | null = null;
 
@@ -71,6 +75,7 @@ export class ResultScene extends Phaser.Scene {
     brainMode?: "tee" | "dummy";
     scoreOptions?: { dailyStreakDays?: number; surpriseStreak?: number };
     challengeMeta?: ChallengeMeta;
+    duelStartTime?: number;
   }): void {
     this.result = data.result;
     this.duelId = data.duelId ?? null;
@@ -80,7 +85,9 @@ export class ResultScene extends Phaser.Scene {
     this.brainMode = data.brainMode;
     this.scoreOptions = data.scoreOptions ?? {};
     this.challengeMeta = data.challengeMeta;
+    this.duelStartTime = data.duelStartTime ?? Date.now();
     this.scoreSubmitted = false;
+    this.progressionNotified = false;
     this.verifyProof = undefined;
     trackMetric("duel_finished");
 
@@ -102,6 +109,8 @@ export class ResultScene extends Phaser.Scene {
     if (this.duelId) {
       void this.loadVerifySummary(verifyApiUrl(this.duelId, this.apiBaseUrl));
     }
+
+    void this.applyProgression();
 
     this.localeUnsub = onLanguageChange(() => this.renderPanel());
     this.walletUnsub = onWalletChange(() => {
@@ -199,6 +208,12 @@ export class ResultScene extends Phaser.Scene {
 
     buttons.push(
       {
+        label: strings.replayWatch,
+        onClick: () => {
+          if (this.duelId) gameBridge.openReplay(this.duelId);
+        },
+      },
+      {
         label: strings.verifyOnChain,
         onClick: () => {
           if (this.duelId) {
@@ -222,6 +237,7 @@ export class ResultScene extends Phaser.Scene {
             archetype: this.archetype,
             brainMode: this.brainMode,
             verifyProof: this.verifyProof,
+            nickname: wallet ? getCachedProfile(wallet)?.nickname : undefined,
           });
         },
       },
@@ -317,16 +333,24 @@ export class ResultScene extends Phaser.Scene {
     }
 
     const nickname = getCachedProfile(address)?.nickname;
+    const playTimeMs = Math.max(0, Date.now() - this.duelStartTime);
     try {
+      const payload = await withSiweAuth({
+        playerId: address,
+        score: this.result.score,
+        duelId: this.duelId ?? undefined,
+        nickname,
+        won: this.result.winner === DuelWinner.PLAYER,
+        timesRead: this.result.timesRead,
+        roundsPlayed: this.result.roundsPlayed,
+        maxReadingStreak: this.result.finalReadingStreak,
+        playTimeMs,
+        verifiedOnChain: Boolean(this.verifyProof),
+      });
       const res = await fetch("/api/global/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          playerId: address,
-          score: this.result.score,
-          duelId: this.duelId ?? undefined,
-          nickname,
-        }),
+        body: JSON.stringify(payload),
       });
       const body = (await res.json().catch(() => ({}))) as { accepted?: boolean };
       if (body.accepted) {
@@ -349,6 +373,42 @@ export class ResultScene extends Phaser.Scene {
           .setColor(COLORS.ember);
       }
     }
+  }
+
+  private async applyProgression(verifiedOnChain = false): Promise<void> {
+    if (this.progressionNotified && !verifiedOnChain) return;
+    const address = getWalletAddress();
+    if (!address) return;
+
+    const playTimeMs = Math.max(0, Date.now() - this.duelStartTime);
+    const before = getCachedProfile(address);
+    const beforeLevel = before ? xpProgress(before.xp ?? 0).level : 1;
+
+    const { earned, notchesGain, xpGain } = await persistDuelProgression(address, this.result, {
+      surpriseStreak: this.scoreOptions.surpriseStreak ?? 0,
+      verifiedOnChain: verifiedOnChain || Boolean(this.verifyProof),
+      playTimeMs,
+      verifiedOnly: verifiedOnChain && this.progressionNotified,
+    });
+
+    this.progressionNotified = true;
+    const strings = t();
+    const after = getCachedProfile(address);
+    const afterLevel = after ? xpProgress(after.xp ?? 0).level : beforeLevel;
+
+    let progressLine = format(strings.progressEarned, { xp: xpGain, notches: notchesGain });
+    if (afterLevel > beforeLevel) {
+      progressLine += `\n${format(strings.progressLevelUp, { from: beforeLevel, to: afterLevel })}`;
+    }
+    if (earned.length > 0) {
+      playSfx("achievement_unlock");
+      progressLine += `\n🏅 ${earned.join(", ")}`;
+    }
+
+    this.panelHandle?.dailyLabel
+      .setAlpha(1)
+      .setText(progressLine)
+      .setColor(COLORS.cyan);
   }
 
   private async submitDailyScore(
@@ -382,10 +442,13 @@ export class ResultScene extends Phaser.Scene {
           xpGain: xpForResult(this.result),
         }),
       });
-      const body = (await res.json()) as { accepted?: boolean; reason?: string };
+      const body = (await res.json()) as { accepted?: boolean; reason?: string; dailyRank?: number };
       label.setAlpha(1);
       if (res.ok && body.accepted !== false) {
         label.setText(strings.scoreSubmitted).setColor(COLORS.cyan);
+        if (body.dailyRank !== undefined && body.dailyRank <= 3) {
+          void this.applyProgression(false);
+        }
       } else if (body.reason === "PROFILE_REQUIRED") {
         label.setText(strings.scoreSubmitNoProfile);
       } else if (body.reason === "DAILY_ALREADY_SUBMITTED") {
@@ -411,6 +474,7 @@ export class ResultScene extends Phaser.Scene {
       const tee = data.teeVerified ? " · 0G TEE ✓" : "";
       if (data.verified) {
         playSfx("verify_success");
+        void this.applyProgression(true);
         void this.trySubmitGlobalScore();
       }
       this.panelHandle?.setVerifyText(
