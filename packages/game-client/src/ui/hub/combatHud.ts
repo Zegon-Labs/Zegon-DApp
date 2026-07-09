@@ -45,6 +45,8 @@ export interface CombatHudFighterLayout {
 export interface CombatHudOpts {
   /** When true, skip creating the BlindsightMeter panel (streak lives in TopHudBar). */
   hideBlindsight?: boolean;
+  /** Initial player name on the left fighter panel. */
+  playerName?: string;
 }
 
 export class CombatHud {
@@ -75,6 +77,7 @@ export class CombatHud {
       panelH,
       depth,
       showHitsSubtitle: true,
+      nameLabel: opts?.playerName,
     });
 
     this.zegonPanel = new SideHudPanel(scene, {
@@ -97,6 +100,7 @@ export class CombatHud {
       state.playerHp,
       state.playerMaxHp,
       state.playerHitsLabel,
+      state.playerLabel,
     );
     this.zegonPanel.update(state.zegonHp, state.zegonMaxHp);
     if (state.liveScore !== undefined) {

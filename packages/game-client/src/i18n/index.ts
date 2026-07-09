@@ -18,6 +18,7 @@ export interface LocaleStrings {
   yourMove: string;
   deadeye: string;
   hudYou: string;
+  hudGunfighter: string;
   hudZegon: string;
   hudHp: string;
   hudAmmo: string;
@@ -363,6 +364,7 @@ export interface LocaleStrings {
   gunslingerNftBurnConfirm: string;
   gunslingerNftBurned: string;
   gunslingerNftBurnMigrated: string;
+  gunslingerNftBurnCleared: string;
   gunslingerNftBurnFailed: string;
   gunslingerNftBurnNotSupported: string;
   gunslingerMintFailed: string;
@@ -488,6 +490,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     yourMove: "YOUR MOVE",
     deadeye: "DEADEYE!",
     hudYou: "YOU",
+    hudGunfighter: "Gunfighter",
     hudZegon: "ZEGON",
     hudHp: "HP",
     hudAmmo: "AMMO",
@@ -851,6 +854,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerNftBurned: "NFT burned — you can mint again.",
     gunslingerNftBurnMigrated:
       "Old NFT slot cleared (previous contract). You can mint fresh on the new contract.",
+    gunslingerNftBurnCleared:
+      "NFT slot cleared — you can mint again. A previous token may still appear in MetaMask on an older contract.",
     gunslingerNftBurnFailed: "Burn failed — try again later.",
     gunslingerNftBurnNotSupported: "Burn not available yet — contract upgrade pending.",
     gunslingerMintFailed: "Mint failed — try again later",
@@ -985,6 +990,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     yourMove: "TU JUGADA",
     deadeye: "¡OJO DE MUERTE!",
     hudYou: "TÚ",
+    hudGunfighter: "Gunfighter",
     hudZegon: "ZEGON",
     hudHp: "PS",
     hudAmmo: "MUNICIÓN",
@@ -1348,6 +1354,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerNftBurned: "NFT quemado — podés mintear de nuevo.",
     gunslingerNftBurnMigrated:
       "Slot del NFT anterior liberado (contrato previo). Podés mintear uno nuevo.",
+    gunslingerNftBurnCleared:
+      "Slot del NFT liberado — podés mintear de nuevo. Un token viejo puede seguir en MetaMask (contrato anterior).",
     gunslingerNftBurnFailed: "Quema falló — probá más tarde.",
     gunslingerNftBurnNotSupported: "Quema no disponible aún — falta actualizar el contrato.",
     gunslingerMintFailed: "Mint falló — probá más tarde",

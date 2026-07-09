@@ -59,6 +59,7 @@ import { fetchProfile, getCachedProfile } from "../services/profile.js";
 import { shotDamageMultiplierLabel } from "../utils/damageFormat.js";
 import { consumeEquippedOnServer } from "../services/upgrades.js";
 import { getWalletAddress } from "../services/wallet.js";
+import { resolvePlayerHudName } from "../ui/hub/playerHudIdentity.js";
 import { getPreferences } from "../services/preferences.js";
 import {
   playActionSfx,
@@ -196,7 +197,10 @@ export class DuelScene extends Phaser.Scene {
     this.playerHandSprite = new PlayerHandSprite(this, 6);
 
 
-    this.combatHud = new CombatHud(this, 9, undefined, { hideBlindsight: true });
+    this.combatHud = new CombatHud(this, 9, undefined, {
+      hideBlindsight: true,
+      playerName: resolvePlayerHudName(strings.hudGunfighter),
+    });
 
     this.topHudBar = new TopHudBar(this, {
       onSettings: () => gameBridge.openSettingsOverlay(),
@@ -805,7 +809,7 @@ export class DuelScene extends Phaser.Scene {
       itemStatus: "",
       itemReady: itemCooldown <= 0,
       itemCooldown,
-      playerLabel: strings.hudYou,
+      playerLabel: resolvePlayerHudName(strings.hudGunfighter),
       zegonLabel: strings.hudZegon,
       hudItem: strings.hudItem,
       hudStatus: strings.hudStatus,

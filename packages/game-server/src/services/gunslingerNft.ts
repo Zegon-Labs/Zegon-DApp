@@ -35,6 +35,7 @@ export interface GunslingerBurnResult {
   txHash: string;
   explorerUrl: string;
   migrated?: boolean;
+  cleared?: boolean;
 }
 
 export class GunslingerNftService {
@@ -134,7 +135,11 @@ export class GunslingerNftService {
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (message.includes("burn") || message.includes("missing revert data")) {
+      if (
+        message.includes("is not a function") ||
+        message.includes("no matching fragment") ||
+        message.includes("unknown custom error")
+      ) {
         throw new Error("BURN_NOT_SUPPORTED");
       }
       throw err;

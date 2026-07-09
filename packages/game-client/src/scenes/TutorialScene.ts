@@ -51,6 +51,7 @@ import {
   stopSfxLoop,
 } from "../services/sfx.js";
 import { getPreferences } from "../services/preferences.js";
+import { resolvePlayerHudName } from "../ui/hub/playerHudIdentity.js";
 import {
   getPracticeForRound,
   LESSON_COUNT,
@@ -153,7 +154,10 @@ export class TutorialScene extends Phaser.Scene {
       characterMaxH: L.bottomStrip.characterMaxH,
     });
     this.playerHandSprite = new PlayerHandSprite(this, 6);
-    this.combatHud = new CombatHud(this, 9, undefined, { hideBlindsight: true });
+    this.combatHud = new CombatHud(this, 9, undefined, {
+      hideBlindsight: true,
+      playerName: resolvePlayerHudName(t().hudGunfighter),
+    });
 
     this.topHudBar = new TopHudBar(this, {
       onSettings: () => gameBridge.openSettingsOverlay(),
@@ -732,7 +736,7 @@ export class TutorialScene extends Phaser.Scene {
       itemStatus,
       itemReady: itemCooldown <= 0,
       itemCooldown,
-      playerLabel: strings.hudYou,
+      playerLabel: resolvePlayerHudName(strings.hudGunfighter),
       zegonLabel: strings.hudZegon,
       hudItem: strings.hudItem,
       hudStatus: strings.hudStatus,

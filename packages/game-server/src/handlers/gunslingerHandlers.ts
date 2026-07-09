@@ -169,29 +169,29 @@ export async function handleGunslingerBurn(body: {
 
   try {
     const onChainToken: bigint = await nftService.tokenOfOwner(body.address);
-    if (onChainToken === 0n) {
-      const storedContract = profile.gunslinger.nft.contractAddress?.toLowerCase();
-      const currentContract = nftService.getContractAddress()?.toLowerCase();
-      if (storedContract && currentContract && storedContract !== currentContract) {
-        const updated = await clearGunslingerNft(body.address);
-        return {
-          accepted: true,
-          profile: updated,
-          burn: {
-            tokenId: profile.gunslinger.nft.tokenId,
-            contractAddress: profile.gunslinger.nft.contractAddress,
-            txHash: "",
-            explorerUrl: "",
-            migrated: true,
-          },
-        };
-      }
-      return { accepted: false, reason: "NFT_NOT_ON_CHAIN" };
+
+    if (onChainToken > 0n) {
+      const burn = await nftService.burnForOwner(body.address);
+      const updated = await clearGunslingerNft(body.address);
+      return { accepted: true, profile: updated, burn };
     }
 
-    const burn = await nftService.burnForOwner(body.address);
+    // No token on the active contract — clear profile so the player can mint again.
+    const storedContract = profile.gunslinger.nft.contractAddress?.toLowerCase();
+    const currentContract = nftService.getContractAddress()?.toLowerCase();
     const updated = await clearGunslingerNft(body.address);
-    return { accepted: true, profile: updated, burn };
+    return {
+      accepted: true,
+      profile: updated,
+      burn: {
+        tokenId: profile.gunslinger.nft.tokenId,
+        contractAddress: profile.gunslinger.nft.contractAddress,
+        txHash: "",
+        explorerUrl: "",
+        migrated: Boolean(storedContract && currentContract && storedContract !== currentContract),
+        cleared: true,
+      },
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("NO_TOKEN")) return { accepted: false, reason: "NFT_NOT_ON_CHAIN" };

@@ -81,7 +81,7 @@ export async function burnGunslingerNft(
 ): Promise<{
   ok: boolean;
   profile?: PlayerProfile;
-  burn?: { txHash: string; explorerUrl: string; tokenId: string; migrated?: boolean };
+  burn?: { txHash: string; explorerUrl: string; tokenId: string; migrated?: boolean; cleared?: boolean };
   reason?: string;
 }> {
   const payload = await withSiweAuth({ address });

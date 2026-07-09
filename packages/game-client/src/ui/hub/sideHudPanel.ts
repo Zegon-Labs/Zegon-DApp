@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
 import { preloadZegonDamagePortrait } from "./zegonDamagePortrait.js";
+import { preloadPlayerPortrait } from "./playerHudIdentity.js";
 
 // ── Asset keys ─────────────────────────────────────────────────────────────
 export const SIDE_BAR_KEY        = "side-bar";
@@ -13,8 +14,7 @@ export function preloadSideHudPanels(scene: Phaser.Scene): void {
     scene.load.image(SIDE_BAR_KEY, "/sprites/side_bar.png");
   if (!scene.textures.exists(SIDE_BAR_RIGHT_KEY))
     scene.load.image(SIDE_BAR_RIGHT_KEY, "/sprites/side_bar_right.png");
-  if (!scene.textures.exists(PLAYER_PORTRAIT_KEY))
-    scene.load.image(PLAYER_PORTRAIT_KEY, "/sprites/figura_sin_fondo_v2.png");
+  preloadPlayerPortrait(scene);
   if (!scene.textures.exists(ZEGON_PORTRAIT_KEY))
     scene.load.image(ZEGON_PORTRAIT_KEY, "/sprites/zegon_caracter.png");
   preloadZegonDamagePortrait(scene);
@@ -54,6 +54,8 @@ export interface SideHudPanelOptions {
   showHitsSubtitle?: boolean;
   /** Live duel score under the HP bar (ZEGON panel). */
   showLiveScore?: boolean;
+  /** Name shown above the HP bar (player panel). */
+  nameLabel?: string;
 }
 
 // ── Class ───────────────────────────────────────────────────────────────────
@@ -74,6 +76,7 @@ export class SideHudPanel {
   private readonly scoreLabelText: Phaser.GameObjects.Text | null;
   private readonly scoreValueText: Phaser.GameObjects.Text | null;
   private readonly showLiveScore: boolean;
+  private readonly nameText: Phaser.GameObjects.Text | null;
   private displayedScore = 0;
 
   constructor(scene: Phaser.Scene, opts: SideHudPanelOptions) {
@@ -146,6 +149,23 @@ export class SideHudPanel {
     this.objs.push(this.hpGfx);
     this.drawSegments(0, 1);
 
+    if (opts.nameLabel) {
+      this.nameText = scene.add
+        .text(this.barX + this.barW / 2, this.barY - 3, opts.nameLabel, {
+          fontFamily: FONT_DISPLAY,
+          fontSize: "13px",
+          color: COLORS.gold,
+          letterSpacing: 1,
+          stroke: "#0A0911",
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5, 1)
+        .setDepth(depth + 2);
+      this.objs.push(this.nameText);
+    } else {
+      this.nameText = null;
+    }
+
     if (this.showSubtitle) {
       this.subtitleText = scene.add
         .text(this.barX + this.barW / 2, this.barY + this.barH + 6, "", {
@@ -191,8 +211,11 @@ export class SideHudPanel {
 
   // ── Public API ────────────────────────────────────────────────────────────
 
-  update(hp: number, maxHp: number, hitsLabel?: string): void {
+  update(hp: number, maxHp: number, hitsLabel?: string, nameLabel?: string): void {
     this.drawSegments(Math.max(0, hp), Math.max(1, maxHp));
+    if (this.nameText && nameLabel !== undefined) {
+      this.nameText.setText(nameLabel);
+    }
     if (this.subtitleText) {
       this.subtitleText.setText(hitsLabel ?? "");
       this.subtitleText.setVisible(Boolean(hitsLabel));

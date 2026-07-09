@@ -30,6 +30,7 @@ import {
   onWalletChange,
   truncateAddress,
 } from "../services/wallet.js";
+import { resolvePlayerHudName } from "../ui/hub/playerHudIdentity.js";
 
 export function ProfilePanel() {
   const { strings, language: lang } = useLocale();
@@ -159,6 +160,12 @@ export function ProfilePanel() {
     if (res.ok) tick((n) => n + 1);
   }
 
+  function burnSuccessMessage(burn?: { migrated?: boolean; cleared?: boolean }): string {
+    if (burn?.migrated) return strings.gunslingerNftBurnMigrated;
+    if (burn?.cleared) return strings.gunslingerNftBurnCleared;
+    return strings.gunslingerNftBurned;
+  }
+
   async function handleBurn(): Promise<void> {
     if (!wallet || burnBusy || !gs?.nft) return;
     if (!window.confirm(strings.gunslingerNftBurnConfirm)) return;
@@ -167,16 +174,19 @@ export function ProfilePanel() {
     const res = await burnGunslingerNft(wallet);
     setBurnBusy(false);
     if (res.ok) {
-      setActionMsg(
-        res.burn && "migrated" in res.burn && res.burn.migrated
-          ? strings.gunslingerNftBurnMigrated
-          : strings.gunslingerNftBurned,
-      );
+      setActionMsg(burnSuccessMessage(res.burn));
       tick((n) => n + 1);
     } else if (res.reason === "BURN_NOT_SUPPORTED") {
       setActionMsg(strings.gunslingerNftBurnNotSupported);
+    } else if (res.reason === "NFT_NOT_MINTED") {
+      setActionMsg(strings.gunslingerNftBurnCleared);
+      tick((n) => n + 1);
     } else {
-      setActionMsg(strings.gunslingerNftBurnFailed);
+      setActionMsg(
+        res.reason && res.reason !== "BURN_FAILED"
+          ? `${strings.gunslingerNftBurnFailed} (${res.reason})`
+          : strings.gunslingerNftBurnFailed,
+      );
     }
   }
 
@@ -293,6 +303,7 @@ export function ProfilePanel() {
                   />
                 </div>
                 <div className="gunslinger-section__meta">
+                  <p className="profile-hero-name">{resolvePlayerHudName(strings.hudGunfighter)}</p>
                   {evaluated ? (
                     <p className="gunslinger-rank-label">
                       {format(strings.gunslingerRankLabel, {
