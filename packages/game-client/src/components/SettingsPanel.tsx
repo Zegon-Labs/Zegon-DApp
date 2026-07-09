@@ -5,12 +5,6 @@ import { playSfx } from "../services/sfx.js";
 import { useLocale } from "../hooks/useLocale.js";
 import { notify } from "../lib/toast.js";
 import {
-  fetchProfile,
-  getCachedProfile,
-  saveProfile,
-  validateNickname,
-} from "../services/profile.js";
-import {
   applyPreferences,
   getPreferences,
   onPreferencesChange,
@@ -19,11 +13,9 @@ import {
 } from "../services/preferences.js";
 import {
   connectWallet,
-  disconnectWallet,
   getWalletAddress,
   hasEthereumProvider,
   onWalletChange,
-  truncateAddress,
 } from "../services/wallet.js";
 
 function SettingsSection({
@@ -101,43 +93,15 @@ export function SettingsPanel({
 }) {
   const { strings, language, setLanguage } = useLocale();
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
-  const [nickname, setNickname] = useState("");
   const [prefs, setPrefs] = useState<GamePreferences>(() => getPreferences());
 
   useEffect(() => onWalletChange(setWallet), []);
   useEffect(() => onPreferencesChange(setPrefs), []);
 
-  useEffect(() => {
-    if (!wallet) {
-      setNickname("");
-      return;
-    }
-    const cached = getCachedProfile(wallet);
-    if (cached) setNickname(cached.nickname);
-    void fetchProfile(wallet).then((p) => {
-      if (p) setNickname(p.nickname);
-    });
-  }, [wallet]);
-
   function savePrefs(patch: Partial<GamePreferences>) {
     const next = setPreferences(patch);
     applyPreferences(next);
     notify.info(strings.settingsSoon);
-  }
-
-  async function handleSaveNickname() {
-    if (!wallet) return;
-    const check = validateNickname(nickname);
-    if (!check.ok) {
-      notify.error(check.key === "nicknameLength" ? strings.nicknameLength : strings.nicknameChars);
-      return;
-    }
-    try {
-      await saveProfile(wallet, nickname);
-      notify.success(strings.profileSaved);
-    } catch {
-      notify.error(strings.profileSaveFailed);
-    }
   }
 
   async function handleConnect() {
@@ -188,51 +152,14 @@ export function SettingsPanel({
         </div>
 
         <div className="settings-scroll-area">
-        <SettingsSection title={strings.settingsSectionProfile}>
-          {wallet ? (
-            <>
-              <p className="settings-meta">
-                {strings.settingsProfileWallet}:{" "}
-                <code>{truncateAddress(wallet)}</code>
-              </p>
-              <label className="settings-label" htmlFor="settings-nick">
-                {strings.nicknameLabel}
-              </label>
-              <input
-                id="settings-nick"
-                className="settings-input"
-                value={nickname}
-                maxLength={16}
-                onChange={(e) => setNickname(e.target.value)}
-              />
-              <p className="settings-hint">{strings.nicknameHint}</p>
-              <button
-                type="button"
-                className="btn btn--menu settings-inline-btn"
-                onClick={() => void handleSaveNickname()}
-              >
-                {strings.settingsEditNickname}
-              </button>
-              <button
-                type="button"
-                className="btn btn--menu settings-inline-btn"
-                onClick={() => {
-                  void disconnectWallet();
-                  notify.info(strings.disconnectWallet);
-                }}
-              >
-                {strings.disconnectWallet}
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="settings-hint">{strings.settingsProfileNoWallet}</p>
-              <button type="button" className="btn btn--secondary" onClick={() => void handleConnect()}>
-                {strings.connectWallet}
-              </button>
-            </>
-          )}
-        </SettingsSection>
+        {!wallet ? (
+          <SettingsSection title={strings.settingsSectionProfile}>
+            <p className="settings-hint">{strings.settingsProfileNoWallet}</p>
+            <button type="button" className="btn btn--secondary" onClick={() => void handleConnect()}>
+              {strings.connectWallet}
+            </button>
+          </SettingsSection>
+        ) : null}
 
         <SettingsSection title={strings.settingsSectionLanguage}>
           <div className="hero__lang-row">

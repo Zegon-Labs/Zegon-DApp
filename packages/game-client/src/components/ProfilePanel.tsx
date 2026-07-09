@@ -11,14 +11,24 @@ import {
 import { gameBridge } from "../game/bridge.js";
 import { useLocale } from "../hooks/useLocale.js";
 import { format } from "../i18n/index.js";
+import { notify } from "../lib/toast.js";
 import {
   fetchProfile,
   getCachedProfile,
   onProfileChange,
+  saveProfile,
+  validateNickname,
   xpProgress,
 } from "../services/profile.js";
 import { evaluateGunslinger, mintGunslingerNft, setGunslingerGender } from "../services/gunslinger.js";
-import { getWalletAddress, onWalletChange } from "../services/wallet.js";
+import {
+  connectWallet,
+  disconnectWallet,
+  getWalletAddress,
+  hasEthereumProvider,
+  onWalletChange,
+  truncateAddress,
+} from "../services/wallet.js";
 
 export function ProfilePanel() {
   const { strings, language: lang } = useLocale();
@@ -27,15 +37,28 @@ export function ProfilePanel() {
   const [evalBusy, setEvalBusy] = useState(false);
   const [mintBusy, setMintBusy] = useState(false);
   const [actionMsg, setActionMsg] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [nickBusy, setNickBusy] = useState(false);
 
   useEffect(() => onWalletChange(setWallet), []);
 
   useEffect(() => {
-    if (!wallet) return;
-    void fetchProfile(wallet).then(() => tick((n) => n + 1));
+    if (!wallet) {
+      setNickname("");
+      return;
+    }
+    const cached = getCachedProfile(wallet);
+    if (cached) setNickname(cached.nickname);
+    void fetchProfile(wallet).then((p) => {
+      if (p) setNickname(p.nickname);
+      tick((n) => n + 1);
+    });
     return onProfileChange((addr) => {
       if (addr === wallet) {
-        void fetchProfile(wallet).then(() => tick((n) => n + 1));
+        void fetchProfile(wallet).then((p) => {
+          if (p) setNickname(p.nickname);
+          tick((n) => n + 1);
+        });
       }
     });
   }, [wallet]);
@@ -61,6 +84,43 @@ export function ProfilePanel() {
 
   const nftNeedsUpdate =
     Boolean(gs?.nft) && (gs?.nft?.rankAtMint ?? 0) < currentRank;
+
+  async function handleSaveNickname(): Promise<void> {
+    if (!wallet || nickBusy) return;
+    const check = validateNickname(nickname);
+    if (!check.ok) {
+      notify.error(check.key === "nicknameLength" ? strings.nicknameLength : strings.nicknameChars);
+      return;
+    }
+    setNickBusy(true);
+    try {
+      await saveProfile(wallet, nickname);
+      notify.success(strings.profileSaved);
+      tick((n) => n + 1);
+    } catch {
+      notify.error(strings.profileSaveFailed);
+    } finally {
+      setNickBusy(false);
+    }
+  }
+
+  async function handleConnect(): Promise<void> {
+    if (!hasEthereumProvider()) {
+      notify.error(strings.walletNoProvider);
+      return;
+    }
+    try {
+      await connectWallet();
+      notify.success(strings.walletConnected);
+    } catch {
+      notify.error(strings.walletNoProvider);
+    }
+  }
+
+  async function handleDisconnect(): Promise<void> {
+    await disconnectWallet();
+    notify.info(strings.disconnectWallet);
+  }
 
   async function handleEvaluate(): Promise<void> {
     if (!wallet || evalBusy) return;
@@ -128,12 +188,56 @@ export function ProfilePanel() {
     <div className="hero__overlay" role="dialog" aria-modal="true">
       <div className="hero__panel hero__panel--wide hero__panel--utility">
         <h2 className="hero__panel-title">{strings.profileTitle}</h2>
-        {!wallet || !profile ? (
-          <p className="hero__verify-copy">{strings.settingsProfileNoWallet}</p>
+        {!wallet ? (
+          <div className="utility-panel-body">
+            <p className="hero__verify-copy">{strings.settingsProfileNoWallet}</p>
+            <button
+              type="button"
+              className="utility-sprite-button profile-account__connect"
+              onClick={() => void handleConnect()}
+            >
+              {strings.connectWallet}
+            </button>
+          </div>
         ) : (
           <div className="utility-panel-body">
-            <p className="profile-hero-name">{profile.nickname}</p>
+            <section className="profile-account" aria-label={strings.settingsSectionProfile}>
+              <h3 className="profile-account__title">{strings.settingsSectionProfile}</h3>
+              <p className="profile-account__wallet">
+                {strings.settingsProfileWallet}: <code>{truncateAddress(wallet)}</code>
+              </p>
+              <label className="profile-account__label" htmlFor="profile-nick">
+                {strings.nicknameLabel}
+              </label>
+              <input
+                id="profile-nick"
+                className="profile-account__input"
+                value={nickname}
+                maxLength={16}
+                onChange={(e) => setNickname(e.target.value)}
+              />
+              <p className="profile-account__hint">{strings.nicknameHint}</p>
+              <div className="profile-account__actions">
+                <button
+                  type="button"
+                  className="utility-sprite-button profile-account__btn"
+                  disabled={nickBusy}
+                  onClick={() => void handleSaveNickname()}
+                >
+                  {strings.settingsEditNickname}
+                </button>
+                <button
+                  type="button"
+                  className="utility-sprite-button profile-account__btn profile-account__btn--ghost"
+                  onClick={() => void handleDisconnect()}
+                >
+                  {strings.disconnectWallet}
+                </button>
+              </div>
+            </section>
 
+            {profile ? (
+              <>
             <section className="gunslinger-section" aria-label={strings.gunslingerRankTitle}>
               <h3 className="gunslinger-section__title">{strings.gunslingerRankTitle}</h3>
               <div className="gunslinger-section__hero">
@@ -326,6 +430,10 @@ export function ProfilePanel() {
                   return <li key={id}>{lang === "es" ? ach.nameEs : ach.nameEn}</li>;
                 })}
               </ul>
+            )}
+              </>
+            ) : (
+              <p className="profile-account__setup">{strings.profileSaveNicknameFirst}</p>
             )}
           </div>
         )}

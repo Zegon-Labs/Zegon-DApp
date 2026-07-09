@@ -223,6 +223,7 @@ export interface LocaleStrings {
   profileSkip: string;
   profileSaved: string;
   profileSaveFailed: string;
+  profileSaveNicknameFirst: string;
   settingsProfileWallet: string;
   settingsProfileNoWallet: string;
   settingsEditNickname: string;
@@ -695,6 +696,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     profileSkip: "Later",
     profileSaved: "Profile saved",
     profileSaveFailed: "Could not save profile. Try again.",
+    profileSaveNicknameFirst: "Save your nickname above to unlock stats, Gunslinger rank, and NFT minting.",
     settingsProfileWallet: "Wallet",
     settingsProfileNoWallet: "Connect a wallet to create your player profile and join rankings.",
     settingsEditNickname: "Save nickname",
@@ -1175,6 +1177,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     profileSkip: "Después",
     profileSaved: "Perfil guardado",
     profileSaveFailed: "No se pudo guardar. Intentá de nuevo.",
+    profileSaveNicknameFirst: "Guardá tu nickname arriba para desbloquear stats, rango Gunslinger y mint del NFT.",
     settingsProfileWallet: "Wallet",
     settingsProfileNoWallet: "Conectá una wallet para crear tu perfil y entrar al ranking.",
     settingsEditNickname: "Guardar nickname",
