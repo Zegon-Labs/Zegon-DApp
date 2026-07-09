@@ -119,29 +119,30 @@ export class SideHudPanel {
     const innerCX      = innerLeft + innerW / 2;
     const innerCY      = innerTop + innerH / 2;
 
-    const portraitKey = opts.side === "left" ? PLAYER_PORTRAIT_KEY : ZEGON_PORTRAIT_KEY;
-    if (scene.textures.exists(portraitKey)) {
-      const portrait = scene.add
-        .image(innerCX, innerCY, portraitKey)
-        .setOrigin(0.5, 0.5)
-        .setDepth(depth);
-      portrait.setScale(Math.min(innerW / portrait.width, innerH / portrait.height));
-
-      const maskGfx = scene.make.graphics({ x: 0, y: 0 });
-      maskGfx.fillStyle(0xffffff);
-      maskGfx.fillRect(innerLeft, innerTop, innerW, innerH);
-      portrait.setMask(maskGfx.createGeometryMask());
-      this.objs.push(portrait, maskGfx);
-    }
-
-    // ── Panel frame (drawn above portrait so the border covers the edges) ───
+    // ── Panel frame (background — inner window is opaque, portrait goes on top) ─
     if (scene.textures.exists(imgKey)) {
       const panel = scene.add
         .image(opts.x, opts.y, imgKey)
         .setOrigin(originX, 0)
         .setScale(scaleX, scaleY)
-        .setDepth(depth + 1);
+        .setDepth(depth);
       this.objs.push(panel);
+    }
+
+    const portraitKey = opts.side === "left" ? PLAYER_PORTRAIT_KEY : ZEGON_PORTRAIT_KEY;
+    if (scene.textures.exists(portraitKey)) {
+      const portrait = scene.add
+        .image(innerCX, innerCY, portraitKey)
+        .setOrigin(0.5, 0.5)
+        .setDepth(depth + 1);
+      portrait.setScale(Math.min(innerW / portrait.width, innerH / portrait.height));
+
+      const maskGfx = scene.add.graphics({ x: 0, y: 0 });
+      maskGfx.setVisible(false);
+      maskGfx.fillStyle(0xffffff);
+      maskGfx.fillRect(innerLeft, innerTop, innerW, innerH);
+      portrait.setMask(maskGfx.createGeometryMask());
+      this.objs.push(portrait, maskGfx);
     }
 
     // ── HP bar geometry ───────────────────────────────────────────────────────
@@ -320,7 +321,12 @@ export class SideHudPanel {
   hpBarCenterY(): number { return this.barY + this.barH / 2; }
 
   destroy(): void {
-    for (const obj of this.objs) obj.destroy();
+    for (const obj of this.objs) {
+      if (obj instanceof Phaser.GameObjects.Image && obj.mask) {
+        obj.clearMask(true);
+      }
+      obj.destroy();
+    }
     this.objs.length = 0;
   }
 
