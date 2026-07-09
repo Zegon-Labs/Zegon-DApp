@@ -45,6 +45,8 @@ const BAR_H_PX = 20;
 // Portrait viewport inset inside the ornamental frame (fraction of zone A / panel height)
 const PORTRAIT_INSET_X = 0.18;
 const PORTRAIT_INSET_Y = 0.15;
+/** ZEGON sprite has extra transparent padding — cover-scale fills the frame better. */
+const ZEGON_PORTRAIT_COVER_BOOST = 1.22;
 
 // ── Options ─────────────────────────────────────────────────────────────────
 export interface SideHudPanelOptions {
@@ -135,7 +137,13 @@ export class SideHudPanel {
         .image(innerCX, innerCY, portraitKey)
         .setOrigin(0.5, 0.5)
         .setDepth(depth + 1);
-      portrait.setScale(Math.min(innerW / portrait.width, innerH / portrait.height));
+      const fitW = innerW / portrait.width;
+      const fitH = innerH / portrait.height;
+      const fitScale =
+        opts.side === "right"
+          ? Math.max(fitW, fitH) * ZEGON_PORTRAIT_COVER_BOOST
+          : Math.min(fitW, fitH);
+      portrait.setScale(fitScale);
 
       const maskGfx = scene.add.graphics({ x: 0, y: 0 });
       maskGfx.setVisible(false);
