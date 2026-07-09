@@ -1,4 +1,25 @@
-import type { UpgradeLevels, SaloonRelicLevels, SaloonRelicId } from "@zegon/game-core";
+import type { UpgradeLevels, SaloonRelicLevels, SaloonRelicId, CharacterGender } from "@zegon/game-core";
+
+export interface GunslingerNftRecord {
+  tokenId: string;
+  contractAddress: string;
+  metadataRootHash: string;
+  portraitRootHash?: string;
+  mintedAt: number;
+  txHash: string;
+  rankAtMint: number;
+}
+
+export interface GunslingerProfile {
+  rank: number;
+  bio: string;
+  bioLang: "en" | "es";
+  characterGender: CharacterGender;
+  evaluatedAt: number;
+  duelsAtEvaluation: number;
+  lastManualEvalAt?: number;
+  nft?: GunslingerNftRecord;
+}
 
 export interface PlayerStats {
   duelsWon: number;
@@ -38,6 +59,8 @@ export interface PlayerProfile {
   unlocks: string[];
   achievements: string[];
   dailyAttempts: Record<string, DailyAttempt>;
+  gunslinger?: GunslingerProfile | null;
+  recentDuelIds?: string[];
 }
 
 export const DEFAULT_STATS: PlayerStats = {
@@ -78,5 +101,7 @@ export function normalizeProfile(
     unlocks: raw.unlocks ?? [],
     achievements: raw.achievements ?? [],
     dailyAttempts: raw.dailyAttempts ?? {},
+    gunslinger: raw.gunslinger ?? null,
+    recentDuelIds: raw.recentDuelIds ?? [],
   };
 }

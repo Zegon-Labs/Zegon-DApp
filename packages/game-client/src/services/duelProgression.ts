@@ -8,6 +8,7 @@ import {
 } from "@zegon/game-core";
 import { fetchProfile, getCachedProfile, mergeRemoteProfile, recordLocalProgress, saveProfile, type PlayerProfile } from "./profile.js";
 import { withSiweAuth } from "./siwe.js";
+import { getLanguage } from "../i18n/index.js";
 
 async function ensureServerProfile(address: string): Promise<boolean> {
   const cached = getCachedProfile(address);
@@ -56,6 +57,7 @@ export async function persistDuelProgression(
     playTimeMs?: number;
     dailyRank?: number;
     verifiedOnly?: boolean;
+    duelId?: string | null;
   },
 ): Promise<{ earned: string[]; notchesGain: number; xpGain: number; statsSaved: boolean }> {
   const cached = getCachedProfile(address);
@@ -160,6 +162,8 @@ export async function persistDuelProgression(
     achievements: earned.length > 0 ? earned : undefined,
     unlocks: unlocks.length > 0 ? unlocks : undefined,
     duelDay: today,
+    duelId: options.duelId ?? undefined,
+    lang: getLanguage(),
   });
   const posted = await postProfileStats(payload);
   if (posted.ok && posted.profile) {

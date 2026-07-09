@@ -22,5 +22,6 @@ export * from "./progression/upgrades.js";
 export * from "./progression/saloonProgression.js";
 export * from "./progression/saloonRelics.js";
 export * from "./progression/notches.js";
+export * from "./progression/gunslingerRank.js";
 export * from "./score/breakdown.js";
 export * from "./score/calculate.js";

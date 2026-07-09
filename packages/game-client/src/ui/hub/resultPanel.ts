@@ -29,7 +29,7 @@ const BTN_GAP     = 4;
 const BTN_W_FULL  = 300;
 const BTN_W_HALF  = (BTN_W_FULL - BTN_GAP) / 2;
 
-const PROGRESS_SLOT_H = 34;
+const PROGRESS_SLOT_H = 92;
 const FOOTER_INNER_PAD = 12;
 const STATUS_FOOTER_GAP = 10;
 
@@ -449,6 +449,18 @@ function measurePanelContent(
   const verifyH = verifyMeasure.height;
   verifyMeasure.destroy();
 
+  const progressSample =
+    "+99 XP · +20 Notches\n+55 Ghost (ranking)\n🏅 achievement\nScore saved to global ranking";
+  const progressMeasure = scene.add.text(0, 0, progressSample, {
+    fontFamily: FONT,
+    fontSize: compact ? "11px" : "12px",
+    align: "center",
+    wordWrap: { width: INNER_W - 24 },
+    lineSpacing: 5,
+  });
+  const progressH = Math.max(profile.progressSlotH, progressMeasure.height + 8);
+  progressMeasure.destroy();
+
   const primaryBtns = options.buttons.filter((b) => b.primary);
   const secondaryBtns = options.buttons.filter((b) => !b.primary);
   const btnBlockH = measureButtonBlock(primaryBtns.length, secondaryBtns.length, profile);
@@ -460,7 +472,7 @@ function measurePanelContent(
   h += statsH + profile.sectionGap;
   if (options.walletHint) h += walletHintH + profile.sectionGap;
   h += verifyH + 8;
-  h += profile.progressSlotH + STATUS_FOOTER_GAP;
+  h += progressH + STATUS_FOOTER_GAP;
   h += btnBlockH + FOOTER_INNER_PAD * 2;
   h += profile.innerPadB;
   return h;
@@ -714,19 +726,24 @@ export function createHubResultPanel(
 
   const statusSlotTop = y;
   const dailyLabel = scene.add
-    .text(0, statusSlotTop + profile.progressSlotH / 2, "", {
+    .text(0, statusSlotTop + 4, "", {
       fontFamily: FONT,
       fontSize: compact ? "11px" : "12px",
       color: COLORS.gold,
       align: "center",
       wordWrap: { width: INNER_W - 24 },
-      lineSpacing: 3,
+      lineSpacing: 5,
     })
-    .setOrigin(0.5, 0.5)
+    .setOrigin(0.5, 0)
     .setAlpha(0)
     .setResolution(2);
   container.add(dailyLabel);
   y += profile.progressSlotH + STATUS_FOOTER_GAP;
+
+  const relayoutFooter = () => {
+    const progressTop = verifyLabel.y + verifyLabel.height + 8;
+    dailyLabel.setY(progressTop);
+  };
 
   const btnBlockH = measureButtonBlock(primaryBtns.length, secondaryBtns.length, profile);
   addButtonFooter(scene, container, y, btnBlockH);
@@ -750,10 +767,6 @@ export function createHubResultPanel(
     }
     y += profile.btnH + profile.btnGap;
   }
-
-  const relayoutFooter = () => {
-    dailyLabel.setY(statusSlotTop + profile.progressSlotH / 2);
-  };
 
   return {
     container,

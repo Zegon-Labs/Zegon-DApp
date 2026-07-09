@@ -49,7 +49,7 @@ import {
   type SaloonLoadoutPanelLabels,
   type SpriteActionEntry,
 } from "../ui/hub/index.js";
-import { DUEL_LAYOUT as L } from "../ui/layout.js";
+import { DUEL_LAYOUT as L, loadoutPanelX, loadoutPanelY } from "../ui/layout.js";
 import { buildRoundSummary, type ActionLabelRole } from "../ui/roundSummary.js";
 import { showFloatingDamage } from "../ui/floatingDamage.js";
 import { safeShake } from "../ui/safeShake.js";
@@ -206,9 +206,9 @@ export class DuelScene extends Phaser.Scene {
     this.historyLog = new DuelHistoryLog(this, strings.history, 12);
     this.saloonLoadout = new SaloonLoadoutPanel(
       this,
-      L.history.x,
-      L.history.y + this.historyLog.panelHeight + L.loadout.gap,
-      L.history.w,
+      loadoutPanelX(width, L.loadout.panelW),
+      loadoutPanelY(width, 110),
+      L.loadout.panelW,
       this.loadoutPanelLabels(),
       12,
     );
@@ -788,6 +788,7 @@ export class DuelScene extends Phaser.Scene {
       profile?.equippedConsumable,
       getLanguage(),
     );
+    this.repositionLoadout();
 
     const liveScore = estimateLiveScore(state);
 
@@ -818,6 +819,16 @@ export class DuelScene extends Phaser.Scene {
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
     this.updateActionBarHelp();
+  }
+
+  private repositionLoadout(): void {
+    const { width } = this.scale;
+    const panelW = L.loadout.panelW;
+    const panelH = this.saloonLoadout.getPanelHeight();
+    this.saloonLoadout.setPanelPosition(
+      loadoutPanelX(width, panelW),
+      loadoutPanelY(width, panelH),
+    );
   }
 
   private updateActionButtons(): void {

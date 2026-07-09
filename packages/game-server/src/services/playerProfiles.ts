@@ -4,15 +4,18 @@ import {
   canPurchaseConsumable,
   getUpgradeLevel,
   getConsumableCount,
+  GUNSLINGER_MAX_RECENT_DUELS,
   type UpgradeId,
   type UpgradeLevels,
   type SaloonRelicId,
   type SaloonRelicLevels,
+  type CharacterGender,
 } from "@zegon/game-core";
 import { getSql, isDatabaseConfigured } from "./db.js";
 import {
   normalizeProfile,
   type DailyAttempt,
+  type GunslingerProfile,
   type PlayerProfile,
   type PlayerStats,
 } from "./profileTypes.js";
@@ -64,7 +67,8 @@ async function loadProfileFromDb(address: string): Promise<PlayerProfile | null>
   if (!sql) return null;
   const rows = (await sql`
     SELECT address, nickname, created_at, updated_at, xp, level, notches,
-           upgrades, relics, unlocks, achievements, daily_attempts, stats
+           upgrades, relics, unlocks, achievements, daily_attempts, stats,
+           gunslinger, recent_duel_ids
     FROM players WHERE address = ${normalizeAddress(address)}
   `) as Array<Record<string, unknown>>;
   const row = rows[0];
@@ -83,6 +87,8 @@ async function loadProfileFromDb(address: string): Promise<PlayerProfile | null>
     achievements: (row.achievements ?? []) as string[],
     dailyAttempts: (row.daily_attempts ?? {}) as Record<string, DailyAttempt>,
     stats: (row.stats ?? {}) as Partial<PlayerStats>,
+    gunslinger: (row.gunslinger ?? null) as GunslingerProfile | null,
+    recentDuelIds: (row.recent_duel_ids ?? []) as string[],
   });
 }
 
@@ -92,7 +98,8 @@ async function saveProfileToDb(profile: PlayerProfile): Promise<void> {
   await sql`
     INSERT INTO players (
       address, nickname, created_at, updated_at, xp, level, notches,
-      upgrades, relics, unlocks, achievements, daily_attempts, stats
+      upgrades, relics, unlocks, achievements, daily_attempts, stats,
+      gunslinger, recent_duel_ids
     ) VALUES (
       ${profile.address}, ${profile.nickname}, ${profile.createdAt}, ${profile.updatedAt},
       ${profile.xp}, ${profile.level}, ${profile.notches},
@@ -101,7 +108,9 @@ async function saveProfileToDb(profile: PlayerProfile): Promise<void> {
       ${JSON.stringify(profile.unlocks)}::jsonb,
       ${JSON.stringify(profile.achievements)}::jsonb,
       ${JSON.stringify(profile.dailyAttempts)}::jsonb,
-      ${JSON.stringify(profile.stats)}::jsonb
+      ${JSON.stringify(profile.stats)}::jsonb,
+      ${profile.gunslinger ? JSON.stringify(profile.gunslinger) : null}::jsonb,
+      ${JSON.stringify(profile.recentDuelIds ?? [])}::jsonb
     )
     ON CONFLICT (address) DO UPDATE SET
       nickname = EXCLUDED.nickname,
@@ -114,7 +123,9 @@ async function saveProfileToDb(profile: PlayerProfile): Promise<void> {
       unlocks = EXCLUDED.unlocks,
       achievements = EXCLUDED.achievements,
       daily_attempts = EXCLUDED.daily_attempts,
-      stats = EXCLUDED.stats
+      stats = EXCLUDED.stats,
+      gunslinger = EXCLUDED.gunslinger,
+      recent_duel_ids = EXCLUDED.recent_duel_ids
   `;
 }
 
@@ -124,7 +135,8 @@ async function loadAllProfiles(): Promise<PlayerProfile[]> {
     if (sql) {
       const rows = (await sql`
         SELECT address, nickname, created_at, updated_at, xp, level, notches,
-               upgrades, relics, unlocks, achievements, daily_attempts, stats
+               upgrades, relics, unlocks, achievements, daily_attempts, stats,
+               gunslinger, recent_duel_ids
         FROM players
       `) as Array<Record<string, unknown>>;
       return rows.map((row) =>
@@ -141,6 +153,8 @@ async function loadAllProfiles(): Promise<PlayerProfile[]> {
           achievements: (row.achievements ?? []) as string[],
           dailyAttempts: (row.daily_attempts ?? {}) as Record<string, DailyAttempt>,
           stats: (row.stats ?? {}) as Partial<PlayerStats>,
+          gunslinger: (row.gunslinger ?? null) as GunslingerProfile | null,
+          recentDuelIds: (row.recent_duel_ids ?? []) as string[],
         }),
       );
     }
@@ -203,6 +217,8 @@ export async function setProfile(
     unlocks: existing?.unlocks,
     achievements: existing?.achievements,
     dailyAttempts: existing?.dailyAttempts,
+    gunslinger: existing?.gunslinger,
+    recentDuelIds: existing?.recentDuelIds,
   });
 
   await persistProfile(profile);
@@ -318,7 +334,97 @@ export async function updateProfileStats(
     for (const u of update.newUnlocks) set.add(u);
     profile.unlocks = [...set];
   }
+  if (update.duelId) {
+    profile.recentDuelIds = appendRecentDuelId(profile.recentDuelIds ?? [], update.duelId);
+  }
   profile.updatedAt = now;
+  await persistProfile(profile);
+  return profile;
+}
+
+function appendRecentDuelId(existing: string[], duelId: string): string[] {
+  const id = duelId.trim();
+  if (!id) return existing;
+  const next = [id, ...existing.filter((d) => d !== id)];
+  return next.slice(0, GUNSLINGER_MAX_RECENT_DUELS);
+}
+
+export async function appendPlayerDuelId(address: string, duelId: string): Promise<PlayerProfile | null> {
+  if (!isWalletAddress(address) || !duelId.trim()) return null;
+  const profile = await getProfile(normalizeAddress(address));
+  if (!profile) return null;
+  profile.recentDuelIds = appendRecentDuelId(profile.recentDuelIds ?? [], duelId);
+  profile.updatedAt = Date.now();
+  await persistProfile(profile);
+  return profile;
+}
+
+export async function updateGunslingerProfile(
+  address: string,
+  patch: Partial<GunslingerProfile> & Pick<GunslingerProfile, "rank" | "bio" | "bioLang">,
+  options?: { manual?: boolean; duelsPlayed?: number },
+): Promise<PlayerProfile> {
+  if (!isWalletAddress(address)) throw new Error("INVALID_ADDRESS");
+  const key = normalizeAddress(address);
+  const existing = await getProfile(key);
+  if (!existing) throw new Error("PROFILE_REQUIRED");
+
+  const profile = normalizeProfile(existing);
+  const prev = profile.gunslinger;
+  const now = Date.now();
+  profile.gunslinger = {
+    rank: patch.rank,
+    bio: patch.bio,
+    bioLang: patch.bioLang,
+    characterGender: patch.characterGender ?? prev?.characterGender ?? "man",
+    evaluatedAt: patch.evaluatedAt ?? now,
+    duelsAtEvaluation: patch.duelsAtEvaluation ?? options?.duelsPlayed ?? profile.stats.duelsPlayed,
+    lastManualEvalAt: options?.manual ? now : patch.lastManualEvalAt ?? prev?.lastManualEvalAt,
+    nft: patch.nft ?? prev?.nft,
+  };
+  profile.updatedAt = now;
+  await persistProfile(profile);
+  return profile;
+}
+
+export async function setGunslingerGender(
+  address: string,
+  characterGender: CharacterGender,
+): Promise<PlayerProfile> {
+  if (!isWalletAddress(address)) throw new Error("INVALID_ADDRESS");
+  const key = normalizeAddress(address);
+  const existing = await getProfile(key);
+  if (!existing) throw new Error("PROFILE_REQUIRED");
+
+  const profile = normalizeProfile(existing);
+  const prev = profile.gunslinger;
+  profile.gunslinger = {
+    rank: prev?.rank ?? 0,
+    bio: prev?.bio ?? "",
+    bioLang: prev?.bioLang ?? "en",
+    characterGender,
+    evaluatedAt: prev?.evaluatedAt ?? 0,
+    duelsAtEvaluation: prev?.duelsAtEvaluation ?? 0,
+    lastManualEvalAt: prev?.lastManualEvalAt,
+    nft: prev?.nft,
+  };
+  profile.updatedAt = Date.now();
+  await persistProfile(profile);
+  return profile;
+}
+
+export async function saveGunslingerNft(
+  address: string,
+  nft: NonNullable<GunslingerProfile["nft"]>,
+): Promise<PlayerProfile> {
+  if (!isWalletAddress(address)) throw new Error("INVALID_ADDRESS");
+  const key = normalizeAddress(address);
+  const existing = await getProfile(key);
+  if (!existing?.gunslinger) throw new Error("GUNSLINGER_REQUIRED");
+
+  const profile = normalizeProfile(existing);
+  profile.gunslinger = { ...profile.gunslinger!, nft };
+  profile.updatedAt = Date.now();
   await persistProfile(profile);
   return profile;
 }

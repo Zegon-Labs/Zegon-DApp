@@ -14,10 +14,16 @@ CREATE TABLE IF NOT EXISTS players (
   unlocks JSONB NOT NULL DEFAULT '[]',
   achievements JSONB NOT NULL DEFAULT '[]',
   daily_attempts JSONB NOT NULL DEFAULT '{}',
-  stats JSONB NOT NULL DEFAULT '{}'
+  stats JSONB NOT NULL DEFAULT '{}',
+  gunslinger JSONB,
+  recent_duel_ids JSONB NOT NULL DEFAULT '[]'
 );
 
 CREATE INDEX IF NOT EXISTS idx_players_nickname ON players (nickname);
+
+-- Migrations for existing deployments (no-op on fresh installs)
+ALTER TABLE players ADD COLUMN IF NOT EXISTS gunslinger JSONB;
+ALTER TABLE players ADD COLUMN IF NOT EXISTS recent_duel_ids JSONB NOT NULL DEFAULT '[]';
 
 CREATE TABLE IF NOT EXISTS global_scores (
   player_id TEXT PRIMARY KEY REFERENCES players(address) ON DELETE CASCADE,

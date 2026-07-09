@@ -2,6 +2,7 @@
   "address": "DEPLOY_WITH_pnpm_deploy",
   "poolAddress": "DEPLOY_WITH_pnpm_deploy_pool",
   "leaderboardAddress": "DEPLOY_WITH_pnpm_deploy_leaderboard",
+  "gunslingerAddress": "DEPLOY_WITH_pnpm_deploy_gunslinger",
   "operator": "YOUR_WALLET_ADDRESS",
   "network": "galileo",
   "chainId": 16602,

@@ -1,5 +1,13 @@
-import { useEffect, useState } from "react";
-import { ACHIEVEMENTS } from "@zegon/game-core";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ACHIEVEMENTS,
+  GUNSLINGER_RANKS,
+  canRequestManualGunslingerEval,
+  gunslingerPortraitPath,
+  gunslingerRankName,
+  gunslingerUnlockHint,
+  type CharacterGender,
+} from "@zegon/game-core";
 import { gameBridge } from "../game/bridge.js";
 import { useLocale } from "../hooks/useLocale.js";
 import { format } from "../i18n/index.js";
@@ -9,12 +17,16 @@ import {
   onProfileChange,
   xpProgress,
 } from "../services/profile.js";
+import { evaluateGunslinger, mintGunslingerNft, setGunslingerGender } from "../services/gunslinger.js";
 import { getWalletAddress, onWalletChange } from "../services/wallet.js";
 
 export function ProfilePanel() {
   const { strings, language: lang } = useLocale();
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
   const [, tick] = useState(0);
+  const [evalBusy, setEvalBusy] = useState(false);
+  const [mintBusy, setMintBusy] = useState(false);
+  const [actionMsg, setActionMsg] = useState("");
 
   useEffect(() => onWalletChange(setWallet), []);
 
@@ -32,6 +44,60 @@ export function ProfilePanel() {
   const stats = profile?.stats;
   const xp = profile?.xp ?? 0;
   const prog = xpProgress(xp);
+  const gs = profile?.gunslinger;
+  const gender: CharacterGender = gs?.characterGender ?? "man";
+  const currentRank = gs?.rank ?? 0;
+  const evaluated = Boolean(gs?.evaluatedAt && currentRank > 0);
+
+  const evalGate = useMemo(
+    () =>
+      canRequestManualGunslingerEval(stats?.duelsPlayed ?? 0, gs ?? null),
+    [stats?.duelsPlayed, gs],
+  );
+
+  const portraitSrc = evaluated
+    ? gunslingerPortraitPath(currentRank, gender)
+    : gunslingerPortraitPath(1, gender);
+
+  const nftNeedsUpdate =
+    Boolean(gs?.nft) && (gs?.nft?.rankAtMint ?? 0) < currentRank;
+
+  async function handleEvaluate(): Promise<void> {
+    if (!wallet || evalBusy) return;
+    setEvalBusy(true);
+    setActionMsg("");
+    const res = await evaluateGunslinger(wallet, lang, true);
+    setEvalBusy(false);
+    if (res.ok) {
+      tick((n) => n + 1);
+    } else if (res.reason === "NEED_DUELS") {
+      setActionMsg(strings.gunslingerEvalNeedDuels);
+    } else if (res.reason === "COOLDOWN") {
+      setActionMsg(strings.gunslingerEvalCooldown);
+    } else if (res.reason === "NEED_NEW_DUELS") {
+      setActionMsg(strings.gunslingerEvalNeedNewDuels);
+    }
+  }
+
+  async function handleGender(next: CharacterGender): Promise<void> {
+    if (!wallet || next === gender) return;
+    const res = await setGunslingerGender(wallet, next);
+    if (res.ok) tick((n) => n + 1);
+  }
+
+  async function handleMint(): Promise<void> {
+    if (!wallet || mintBusy || !evaluated) return;
+    setMintBusy(true);
+    setActionMsg("");
+    const res = await mintGunslingerNft(wallet, lang);
+    setMintBusy(false);
+    if (res.ok && res.mint) {
+      setActionMsg(strings.gunslingerMinted);
+      tick((n) => n + 1);
+    } else {
+      setActionMsg(strings.gunslingerMintFailed);
+    }
+  }
 
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
@@ -42,6 +108,132 @@ export function ProfilePanel() {
         ) : (
           <div className="utility-panel-body">
             <p className="profile-hero-name">{profile.nickname}</p>
+
+            <section className="gunslinger-section" aria-label={strings.gunslingerRankTitle}>
+              <h3 className="gunslinger-section__title">{strings.gunslingerRankTitle}</h3>
+              <div className="gunslinger-section__hero">
+                <div className={`gunslinger-portrait${evaluated ? "" : " gunslinger-portrait--pending"}`}>
+                  <img
+                    src={portraitSrc}
+                    alt={
+                      evaluated
+                        ? format(strings.gunslingerRankLabel, {
+                            rank: currentRank,
+                            name: gunslingerRankName(currentRank, lang),
+                          })
+                        : strings.gunslingerRankTitle
+                    }
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.opacity = "0.35";
+                    }}
+                  />
+                </div>
+                <div className="gunslinger-section__meta">
+                  {evaluated ? (
+                    <p className="gunslinger-rank-label">
+                      {format(strings.gunslingerRankLabel, {
+                        rank: currentRank,
+                        name: gunslingerRankName(currentRank, lang),
+                      })}
+                    </p>
+                  ) : null}
+                  <p className="gunslinger-bio">
+                    {gs?.bio?.trim() || strings.gunslingerBioPlaceholder}
+                  </p>
+                  <div className="gunslinger-gender-toggle" role="group" aria-label={strings.gunslingerRankTitle}>
+                    <button
+                      type="button"
+                      className={`gunslinger-gender-btn${gender === "man" ? " gunslinger-gender-btn--active" : ""}`}
+                      onClick={() => void handleGender("man")}
+                    >
+                      {strings.gunslingerGenderMan}
+                    </button>
+                    <button
+                      type="button"
+                      className={`gunslinger-gender-btn${gender === "woman" ? " gunslinger-gender-btn--active" : ""}`}
+                      onClick={() => void handleGender("woman")}
+                    >
+                      {strings.gunslingerGenderWoman}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <ol className="gunslinger-rank-ladder">
+                {GUNSLINGER_RANKS.map((def) => {
+                  const unlocked = evaluated && currentRank >= def.rank;
+                  const isCurrent = evaluated && currentRank === def.rank;
+                  return (
+                    <li
+                      key={def.rank}
+                      className={`gunslinger-rank-step${unlocked ? " gunslinger-rank-step--unlocked" : ""}${isCurrent ? " gunslinger-rank-step--current" : ""}`}
+                    >
+                      <span className="gunslinger-rank-step__num">{def.rank}</span>
+                      <div className="gunslinger-rank-step__body">
+                        <span className="gunslinger-rank-step__name">
+                          {lang === "es" ? def.nameEs : def.nameEn}
+                        </span>
+                        {!unlocked ? (
+                          <span className="gunslinger-rank-step__hint">
+                            {gunslingerUnlockHint(def.rank, lang)}
+                          </span>
+                        ) : isCurrent ? (
+                          <span className="gunslinger-rank-step__badge">{strings.gunslingerRankCurrent}</span>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <div className="gunslinger-actions">
+                <button
+                  type="button"
+                  className="utility-sprite-button gunslinger-actions__btn"
+                  disabled={evalBusy || !evalGate.ok}
+                  onClick={() => void handleEvaluate()}
+                >
+                  {evalBusy ? strings.gunslingerEvaluating : strings.gunslingerEvaluate}
+                </button>
+                {evaluated ? (
+                  <button
+                    type="button"
+                    className="utility-sprite-button gunslinger-actions__btn gunslinger-actions__btn--mint"
+                    disabled={mintBusy || (Boolean(gs?.nft) && !nftNeedsUpdate)}
+                    onClick={() => void handleMint()}
+                  >
+                    {mintBusy
+                      ? strings.gunslingerMinting
+                      : nftNeedsUpdate
+                        ? strings.gunslingerUpdateNft
+                        : gs?.nft
+                          ? strings.gunslingerMinted
+                          : strings.gunslingerMint}
+                  </button>
+                ) : null}
+              </div>
+              {!evalGate.ok && !evaluated ? (
+                <p className="gunslinger-action-hint">
+                  {evalGate.reason === "NEED_DUELS"
+                    ? strings.gunslingerEvalNeedDuels
+                    : evalGate.reason === "COOLDOWN"
+                      ? strings.gunslingerEvalCooldown
+                      : strings.gunslingerEvalNeedNewDuels}
+                </p>
+              ) : null}
+              {actionMsg ? <p className="gunslinger-action-msg">{actionMsg}</p> : null}
+              {gs?.nft?.txHash ? (
+                <a
+                  className="gunslinger-explorer-link"
+                  href={`https://chainscan-galileo.0g.ai/tx/${gs.nft.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  0G Explorer
+                </a>
+              ) : null}
+            </section>
+
             <p className="profile-hero-stat">
               {format(strings.profileReadStat, {
                 read: stats?.timesReadTotal ?? 0,

@@ -10,6 +10,7 @@ import {
   buildChallengeUrl,
   createDailyDuel,
   DEFAULT_DUEL_CONFIG,
+  shouldAutoEvaluateGunslinger,
   withUniqueDuelSeed,
 } from "@zegon/game-core";
 import { computeCommitHash, computeInputHash } from "../services/commit.js";
@@ -31,7 +32,9 @@ import {
   purchaseRelic,
   equipConsumable,
   consumeEquippedConsumable,
+  updateGunslingerProfile,
 } from "../services/playerProfiles.js";
+import { evaluateGunslingerRank } from "../services/gunslingerEvaluate.js";
 import {
   buildSiweMessage,
   createNonce,
@@ -933,6 +936,8 @@ export async function handleUpdateProfileStats(body: {
   achievements?: string[];
   unlocks?: string[];
   duelDay?: string;
+  duelId?: string;
+  lang?: "en" | "es";
   auth?: { message?: string; signature?: string };
 }): Promise<
   | { accepted: true; profile: Awaited<ReturnType<typeof updateProfileStats>> }
@@ -971,7 +976,31 @@ export async function handleUpdateProfileStats(body: {
     newAchievements: body.achievements,
     newUnlocks: body.unlocks,
     duelDay: body.duelDay,
+    duelId: body.duelId,
   });
+
+  if (shouldAutoEvaluateGunslinger(profile.stats.duelsPlayed, profile.gunslinger)) {
+    const lang = body.lang === "es" ? "es" : profile.gunslinger?.bioLang ?? "en";
+    try {
+      const evalResult = await evaluateGunslingerRank(profile, lang);
+      if (evalResult.rank) {
+        const updated = await updateGunslingerProfile(
+          body.address,
+          {
+            rank: evalResult.rank,
+            bio: evalResult.bio,
+            bioLang: lang,
+            characterGender: profile.gunslinger?.characterGender ?? "man",
+          },
+          { duelsPlayed: profile.stats.duelsPlayed },
+        );
+        return { accepted: true, profile: updated };
+      }
+    } catch {
+      // auto-eval is best-effort
+    }
+  }
+
   return { accepted: true, profile };
 }
 
@@ -1211,3 +1240,10 @@ export async function handleCloseSeason(body: { seasonId: string }): Promise<{
 }
 
 export { buildChallengeUrl };
+
+export {
+  handleGunslingerEvaluate,
+  handleGunslingerPreference,
+  handleGunslingerMint,
+  handleGunslingerMetadata,
+} from "./gunslingerHandlers.js";

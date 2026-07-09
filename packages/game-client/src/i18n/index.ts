@@ -337,6 +337,23 @@ export interface LocaleStrings {
   profileStatWins: string;
   profileStatDuels: string;
   profileStatStreak: string;
+  gunslingerRankTitle: string;
+  gunslingerRankLabel: string;
+  gunslingerBioPlaceholder: string;
+  gunslingerGenderMan: string;
+  gunslingerGenderWoman: string;
+  gunslingerEvaluate: string;
+  gunslingerEvaluating: string;
+  gunslingerEvalNeedDuels: string;
+  gunslingerEvalCooldown: string;
+  gunslingerEvalNeedNewDuels: string;
+  gunslingerMint: string;
+  gunslingerMinting: string;
+  gunslingerUpdateNft: string;
+  gunslingerMinted: string;
+  gunslingerMintFailed: string;
+  gunslingerRankLocked: string;
+  gunslingerRankCurrent: string;
   saloonMenu: string;
   saloonTitle: string;
   saloonBuy: string;
@@ -785,6 +802,23 @@ const LOCALES: Record<Language, LocaleStrings> = {
     profileStatWins: "Wins",
     profileStatDuels: "Duels",
     profileStatStreak: "Max streak",
+    gunslingerRankTitle: "Gunslinger Rank",
+    gunslingerRankLabel: "Rank {rank} · {name}",
+    gunslingerBioPlaceholder: "Complete a few duels, then ask ZEGON to judge your Gunslinger Rank.",
+    gunslingerGenderMan: "Man",
+    gunslingerGenderWoman: "Woman",
+    gunslingerEvaluate: "Ask ZEGON to judge me",
+    gunslingerEvaluating: "ZEGON is reading your trail…",
+    gunslingerEvalNeedDuels: "Play at least 3 duels to unlock evaluation.",
+    gunslingerEvalCooldown: "You can request a new judgment in 24 hours.",
+    gunslingerEvalNeedNewDuels: "Play 3 more duels since your last judgment.",
+    gunslingerMint: "Mint Gunslinger NFT",
+    gunslingerMinting: "Minting on 0G Galileo…",
+    gunslingerUpdateNft: "Update NFT metadata",
+    gunslingerMinted: "NFT minted — view on explorer",
+    gunslingerMintFailed: "Mint failed — try again later",
+    gunslingerRankLocked: "Locked",
+    gunslingerRankCurrent: "Current",
     saloonMenu: "THE SMITH",
     saloonTitle: "UPGRADE YOUR DRAW",
     saloonBuy: "Upgrade ({cost} N)",
@@ -1241,6 +1275,23 @@ const LOCALES: Record<Language, LocaleStrings> = {
     profileStatWins: "Victorias",
     profileStatDuels: "Duelos",
     profileStatStreak: "Racha máx.",
+    gunslingerRankTitle: "Rango de Gunslinger",
+    gunslingerRankLabel: "Rango {rank} · {name}",
+    gunslingerBioPlaceholder: "Jugá algunos duelos y pedile a ZEGON que juzgue tu Rango de Gunslinger.",
+    gunslingerGenderMan: "Hombre",
+    gunslingerGenderWoman: "Mujer",
+    gunslingerEvaluate: "Pedir juicio a ZEGON",
+    gunslingerEvaluating: "ZEGON lee tu rastro…",
+    gunslingerEvalNeedDuels: "Jugá al menos 3 duelos para desbloquear la evaluación.",
+    gunslingerEvalCooldown: "Podés pedir un nuevo juicio en 24 horas.",
+    gunslingerEvalNeedNewDuels: "Jugá 3 duelos más desde tu último juicio.",
+    gunslingerMint: "Mintear NFT Gunslinger",
+    gunslingerMinting: "Minteando en 0G Galileo…",
+    gunslingerUpdateNft: "Actualizar metadata del NFT",
+    gunslingerMinted: "NFT minteado — ver en explorer",
+    gunslingerMintFailed: "Mint falló — probá más tarde",
+    gunslingerRankLocked: "Bloqueado",
+    gunslingerRankCurrent: "Actual",
     saloonMenu: "EL HERRERO",
     saloonTitle: "MEJORA TU DISPARO",
     saloonBuy: "Mejorar ({cost} N)",

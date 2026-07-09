@@ -1,4 +1,26 @@
-import type { UpgradeLevels, SaloonRelicLevels, SaloonRelicId } from "@zegon/game-core";
+import type { UpgradeLevels, SaloonRelicLevels, SaloonRelicId, CharacterGender } from "@zegon/game-core";
+import { rankMonotonicMerge } from "@zegon/game-core";
+
+export interface GunslingerNftRecord {
+  tokenId: string;
+  contractAddress: string;
+  metadataRootHash: string;
+  portraitRootHash?: string;
+  mintedAt: number;
+  txHash: string;
+  rankAtMint: number;
+}
+
+export interface GunslingerProfile {
+  rank: number;
+  bio: string;
+  bioLang: "en" | "es";
+  characterGender: CharacterGender;
+  evaluatedAt: number;
+  duelsAtEvaluation: number;
+  lastManualEvalAt?: number;
+  nft?: GunslingerNftRecord;
+}
 
 export interface PlayerProfile {
   address: string;
@@ -28,6 +50,8 @@ export interface PlayerProfile {
     streakDays: number;
     lastDuelDay?: string;
   };
+  gunslinger?: GunslingerProfile | null;
+  recentDuelIds?: string[];
 }
 
 const NICKNAME_RE = /^[a-zA-Z0-9_]{3,16}$/;
@@ -103,8 +127,29 @@ function mergeStats(
   };
 }
 
+function mergeGunslinger(
+  local?: GunslingerProfile | null,
+  remote?: GunslingerProfile | null,
+): GunslingerProfile | null {
+  if (!local && !remote) return null;
+  if (!local) return remote ?? null;
+  if (!remote) return local;
+  const newer = (local.evaluatedAt ?? 0) >= (remote.evaluatedAt ?? 0) ? local : remote;
+  const older = newer === local ? remote : local;
+  return {
+    ...newer,
+    rank: rankMonotonicMerge(older.rank ?? 0, newer.rank ?? 0),
+    characterGender: remote.characterGender ?? local.characterGender ?? "man",
+    nft: newer.nft ?? older.nft,
+  };
+}
+
 function mergeProfiles(local: PlayerProfile, remote: PlayerProfile): PlayerProfile {
   const xp = Math.max(local.xp ?? 0, remote.xp ?? 0);
+  const mergedRecent = [...new Set([...(remote.recentDuelIds ?? []), ...(local.recentDuelIds ?? [])])].slice(
+    0,
+    15,
+  );
   return {
     ...remote,
     nickname: remote.nickname || local.nickname,
@@ -117,6 +162,8 @@ function mergeProfiles(local: PlayerProfile, remote: PlayerProfile): PlayerProfi
     achievements: [...new Set([...(local.achievements ?? []), ...(remote.achievements ?? [])])],
     unlocks: [...new Set([...(local.unlocks ?? []), ...(remote.unlocks ?? [])])],
     stats: mergeStats(local.stats, remote.stats, local.updatedAt ?? 0, remote.updatedAt ?? 0),
+    gunslinger: mergeGunslinger(local.gunslinger, remote.gunslinger),
+    recentDuelIds: mergedRecent,
     updatedAt: Math.max(local.updatedAt ?? 0, remote.updatedAt ?? 0),
   };
 }

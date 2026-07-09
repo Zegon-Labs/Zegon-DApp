@@ -37,7 +37,7 @@ export const DUEL_LAYOUT = {
   taunt: { y: 162, maxW: 750 },
 
   history: { x: 8, y: 14, w: 272, visibleRows: 5, pipGap: 6, pipSize: 9 },
-  loadout: { gap: 10 },
+  loadout: { gap: 10, gapAboveActions: 10, panelW: 236 },
 
   blindsight: {
     panelW: 210,
@@ -167,6 +167,14 @@ export function blindsightPanelX(screenWidth: number): number {
 
 export function zegonStatsPanelX(screenWidth: number): number {
   return screenWidth - DUEL_LAYOUT.stats.playerX - DUEL_LAYOUT.stats.panelW;
+}
+
+export function loadoutPanelX(screenWidth: number, panelW: number): number {
+  return screenWidth - HUD_SAFE.side - panelW;
+}
+
+export function loadoutPanelY(screenWidth: number, panelH: number): number {
+  return actionPanelTopY(screenWidth) - DUEL_LAYOUT.loadout.gapAboveActions - panelH;
 }
 
 export function chromeButtonCenterX(screenWidth: number): number {

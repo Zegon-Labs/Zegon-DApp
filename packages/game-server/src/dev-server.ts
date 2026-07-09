@@ -28,6 +28,10 @@ import {
   handleConsumeEquippedConsumable,
   handleDuelReplay,
   handleSeasonClaim,
+  handleGunslingerEvaluate,
+  handleGunslingerPreference,
+  handleGunslingerMint,
+  handleGunslingerMetadata,
 } from "./handlers/duelHandlers.js";
 import { handleHealth } from "./handlers/healthHandler.js";
 
@@ -270,6 +274,42 @@ const server = createServer(async (req, res) => {
     if (url === "/api/player/profile" && req.method === "POST") {
       const body = (await parseBody(req)) as Parameters<typeof handleSetPlayerProfile>[0];
       const result = await handleSetPlayerProfile(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/gunslinger/evaluate" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleGunslingerEvaluate>[0];
+      const result = await handleGunslingerEvaluate(body);
+      const status = "accepted" in result && !result.accepted ? 400 : 200;
+      res.writeHead(status, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/gunslinger/preference" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleGunslingerPreference>[0];
+      const result = await handleGunslingerPreference(body);
+      const status = "accepted" in result && !result.accepted ? 400 : 200;
+      res.writeHead(status, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/gunslinger/mint" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleGunslingerMint>[0];
+      const result = await handleGunslingerMint(body);
+      const status = "accepted" in result && !result.accepted ? 400 : 200;
+      res.writeHead(status, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.startsWith("/api/player/gunslinger/metadata") && req.method === "GET") {
+      const parsed = new URL(url, "http://localhost");
+      const address = parsed.searchParams.get("address") ?? "";
+      const result = await handleGunslingerMetadata(address);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;

@@ -488,6 +488,7 @@ export class ResultScene extends Phaser.Scene {
       verifiedOnChain: verifiedOnChain || Boolean(this.verifyProof),
       playTimeMs,
       verifiedOnly: verifiedOnChain && this.progressionNotified,
+      duelId: this.duelId,
     });
 
     this.progressionNotified = true;

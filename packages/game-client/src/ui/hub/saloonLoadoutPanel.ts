@@ -35,6 +35,15 @@ export class SaloonLoadoutPanel {
   private chipTexts: Phaser.GameObjects.Text[] = [];
   private labels: SaloonLoadoutPanelLabels;
   private readonly panelW: number;
+  private panelHeight = 72;
+
+  getPanelHeight(): number {
+    return this.panelHeight;
+  }
+
+  setPanelPosition(x: number, y: number): void {
+    this.container.setPosition(x, y);
+  }
 
   constructor(
     scene: Phaser.Scene,
@@ -198,6 +207,7 @@ export class SaloonLoadoutPanel {
 
     const bottomPad = this.bgImage ? 24 : 14;
     const panelH = Math.max(this.bgImage ? 110 : 84, y + bottomPad);
+    this.panelHeight = panelH;
     this.drawFrame(panelH);
   }
 

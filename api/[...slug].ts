@@ -154,6 +154,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (slug[0] === "player" && slug[1] === "profile" && req.method === "POST") {
       return res.status(200).json(await h.handleSetPlayerProfile(req.body));
     }
+    if (slug[0] === "player" && slug[1] === "gunslinger" && slug[2] === "evaluate" && req.method === "POST") {
+      const result = await h.handleGunslingerEvaluate(req.body);
+      if ("accepted" in result && !result.accepted) {
+        return res.status(400).json(result);
+      }
+      return res.status(200).json(result);
+    }
+    if (slug[0] === "player" && slug[1] === "gunslinger" && slug[2] === "preference" && req.method === "POST") {
+      const result = await h.handleGunslingerPreference(req.body);
+      if ("accepted" in result && !result.accepted) {
+        return res.status(400).json(result);
+      }
+      return res.status(200).json(result);
+    }
+    if (slug[0] === "player" && slug[1] === "gunslinger" && slug[2] === "mint" && req.method === "POST") {
+      const result = await h.handleGunslingerMint(req.body);
+      if ("accepted" in result && !result.accepted) {
+        return res.status(400).json(result);
+      }
+      return res.status(200).json(result);
+    }
+    if (slug[0] === "player" && slug[1] === "gunslinger" && slug[2] === "metadata" && req.method === "GET") {
+      const address = String(req.query.address ?? slug[3] ?? "");
+      return res.status(200).json(await h.handleGunslingerMetadata(address));
+    }
 
     return res.status(404).json({ error: "Not found", slug });
   } catch (err) {

@@ -1,4 +1,4 @@
-import { writeFile, readFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { ethers } from "ethers";
 import { duelLogDir } from "../utils/paths.js";
@@ -16,18 +16,100 @@ export interface StorageResult {
   indexerUrl?: string;
 }
 
-async function storeLocal(
-  duelId: string,
-  payload: unknown,
-): Promise<string | undefined> {
+export function storageDownloadUrl(rootHash: string): string {
+  return `${INDEXER_RPC}/download?root=${encodeURIComponent(rootHash)}`;
+}
+
+async function storeLocal(key: string, payload: unknown): Promise<string | undefined> {
   try {
     await mkdir(DATA_DIR, { recursive: true });
-    const path = join(DATA_DIR, `${duelId}.json`);
-    await writeFile(path, JSON.stringify(payload, null, 2));
+    const path = join(DATA_DIR, `${key}.json`);
+    const body =
+      typeof payload === "string" || payload instanceof Uint8Array
+        ? payload
+        : JSON.stringify(payload, null, 2);
+    await writeFile(path, body);
     return path;
   } catch {
     return undefined;
   }
+}
+
+async function uploadBytes(bytes: Uint8Array): Promise<StorageResult> {
+  const pk = process.env.SERVER_WALLET_PRIVATE_KEY;
+  if (!pk) {
+    return {};
+  }
+
+  try {
+    const { Indexer, MemData } = await import("@0glabs/0g-ts-sdk");
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    const signer = new ethers.Wallet(pk, provider);
+    const indexer = new Indexer(INDEXER_RPC);
+
+    const file = new MemData(bytes);
+    const [tree, treeErr] = await file.merkleTree();
+    if (treeErr !== null) {
+      throw treeErr;
+    }
+
+    const [tx, uploadErr] = await indexer.upload(file, RPC_URL, signer as never);
+    if (uploadErr !== null) {
+      throw uploadErr;
+    }
+
+    const rootHash =
+      typeof tx === "object" && tx !== null && "rootHash" in tx
+        ? String(tx.rootHash)
+        : tree?.rootHash?.() ?? undefined;
+    const txHash =
+      typeof tx === "object" && tx !== null && "txHash" in tx
+        ? String(tx.txHash)
+        : undefined;
+
+    return {
+      rootHash,
+      txHash,
+      indexerUrl: rootHash ? storageDownloadUrl(rootHash) : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+export async function uploadJsonToStorage(
+  key: string,
+  payload: unknown,
+): Promise<StorageResult> {
+  const localPath = await storeLocal(key, payload);
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  const uploaded = await uploadBytes(bytes);
+  return { ...uploaded, localPath };
+}
+
+export async function uploadBytesToStorage(
+  key: string,
+  bytes: Uint8Array,
+): Promise<StorageResult> {
+  const localPath = await storeLocal(key, bytes);
+  const uploaded = await uploadBytes(bytes);
+  return { ...uploaded, localPath, indexerUrl: uploaded.indexerUrl };
+}
+
+export async function readPortraitBytes(relativePath: string): Promise<Uint8Array | null> {
+  const candidates = [
+    join(process.cwd(), "packages", "game-client", "public", relativePath),
+    join(process.cwd(), "public", relativePath),
+  ];
+  for (const path of candidates) {
+    try {
+      const buf = await readFile(path);
+      return new Uint8Array(buf);
+    } catch {
+      // try next
+    }
+  }
+  return null;
 }
 
 export async function loadDuelLog(duelId: string): Promise<unknown[] | null> {
@@ -65,44 +147,7 @@ export async function storeDuelLog(
     return { localPath };
   }
 
-  try {
-    const { Indexer, MemData } = await import("@0glabs/0g-ts-sdk");
-    const provider = new ethers.JsonRpcProvider(RPC_URL);
-    const signer = new ethers.Wallet(pk, provider);
-    const indexer = new Indexer(INDEXER_RPC);
-
-    const bytes = new TextEncoder().encode(JSON.stringify(payload));
-    const file = new MemData(bytes);
-    const [tree, treeErr] = await file.merkleTree();
-    if (treeErr !== null) {
-      throw treeErr;
-    }
-
-    const [tx, uploadErr] = await indexer.upload(
-      file,
-      RPC_URL,
-      signer as never,
-    );
-    if (uploadErr !== null) {
-      throw uploadErr;
-    }
-
-    const rootHash =
-      typeof tx === "object" && tx !== null && "rootHash" in tx
-        ? String(tx.rootHash)
-        : tree?.rootHash?.() ?? undefined;
-    const txHash =
-      typeof tx === "object" && tx !== null && "txHash" in tx
-        ? String(tx.txHash)
-        : undefined;
-
-    return {
-      rootHash,
-      txHash,
-      localPath,
-      indexerUrl: `${INDEXER_RPC}?rootHash=${rootHash ?? ""}`,
-    };
-  } catch {
-    return { localPath };
-  }
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  const uploaded = await uploadBytes(bytes);
+  return { ...uploaded, localPath };
 }

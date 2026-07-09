@@ -3939,6 +3939,188 @@ html.zegon-reduced-motion .smoke-particle {
   font-size: 13px;
 }
 
+.gunslinger-section {
+  margin: 12px 0 16px;
+  padding: 14px;
+  border: 1px solid rgba(200, 60, 60, 0.35);
+  background: rgba(12, 10, 18, 0.88);
+}
+
+.gunslinger-section__title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: var(--ember);
+  text-transform: uppercase;
+}
+
+.gunslinger-section__hero {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.gunslinger-portrait {
+  flex: 0 0 120px;
+  width: 120px;
+  height: 160px;
+  border: 1px solid var(--fog);
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.gunslinger-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.gunslinger-portrait--pending img {
+  opacity: 0.45;
+  filter: grayscale(0.85);
+}
+
+.gunslinger-section__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.gunslinger-rank-label {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--gold);
+}
+
+.gunslinger-bio {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--cyan);
+}
+
+.gunslinger-gender-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.gunslinger-gender-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--fog);
+  background: rgba(20, 18, 28, 0.9);
+  color: var(--dust);
+  cursor: pointer;
+}
+
+.gunslinger-gender-btn--active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.gunslinger-rank-ladder {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gunslinger-rank-step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border: 1px solid rgba(80, 75, 95, 0.5);
+  opacity: 0.55;
+}
+
+.gunslinger-rank-step--unlocked {
+  opacity: 1;
+  border-color: rgba(80, 200, 200, 0.35);
+}
+
+.gunslinger-rank-step--current {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(255, 200, 80, 0.15);
+}
+
+.gunslinger-rank-step__num {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border: 1px solid var(--fog);
+  color: var(--bone);
+}
+
+.gunslinger-rank-step__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.gunslinger-rank-step__name {
+  display: block;
+  font-size: 13px;
+  color: var(--bone);
+}
+
+.gunslinger-rank-step__hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--dust);
+}
+
+.gunslinger-rank-step__badge {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.gunslinger-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gunslinger-actions__btn {
+  font-size: 11px;
+  padding: 8px 12px;
+}
+
+.gunslinger-actions__btn--mint {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.gunslinger-action-hint,
+.gunslinger-action-msg {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--dust);
+}
+
+.gunslinger-action-msg {
+  color: var(--cyan);
+}
+
+.gunslinger-explorer-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ember);
+}
+
 .upgrade-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
