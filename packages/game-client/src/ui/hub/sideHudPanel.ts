@@ -42,6 +42,10 @@ const R_BAR_X1     = 2500;  // bar zone end   (source x) — before portrait bor
 // Thin bar height in screen pixels (centered vertically within the panel)
 const BAR_H_PX = 20;
 
+// Portrait viewport inset inside the ornamental frame (fraction of zone A / panel height)
+const PORTRAIT_INSET_X = 0.18;
+const PORTRAIT_INSET_Y = 0.15;
+
 // ── Options ─────────────────────────────────────────────────────────────────
 export interface SideHudPanelOptions {
   side: "left" | "right";
@@ -98,38 +102,46 @@ export class SideHudPanel {
     const imgKey  = opts.side === "left" ? SIDE_BAR_KEY : SIDE_BAR_RIGHT_KEY;
     const originX = opts.side === "left" ? 0 : 1;
 
-    if (scene.textures.exists(imgKey)) {
-      scene.add
-        .image(opts.x, opts.y, imgKey)
-        .setOrigin(originX, 0)
-        .setScale(scaleX, scaleY)
-        .setDepth(depth);
-    }
-
     // Left edge of the image in screen space (used for all content placement)
     const imgLeft = opts.side === "left"
       ? opts.x
       : opts.x - SRC_W * scaleX;  // = width - PANEL_DISPLAY_W
 
-    // ── Portrait ─────────────────────────────────────────────────────────────
+    // ── Portrait frame geometry ─────────────────────────────────────────────
     const zoneASrcX    = opts.side === "left" ? 0          : R_ZONE_A_X;
     const zoneASrcW    = opts.side === "left" ? L_ZONE_A_W : R_ZONE_A_W;
     const zoneALeft    = imgLeft + zoneASrcX  * scaleX;
     const zoneAScreenW = zoneASrcW * scaleX;
-    const zoneACX      = zoneALeft + zoneAScreenW / 2;
-    const zoneACY      = opts.y + panelH / 2;
+    const innerLeft    = zoneALeft + zoneAScreenW * PORTRAIT_INSET_X;
+    const innerTop     = opts.y + panelH * PORTRAIT_INSET_Y;
+    const innerW       = zoneAScreenW * (1 - 2 * PORTRAIT_INSET_X);
+    const innerH       = panelH * (1 - 2 * PORTRAIT_INSET_Y);
+    const innerCX      = innerLeft + innerW / 2;
+    const innerCY      = innerTop + innerH / 2;
 
     const portraitKey = opts.side === "left" ? PLAYER_PORTRAIT_KEY : ZEGON_PORTRAIT_KEY;
     if (scene.textures.exists(portraitKey)) {
       const portrait = scene.add
-        .image(zoneACX, zoneACY, portraitKey)
+        .image(innerCX, innerCY, portraitKey)
         .setOrigin(0.5, 0.5)
+        .setDepth(depth);
+      portrait.setScale(Math.min(innerW / portrait.width, innerH / portrait.height));
+
+      const maskGfx = scene.make.graphics({ x: 0, y: 0 });
+      maskGfx.fillStyle(0xffffff);
+      maskGfx.fillRect(innerLeft, innerTop, innerW, innerH);
+      portrait.setMask(maskGfx.createGeometryMask());
+      this.objs.push(portrait, maskGfx);
+    }
+
+    // ── Panel frame (drawn above portrait so the border covers the edges) ───
+    if (scene.textures.exists(imgKey)) {
+      const panel = scene.add
+        .image(opts.x, opts.y, imgKey)
+        .setOrigin(originX, 0)
+        .setScale(scaleX, scaleY)
         .setDepth(depth + 1);
-      portrait.setScale(Math.min(
-        (zoneAScreenW * 0.88) / portrait.width,
-        (panelH       * 0.88) / portrait.height,
-      ));
-      this.objs.push(portrait);
+      this.objs.push(panel);
     }
 
     // ── HP bar geometry ───────────────────────────────────────────────────────
