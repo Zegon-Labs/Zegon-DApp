@@ -159,27 +159,51 @@ export function ProfilePanel() {
                 </div>
               </div>
 
-              <ol className="gunslinger-rank-ladder">
+              <h4 className="gunslinger-rank-path__title">{strings.gunslingerRankPath}</h4>
+              <ol className="gunslinger-rank-ladder" aria-label={strings.gunslingerRankPath}>
                 {GUNSLINGER_RANKS.map((def) => {
-                  const unlocked = evaluated && currentRank >= def.rank;
                   const isCurrent = evaluated && currentRank === def.rank;
+                  const isAchieved = evaluated && currentRank > def.rank;
+                  const isLocked = !evaluated || currentRank < def.rank;
+                  const rankName = lang === "es" ? def.nameEs : def.nameEn;
                   return (
                     <li
                       key={def.rank}
-                      className={`gunslinger-rank-step${unlocked ? " gunslinger-rank-step--unlocked" : ""}${isCurrent ? " gunslinger-rank-step--current" : ""}`}
+                      className={[
+                        "gunslinger-rank-step",
+                        isCurrent ? " gunslinger-rank-step--current" : "",
+                        isAchieved ? " gunslinger-rank-step--achieved" : "",
+                        isLocked ? " gunslinger-rank-step--locked" : "",
+                      ].join("")}
+                      aria-current={isCurrent ? "step" : undefined}
+                      title={isLocked ? gunslingerUnlockHint(def.rank, lang) : undefined}
                     >
+                      <div className="gunslinger-rank-step__portrait" aria-hidden="true">
+                        <img
+                          src={gunslingerPortraitPath(def.rank, gender)}
+                          alt=""
+                          loading="lazy"
+                        />
+                      </div>
                       <span className="gunslinger-rank-step__num">{def.rank}</span>
                       <div className="gunslinger-rank-step__body">
-                        <span className="gunslinger-rank-step__name">
-                          {lang === "es" ? def.nameEs : def.nameEn}
-                        </span>
-                        {!unlocked ? (
-                          <span className="gunslinger-rank-step__hint">
-                            {gunslingerUnlockHint(def.rank, lang)}
-                          </span>
+                        <span className="gunslinger-rank-step__name">{rankName}</span>
+                        {isLocked ? (
+                          <>
+                            <span className="gunslinger-rank-step__badge gunslinger-rank-step__badge--locked">
+                              {strings.gunslingerRankLocked}
+                            </span>
+                            <span className="gunslinger-rank-step__hint">
+                              {gunslingerUnlockHint(def.rank, lang)}
+                            </span>
+                          </>
                         ) : isCurrent ? (
                           <span className="gunslinger-rank-step__badge">{strings.gunslingerRankCurrent}</span>
-                        ) : null}
+                        ) : (
+                          <span className="gunslinger-rank-step__badge gunslinger-rank-step__badge--achieved">
+                            {strings.gunslingerRankAchieved}
+                          </span>
+                        )}
                       </div>
                     </li>
                   );

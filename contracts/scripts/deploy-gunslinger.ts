@@ -1,24 +1,24 @@
-import { ethers } from "ethers";
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import hre from "hardhat";
+import { ethers } from "hardhat";
+import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
 
 async function main() {
-  const pk = process.env.SERVER_WALLET_PRIVATE_KEY;
-  if (!pk) throw new Error("SERVER_WALLET_PRIVATE_KEY required");
+  const [operator] = await ethers.getSigners();
 
-  const wallet = new ethers.Wallet(pk);
-  const operator = wallet.address;
-
-  const ZegonGunslinger = await hre.ethers.getContractFactory("ZegonGunslinger");
-  const contract = await ZegonGunslinger.deploy(operator);
+  const factory = await ethers.getContractFactory("ZegonGunslinger");
+  const contract = await factory.deploy(operator.address);
   await contract.waitForDeployment();
   const address = await contract.getAddress();
 
-  const deploymentPath = resolve(import.meta.dirname, "../deployments/galileo.json");
+  console.log("ZegonGunslinger deployed to:", address);
+  console.log("Operator:", operator.address);
+
+  const outDir = join(__dirname, "..", "deployments");
+  mkdirSync(outDir, { recursive: true });
+  const galileoPath = join(outDir, "galileo.json");
   let existing: Record<string, unknown> = {};
   try {
-    existing = JSON.parse(readFileSync(deploymentPath, "utf-8")) as Record<string, unknown>;
+    existing = JSON.parse(readFileSync(galileoPath, "utf-8")) as Record<string, unknown>;
   } catch {
     // fresh
   }
@@ -26,13 +26,11 @@ async function main() {
   const next = {
     ...existing,
     gunslingerAddress: address,
-    gunslingerOperator: operator,
+    gunslingerOperator: operator.address,
     gunslingerDeployedAt: new Date().toISOString(),
   };
-  writeFileSync(deploymentPath, JSON.stringify(next, null, 2));
-
-  console.log("ZegonGunslinger deployed:", address);
-  console.log("Operator:", operator);
+  writeFileSync(galileoPath, JSON.stringify(next, null, 2));
+  console.log("Updated contracts/deployments/galileo.json");
   console.log("Set ZEGON_GUNSLINGER_CONTRACT_ADDRESS=", address);
 }
 

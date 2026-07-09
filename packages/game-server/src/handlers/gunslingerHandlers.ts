@@ -111,19 +111,27 @@ export async function handleGunslingerMint(body: {
   }
 
   const lang = body.lang === "es" ? "es" : profile.gunslinger.bioLang ?? "en";
-  const mint = await nftService.mintOrUpdate(profile, lang);
+  try {
+    const mint = await nftService.mintOrUpdate(profile, lang);
 
-  const updated = await saveGunslingerNft(body.address, {
-    tokenId: mint.tokenId,
-    contractAddress: mint.contractAddress,
-    metadataRootHash: mint.metadataRootHash,
-    portraitRootHash: mint.portraitRootHash,
-    mintedAt: Date.now(),
-    txHash: mint.txHash,
-    rankAtMint: profile.gunslinger.rank,
-  });
+    const updated = await saveGunslingerNft(body.address, {
+      tokenId: mint.tokenId,
+      contractAddress: mint.contractAddress,
+      metadataRootHash: mint.metadataRootHash,
+      portraitRootHash: mint.portraitRootHash,
+      mintedAt: Date.now(),
+      txHash: mint.txHash,
+      rankAtMint: profile.gunslinger.rank,
+    });
 
-  return { accepted: true, profile: updated, mint };
+    return { accepted: true, profile: updated, mint };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("PORTRAIT")) return { accepted: false, reason: "PORTRAIT_NOT_FOUND" };
+    if (message.includes("UPLOAD")) return { accepted: false, reason: "STORAGE_UPLOAD_FAILED" };
+    if (message.includes("CONTRACT")) return { accepted: false, reason: "CONTRACT_NOT_CONFIGURED" };
+    return { accepted: false, reason: message.slice(0, 120) || "MINT_FAILED" };
+  }
 }
 
 export async function handleGunslingerMetadata(address: string): Promise<{

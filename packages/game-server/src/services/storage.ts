@@ -100,6 +100,7 @@ export async function readPortraitBytes(relativePath: string): Promise<Uint8Arra
   const candidates = [
     join(process.cwd(), "packages", "game-client", "public", relativePath),
     join(process.cwd(), "public", relativePath),
+    join(process.cwd(), "packages", "game-client", "dist", relativePath),
   ];
   for (const path of candidates) {
     try {
@@ -109,7 +110,20 @@ export async function readPortraitBytes(relativePath: string): Promise<Uint8Arra
       // try next
     }
   }
-  return null;
+
+  const publicBase =
+    process.env.GUNSLINGER_PUBLIC_BASE_URL ??
+    (process.env.SIWE_DOMAIN ? `https://${process.env.SIWE_DOMAIN}` : "https://www.zegonduel.com");
+  const urlPath = relativePath.replace(/\\/g, "/");
+  const segments = urlPath.split("/");
+  const encoded = segments.map((s, i) => (i === 0 ? s : encodeURIComponent(s))).join("/");
+  try {
+    const res = await fetch(`${publicBase}/${encoded}`);
+    if (!res.ok) return null;
+    return new Uint8Array(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
 }
 
 export async function loadDuelLog(duelId: string): Promise<unknown[] | null> {

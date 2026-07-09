@@ -352,8 +352,13 @@ export interface LocaleStrings {
   gunslingerUpdateNft: string;
   gunslingerMinted: string;
   gunslingerMintFailed: string;
+  gunslingerMintContractMissing: string;
+  gunslingerMintPortraitMissing: string;
+  gunslingerMintStorageFailed: string;
   gunslingerRankLocked: string;
   gunslingerRankCurrent: string;
+  gunslingerRankAchieved: string;
+  gunslingerRankPath: string;
   saloonMenu: string;
   saloonTitle: string;
   saloonBuy: string;
@@ -817,8 +822,13 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerUpdateNft: "Update NFT metadata",
     gunslingerMinted: "NFT minted — view on explorer",
     gunslingerMintFailed: "Mint failed — try again later",
+    gunslingerMintContractMissing: "NFT contract not configured on server yet.",
+    gunslingerMintPortraitMissing: "Portrait asset missing — contact support.",
+    gunslingerMintStorageFailed: "0G Storage upload failed — try again later.",
     gunslingerRankLocked: "Locked",
     gunslingerRankCurrent: "Current",
+    gunslingerRankAchieved: "Achieved",
+    gunslingerRankPath: "Rank path",
     saloonMenu: "THE SMITH",
     saloonTitle: "UPGRADE YOUR DRAW",
     saloonBuy: "Upgrade ({cost} N)",
@@ -1290,8 +1300,13 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerUpdateNft: "Actualizar metadata del NFT",
     gunslingerMinted: "NFT minteado — ver en explorer",
     gunslingerMintFailed: "Mint falló — probá más tarde",
+    gunslingerMintContractMissing: "Contrato NFT no configurado en el servidor.",
+    gunslingerMintPortraitMissing: "Falta el retrato — contactá soporte.",
+    gunslingerMintStorageFailed: "Falló la subida a 0G Storage — probá más tarde.",
     gunslingerRankLocked: "Bloqueado",
     gunslingerRankCurrent: "Actual",
+    gunslingerRankAchieved: "Alcanzado",
+    gunslingerRankPath: "Camino de rango",
     saloonMenu: "EL HERRERO",
     saloonTitle: "MEJORA TU DISPARO",
     saloonBuy: "Mejorar ({cost} N)",
