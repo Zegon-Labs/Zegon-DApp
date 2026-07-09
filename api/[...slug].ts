@@ -187,7 +187,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ) {
       const address = String(req.query.address ?? slug[3] ?? "");
       const result = await h.handleGunslingerTokenMetadata(address);
-      if (!result.ok) {
+      if (result.ok === false) {
         return res.status(result.reason === "INVALID_ADDRESS" ? 400 : 404).json(result);
       }
       res.setHeader("Cache-Control", "public, max-age=60");
