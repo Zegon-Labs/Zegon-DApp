@@ -47,7 +47,10 @@ describe("gunslingerRank", () => {
 
   it("does not block re-eval with NEED_DUELS once already evaluated", () => {
     const evaluated = { evaluatedAt: Date.now(), duelsAtEvaluation: 8 };
-    expect(canRequestManualGunslingerEval(2, evaluated).reason).toBe("NEED_NEW_DUELS");
+    expect(canRequestManualGunslingerEval(2, evaluated)).toEqual({
+      ok: false,
+      reason: "NEED_NEW_DUELS",
+    });
     expect(canRequestManualGunslingerEval(11, evaluated).ok).toBe(true);
   });
 
