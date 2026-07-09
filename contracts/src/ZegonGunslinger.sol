@@ -15,6 +15,7 @@ contract ZegonGunslinger {
 
     event GunslingerMinted(address indexed owner, uint256 indexed tokenId, string tokenURI);
     event GunslingerUpdated(uint256 indexed tokenId, string tokenURI);
+    event GunslingerBurned(address indexed owner, uint256 indexed tokenId);
     event OperatorTransferred(address indexed previousOperator, address indexed newOperator);
 
     modifier onlyOperator() {
@@ -49,6 +50,19 @@ contract ZegonGunslinger {
         require(_owners[tokenId] != address(0), "Invalid token");
         _tokenURIs[tokenId] = uri;
         emit GunslingerUpdated(tokenId, uri);
+    }
+
+    /// @notice Operator burn — clears wallet slot so a fresh Gunslinger NFT can be minted.
+    function burn(address owner) external onlyOperator {
+        require(owner != address(0), "Invalid owner");
+        uint256 tokenId = tokenOfOwner[owner];
+        require(tokenId != 0, "No token");
+
+        delete _owners[tokenId];
+        delete _tokenURIs[tokenId];
+        tokenOfOwner[owner] = 0;
+
+        emit GunslingerBurned(owner, tokenId);
     }
 
     function tokenURI(uint256 tokenId) external view returns (string memory) {

@@ -11,6 +11,7 @@ import {
 import {
   getProfile,
   saveGunslingerNft,
+  clearGunslingerNft,
   setGunslingerGender,
   updateGunslingerProfile,
   isWalletAddress,
@@ -135,6 +136,47 @@ export async function handleGunslingerMint(body: {
     if (message.includes("UPLOAD")) return { accepted: false, reason: "STORAGE_UPLOAD_FAILED" };
     if (message.includes("CONTRACT")) return { accepted: false, reason: "CONTRACT_NOT_CONFIGURED" };
     return { accepted: false, reason: message.slice(0, 120) || "MINT_FAILED" };
+  }
+}
+
+export async function handleGunslingerBurn(body: {
+  address: string;
+  auth?: { message?: string; signature?: string };
+}): Promise<
+  | {
+      accepted: true;
+      profile: NonNullable<Awaited<ReturnType<typeof getProfile>>>;
+      burn: Awaited<ReturnType<ReturnType<typeof getGunslingerNftService>["burnForOwner"]>>;
+    }
+  | { accepted: false; reason: string }
+> {
+  if (!isWalletAddress(body.address)) {
+    return { accepted: false, reason: "INVALID_ADDRESS" };
+  }
+
+  const siwe = requireSiweOrDev(body.address, body.auth);
+  if (!siwe.ok) return { accepted: false, reason: siwe.error };
+
+  const profile = await getProfile(body.address);
+  if (!profile?.gunslinger?.nft) {
+    return { accepted: false, reason: "NFT_NOT_MINTED" };
+  }
+
+  const nftService = getGunslingerNftService();
+  if (!nftService.isConfigured()) {
+    return { accepted: false, reason: "CONTRACT_NOT_CONFIGURED" };
+  }
+
+  try {
+    const burn = await nftService.burnForOwner(body.address);
+    const updated = await clearGunslingerNft(body.address);
+    return { accepted: true, profile: updated, burn };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("NO_TOKEN")) return { accepted: false, reason: "NFT_NOT_ON_CHAIN" };
+    if (message.includes("BURN_NOT_SUPPORTED")) return { accepted: false, reason: "BURN_NOT_SUPPORTED" };
+    if (message.includes("CONTRACT")) return { accepted: false, reason: "CONTRACT_NOT_CONFIGURED" };
+    return { accepted: false, reason: message.slice(0, 120) || "BURN_FAILED" };
   }
 }
 

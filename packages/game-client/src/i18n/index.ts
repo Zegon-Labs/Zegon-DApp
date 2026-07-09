@@ -358,6 +358,12 @@ export interface LocaleStrings {
   gunslingerNftViewMetadata: string;
   gunslingerNftDownloadPortrait: string;
   gunslingerNftWalletHint: string;
+  gunslingerNftBurn: string;
+  gunslingerNftBurning: string;
+  gunslingerNftBurnConfirm: string;
+  gunslingerNftBurned: string;
+  gunslingerNftBurnFailed: string;
+  gunslingerNftBurnNotSupported: string;
   gunslingerMintFailed: string;
   gunslingerMintContractMissing: string;
   gunslingerMintPortraitMissing: string;
@@ -837,6 +843,13 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerNftDownloadPortrait: "Download portrait image",
     gunslingerNftWalletHint:
       "To see it in MetaMask: 0G Galileo network → Import NFT → contract {contract} · token ID {tokenId}.",
+    gunslingerNftBurn: "Burn NFT (remint)",
+    gunslingerNftBurning: "Burning NFT…",
+    gunslingerNftBurnConfirm:
+      "Burn your Gunslinger NFT on-chain? This is permanent. You can mint a fresh one afterward.",
+    gunslingerNftBurned: "NFT burned — you can mint again.",
+    gunslingerNftBurnFailed: "Burn failed — try again later.",
+    gunslingerNftBurnNotSupported: "Burn not available yet — contract upgrade pending.",
     gunslingerMintFailed: "Mint failed — try again later",
     gunslingerMintContractMissing: "NFT contract not configured on server yet.",
     gunslingerMintPortraitMissing: "Portrait asset missing — contact support.",
@@ -1325,6 +1338,13 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerNftDownloadPortrait: "Descargar retrato",
     gunslingerNftWalletHint:
       "Para verlo en MetaMask: red 0G Galileo → Importar NFT → contrato {contract} · token ID {tokenId}.",
+    gunslingerNftBurn: "Quemar NFT (remintear)",
+    gunslingerNftBurning: "Quemando NFT…",
+    gunslingerNftBurnConfirm:
+      "¿Quemar tu NFT Gunslinger on-chain? Es permanente. Después podés mintear uno nuevo.",
+    gunslingerNftBurned: "NFT quemado — podés mintear de nuevo.",
+    gunslingerNftBurnFailed: "Quema falló — probá más tarde.",
+    gunslingerNftBurnNotSupported: "Quema no disponible aún — falta actualizar el contrato.",
     gunslingerMintFailed: "Mint falló — probá más tarde",
     gunslingerMintContractMissing: "Contrato NFT no configurado en el servidor.",
     gunslingerMintPortraitMissing: "Falta el retrato — contactá soporte.",

@@ -429,6 +429,20 @@ export async function saveGunslingerNft(
   return profile;
 }
 
+export async function clearGunslingerNft(address: string): Promise<PlayerProfile> {
+  if (!isWalletAddress(address)) throw new Error("INVALID_ADDRESS");
+  const key = normalizeAddress(address);
+  const existing = await getProfile(key);
+  if (!existing?.gunslinger) throw new Error("GUNSLINGER_REQUIRED");
+
+  const profile = normalizeProfile(existing);
+  const { nft: _removed, ...gunslingerWithoutNft } = profile.gunslinger!;
+  profile.gunslinger = gunslingerWithoutNft;
+  profile.updatedAt = Date.now();
+  await persistProfile(profile);
+  return profile;
+}
+
 export async function purchaseUpgrade(
   address: string,
   upgradeId: UpgradeId,

@@ -9,10 +9,12 @@ import {
 const GUNSLINGER_ABI = [
   "function mint(address to, string uri) external returns (uint256)",
   "function setTokenURI(uint256 tokenId, string uri) external",
+  "function burn(address owner) external",
   "function tokenOfOwner(address owner) external view returns (uint256)",
   "function tokenURI(uint256 tokenId) external view returns (string)",
   "event GunslingerMinted(address indexed owner, uint256 indexed tokenId, string tokenURI)",
   "event GunslingerUpdated(uint256 indexed tokenId, string tokenURI)",
+  "event GunslingerBurned(address indexed owner, uint256 indexed tokenId)",
 ];
 
 export interface GunslingerMintResult {
@@ -24,6 +26,13 @@ export interface GunslingerMintResult {
   txHash: string;
   explorerUrl: string;
   updated: boolean;
+}
+
+export interface GunslingerBurnResult {
+  tokenId: string;
+  contractAddress: string;
+  txHash: string;
+  explorerUrl: string;
 }
 
 export class GunslingerNftService {
@@ -95,6 +104,34 @@ export class GunslingerNftService {
       explorerUrl: `${EXPLORER_BASE}/tx/${txHash}`,
       updated,
     };
+  }
+
+  async burnForOwner(owner: string): Promise<GunslingerBurnResult> {
+    if (!this.contract || !this.contractAddress) {
+      throw new Error("GUNSLINGER_CONTRACT_NOT_CONFIGURED");
+    }
+    const normalized = ethers.getAddress(owner);
+    const tokenId: bigint = await this.contract.tokenOfOwner(normalized);
+    if (tokenId === 0n) {
+      throw new Error("NO_TOKEN_TO_BURN");
+    }
+
+    try {
+      const tx = await this.contract.burn(normalized);
+      await tx.wait();
+      return {
+        tokenId: tokenId.toString(),
+        contractAddress: this.contractAddress,
+        txHash: tx.hash as string,
+        explorerUrl: `${EXPLORER_BASE}/tx/${tx.hash as string}`,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("burn") || message.includes("missing revert data")) {
+        throw new Error("BURN_NOT_SUPPORTED");
+      }
+      throw err;
+    }
   }
 }
 

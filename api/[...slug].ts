@@ -175,6 +175,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       return res.status(200).json(result);
     }
+    if (slug[0] === "player" && slug[1] === "gunslinger" && slug[2] === "burn" && req.method === "POST") {
+      const result = await h.handleGunslingerBurn(req.body);
+      if ("accepted" in result && !result.accepted) {
+        return res.status(400).json(result);
+      }
+      return res.status(200).json(result);
+    }
     if (slug[0] === "player" && slug[1] === "gunslinger" && slug[2] === "metadata" && req.method === "GET") {
       const address = String(req.query.address ?? slug[3] ?? "");
       return res.status(200).json(await h.handleGunslingerMetadata(address));

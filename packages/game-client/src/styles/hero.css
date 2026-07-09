@@ -4318,6 +4318,14 @@ html.zegon-reduced-motion .smoke-particle {
   color: var(--dust);
 }
 
+.gunslinger-nft-reward__burn {
+  margin-top: 12px;
+  width: 100%;
+  min-height: 40px;
+  font-size: 12px;
+  color: var(--ember);
+}
+
 .gunslinger-explorer-link {
   display: inline-block;
   margin-top: 8px;

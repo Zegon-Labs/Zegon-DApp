@@ -31,6 +31,7 @@ import {
   handleGunslingerEvaluate,
   handleGunslingerPreference,
   handleGunslingerMint,
+  handleGunslingerBurn,
   handleGunslingerMetadata,
   handleGunslingerTokenMetadata,
 } from "./handlers/duelHandlers.js";
@@ -301,6 +302,15 @@ const server = createServer(async (req, res) => {
     if (url === "/api/player/gunslinger/mint" && req.method === "POST") {
       const body = (await parseBody(req)) as Parameters<typeof handleGunslingerMint>[0];
       const result = await handleGunslingerMint(body);
+      const status = "accepted" in result && !result.accepted ? 400 : 200;
+      res.writeHead(status, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/player/gunslinger/burn" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleGunslingerBurn>[0];
+      const result = await handleGunslingerBurn(body);
       const status = "accepted" in result && !result.accepted ? 400 : 200;
       res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));

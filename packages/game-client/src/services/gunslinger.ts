@@ -75,3 +75,23 @@ export async function mintGunslingerNft(
   }
   return { ok: false, reason: res.reason };
 }
+
+export async function burnGunslingerNft(
+  address: string,
+): Promise<{
+  ok: boolean;
+  profile?: PlayerProfile;
+  burn?: { txHash: string; explorerUrl: string; tokenId: string };
+  reason?: string;
+}> {
+  const payload = await withSiweAuth({ address });
+  const res = await postGunslinger<{
+    profile: PlayerProfile;
+    burn: { txHash: string; explorerUrl: string; tokenId: string };
+  }>("burn", payload);
+  if (res.ok && res.data?.profile) {
+    mergeRemoteProfile(address, res.data.profile);
+    return { ok: true, profile: res.data.profile, burn: res.data.burn };
+  }
+  return { ok: false, reason: res.reason };
+}

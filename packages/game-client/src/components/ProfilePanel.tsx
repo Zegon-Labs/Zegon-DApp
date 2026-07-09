@@ -21,7 +21,7 @@ import {
   validateNickname,
   xpProgress,
 } from "../services/profile.js";
-import { evaluateGunslinger, mintGunslingerNft, setGunslingerGender } from "../services/gunslinger.js";
+import { evaluateGunslinger, mintGunslingerNft, burnGunslingerNft, setGunslingerGender } from "../services/gunslinger.js";
 import {
   connectWallet,
   disconnectWallet,
@@ -37,6 +37,7 @@ export function ProfilePanel() {
   const [, tick] = useState(0);
   const [evalBusy, setEvalBusy] = useState(false);
   const [mintBusy, setMintBusy] = useState(false);
+  const [burnBusy, setBurnBusy] = useState(false);
   const [actionMsg, setActionMsg] = useState("");
   const [nickname, setNickname] = useState("");
   const [nickBusy, setNickBusy] = useState(false);
@@ -156,6 +157,23 @@ export function ProfilePanel() {
     if (!wallet || next === gender) return;
     const res = await setGunslingerGender(wallet, next);
     if (res.ok) tick((n) => n + 1);
+  }
+
+  async function handleBurn(): Promise<void> {
+    if (!wallet || burnBusy || !gs?.nft) return;
+    if (!window.confirm(strings.gunslingerNftBurnConfirm)) return;
+    setBurnBusy(true);
+    setActionMsg("");
+    const res = await burnGunslingerNft(wallet);
+    setBurnBusy(false);
+    if (res.ok) {
+      setActionMsg(strings.gunslingerNftBurned);
+      tick((n) => n + 1);
+    } else if (res.reason === "BURN_NOT_SUPPORTED") {
+      setActionMsg(strings.gunslingerNftBurnNotSupported);
+    } else {
+      setActionMsg(strings.gunslingerNftBurnFailed);
+    }
   }
 
   async function handleMint(): Promise<void> {
@@ -443,6 +461,14 @@ export function ProfilePanel() {
                       })}
                     </p>
                   ) : null}
+                  <button
+                    type="button"
+                    className="utility-sprite-button gunslinger-nft-reward__burn"
+                    disabled={burnBusy}
+                    onClick={() => void handleBurn()}
+                  >
+                    {burnBusy ? strings.gunslingerNftBurning : strings.gunslingerNftBurn}
+                  </button>
                 </div>
               ) : null}
             </section>
