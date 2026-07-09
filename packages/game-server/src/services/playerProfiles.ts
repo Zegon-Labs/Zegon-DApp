@@ -1,4 +1,3 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   canPurchaseUpgrade,
@@ -18,11 +17,13 @@ import {
   type PlayerStats,
 } from "./profileTypes.js";
 import { leaderboardDir } from "../utils/paths.js";
+import { loadPersistedJson, savePersistedJson } from "./jsonBlobStore.js";
 
 export type { PlayerProfile, PlayerStats, DailyAttempt };
 
 const NICKNAME_RE = /^[a-zA-Z0-9_]{3,16}$/;
 const DATA_FILE = join(leaderboardDir(), "profiles.json");
+const PROFILES_BLOB = "zegon/profiles.json";
 type ProfileStore = Record<string, PlayerProfile>;
 
 function normalizeAddress(address: string): string {
@@ -45,23 +46,17 @@ export function validateNickname(nickname: string): { ok: true } | { ok: false; 
 }
 
 async function loadJsonStore(): Promise<ProfileStore> {
-  try {
-    await mkdir(leaderboardDir(), { recursive: true });
-    const raw = await readFile(DATA_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as ProfileStore;
-    const out: ProfileStore = {};
-    for (const [key, val] of Object.entries(parsed)) {
-      out[key] = normalizeProfile({ ...val, address: key, nickname: val.nickname });
-    }
-    return out;
-  } catch {
-    return {};
+  const parsed = await loadPersistedJson<ProfileStore>(PROFILES_BLOB, DATA_FILE);
+  if (!parsed) return {};
+  const out: ProfileStore = {};
+  for (const [key, val] of Object.entries(parsed)) {
+    out[key] = normalizeProfile({ ...val, address: key, nickname: val.nickname });
   }
+  return out;
 }
 
 async function saveJsonStore(store: ProfileStore): Promise<void> {
-  await mkdir(leaderboardDir(), { recursive: true });
-  await writeFile(DATA_FILE, JSON.stringify(store, null, 2));
+  await savePersistedJson(PROFILES_BLOB, DATA_FILE, store);
 }
 
 async function loadProfileFromDb(address: string): Promise<PlayerProfile | null> {

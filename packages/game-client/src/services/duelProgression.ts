@@ -146,6 +146,7 @@ export async function persistDuelProgression(
     maxReadingStreak: result.finalReadingStreak,
     playTimeMs: options.playTimeMs,
     verifiedOnChain: options.verifiedOnChain,
+    globalScore: result.score,
     achievements: earned.length > 0 ? earned : undefined,
     unlocks: unlocks.length > 0 ? unlocks : undefined,
     duelDay: today,

@@ -1,6 +1,6 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { leaderboardDir } from "../utils/paths.js";
+import { loadPersistedJson, savePersistedJson } from "./jsonBlobStore.js";
 
 export interface GlobalLeaderboardEntry {
   playerId: string;
@@ -11,20 +11,15 @@ export interface GlobalLeaderboardEntry {
 }
 
 const DATA_FILE = join(leaderboardDir(), "global.json");
+const GLOBAL_BLOB = "zegon/global-scores.json";
 
 async function loadBoard(): Promise<GlobalLeaderboardEntry[]> {
-  try {
-    await mkdir(leaderboardDir(), { recursive: true });
-    const data = await readFile(DATA_FILE, "utf-8");
-    return JSON.parse(data) as GlobalLeaderboardEntry[];
-  } catch {
-    return [];
-  }
+  const data = await loadPersistedJson<GlobalLeaderboardEntry[]>(GLOBAL_BLOB, DATA_FILE);
+  return data ?? [];
 }
 
 async function saveBoard(entries: GlobalLeaderboardEntry[]): Promise<void> {
-  await mkdir(leaderboardDir(), { recursive: true });
-  await writeFile(DATA_FILE, JSON.stringify(entries, null, 2));
+  await savePersistedJson(GLOBAL_BLOB, DATA_FILE, entries);
 }
 
 export async function submitGlobalScore(

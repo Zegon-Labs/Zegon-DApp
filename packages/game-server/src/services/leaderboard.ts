@@ -1,6 +1,6 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { leaderboardDir } from "../utils/paths.js";
+import { loadPersistedJson, savePersistedJson } from "./jsonBlobStore.js";
 
 export interface LeaderboardEntry {
   playerId: string;
@@ -11,21 +11,16 @@ export interface LeaderboardEntry {
 const DATA_DIR = leaderboardDir();
 
 async function loadBoard(seed: string): Promise<LeaderboardEntry[]> {
-  try {
-    await mkdir(DATA_DIR, { recursive: true });
-    const data = await readFile(join(DATA_DIR, `${seed}.json`), "utf-8");
-    return JSON.parse(data) as LeaderboardEntry[];
-  } catch {
-    return [];
-  }
+  const local = join(DATA_DIR, `${seed}.json`);
+  const blob = `zegon/daily/${seed}.json`;
+  const data = await loadPersistedJson<LeaderboardEntry[]>(blob, local);
+  return data ?? [];
 }
 
 async function saveBoard(seed: string, entries: LeaderboardEntry[]): Promise<void> {
-  await mkdir(DATA_DIR, { recursive: true });
-  await writeFile(
-    join(DATA_DIR, `${seed}.json`),
-    JSON.stringify(entries, null, 2),
-  );
+  const local = join(DATA_DIR, `${seed}.json`);
+  const blob = `zegon/daily/${seed}.json`;
+  await savePersistedJson(blob, local, entries);
 }
 
 export async function submitScore(

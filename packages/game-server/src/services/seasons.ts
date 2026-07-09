@@ -1,6 +1,6 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { leaderboardDir } from "../utils/paths.js";
+import { loadPersistedJson, savePersistedJson } from "./jsonBlobStore.js";
 import type { PlayerProfile } from "./profileTypes.js";
 import { listAllProfiles } from "./playerProfiles.js";
 import { getSql, isDatabaseConfigured } from "./db.js";
@@ -24,6 +24,7 @@ export interface SeasonSnapshotEntry {
 }
 
 const SEASONS_FILE = join(leaderboardDir(), "seasons.json");
+const SEASONS_BLOB = "zegon/seasons.json";
 const DEFAULT_SEASON_DAYS = 14;
 
 function defaultSeason(): Season {
@@ -42,19 +43,12 @@ function defaultSeason(): Season {
 }
 
 async function loadSeasonsFile(): Promise<Season[]> {
-  try {
-    await mkdir(leaderboardDir(), { recursive: true });
-    const raw = await readFile(SEASONS_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as Season[];
-    return parsed.length > 0 ? parsed : [defaultSeason()];
-  } catch {
-    return [defaultSeason()];
-  }
+  const parsed = await loadPersistedJson<Season[]>(SEASONS_BLOB, SEASONS_FILE);
+  return parsed && parsed.length > 0 ? parsed : [defaultSeason()];
 }
 
 async function saveSeasonsFile(seasons: Season[]): Promise<void> {
-  await mkdir(leaderboardDir(), { recursive: true });
-  await writeFile(SEASONS_FILE, JSON.stringify(seasons, null, 2));
+  await savePersistedJson(SEASONS_BLOB, SEASONS_FILE, seasons);
 }
 
 function normalizeMetric(value: number, min: number, max: number): number {
