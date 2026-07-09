@@ -5704,14 +5704,13 @@ html.zegon-reduced-motion .smoke-particle {
 }
 
 .hero__panel--utility.hero__panel--archetype {
-  /* Marco utility_table más grande — más zona negra interior para botones */
-  width: min(96vw, 720px);
-  max-width: min(96vw, 720px);
-  min-height: calc(min(96vw, 720px) * 1086 / 1448);
+  width: min(96vw, 920px);
+  max-width: min(96vw, 920px);
+  min-height: calc(min(96vw, 920px) * 1086 / 1448);
   height: auto;
-  max-height: min(94vh, calc(min(96vw, 720px) * 1086 / 1448));
+  max-height: min(94vh, calc(min(96vw, 920px) * 1086 / 1448));
   aspect-ratio: 1448 / 1086;
-  padding: 88px 54px 108px;
+  padding: 100px 58px 96px;
   box-sizing: border-box;
 }
 
@@ -5721,27 +5720,27 @@ html.zegon-reduced-motion .smoke-particle {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   min-height: 0;
   height: 100%;
   overflow: visible;
-  width: 90%;
-  max-width: 520px;
-  margin: 8px auto 0;
-  padding: 0 4px 6px;
+  width: 92%;
+  max-width: 680px;
+  margin: 10px auto 0;
+  padding: 0 6px 8px;
 }
 
 .archetype-picker__footer {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 10px;
 }
 
 .hero__panel--archetype .hero__panel-title {
-  margin-bottom: 0;
+  margin-bottom: 4px;
   flex: 0 0 auto;
-  font-size: clamp(19px, 3.8vw, 23px);
+  font-size: clamp(22px, 4.2vw, 28px);
   line-height: 1.1;
   text-shadow: 0 0 18px rgba(255, 77, 46, 0.35);
 }
@@ -5755,96 +5754,97 @@ html.zegon-reduced-motion .smoke-particle {
 }
 
 .hero__panel--archetype .archetype-carousel {
-  gap: 6px;
+  gap: 10px;
 }
 
 .hero__panel--archetype .archetype-carousel__arrow {
-  width: 28px;
-  height: 50px;
-  font-size: 21px;
+  width: 36px;
+  height: 62px;
+  font-size: 26px;
   border-radius: 4px;
 }
 
 .hero__panel--archetype .archetype-carousel__stage {
-  gap: 5px;
+  gap: 8px;
 }
 
 .hero__panel--archetype .archetype-card__banner {
-  height: 38px;
+  height: 48px;
 }
 
 .hero__panel--archetype .archetype-card__body {
-  gap: 4px;
-  padding: 7px 9px 8px;
+  gap: 6px;
+  padding: 10px 12px 11px;
   font-family: var(--font-display);
 }
 
 .hero__panel--archetype .archetype-card__name {
-  font-size: 15px;
+  font-size: 18px;
 }
 
 .hero__panel--archetype .archetype-card__tag {
-  font-size: 12px;
-  line-height: 1.28;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .hero__panel--archetype .archetype-card__adv,
 .hero__panel--archetype .archetype-card__trade {
-  font-size: 11px;
-  line-height: 1.32;
+  font-size: 13px;
+  line-height: 1.38;
 }
 
 .hero__panel--archetype .archetype-card__traits {
-  gap: 3px;
+  gap: 5px;
 }
 
 .hero__panel--archetype .archetype-card__trait-mark {
-  width: 12px;
-  font-size: 12px;
+  width: 14px;
+  font-size: 14px;
 }
 
 .hero__panel--archetype .archetype-card__stars {
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .hero__panel--archetype .archetype-carousel__dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 .hero__panel--archetype .duel-length {
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 8px;
   padding: 0;
 }
 
 .hero__panel--archetype .duel-length__label {
   flex: 1 1 100%;
-  font-size: 10px;
+  font-size: 12px;
   text-align: center;
   letter-spacing: 0.12em;
 }
 
 .hero__panel--archetype .duel-length__options {
-  gap: 5px;
+  gap: 8px;
 }
 
 .hero__panel--archetype .duel-length__chip {
-  padding: 5px 5px;
+  padding: 8px 10px;
   border-radius: 4px;
+  gap: 3px;
 }
 
 .hero__panel--archetype .duel-length__chip-name {
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 0.08em;
 }
 
 .hero__panel--archetype .duel-length__chip-rounds {
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .hero__panel--archetype .archetype-picker__actions {
-  gap: 4px;
+  gap: 8px;
   padding-top: 0;
   padding-bottom: 0;
   margin-top: 0;
@@ -5852,26 +5852,33 @@ html.zegon-reduced-motion .smoke-particle {
 }
 
 .hero__panel--archetype .btn--archetype-duel {
-  padding: 8px 10px;
+  padding: 12px 14px;
 }
 
 .hero__panel--archetype .btn--archetype-duel .btn__title {
-  font-size: 16px;
+  font-size: 18px;
   letter-spacing: 0.06em;
 }
 
 .hero__panel--utility.hero__panel--archetype .archetype-picker__actions .utility-sprite-button {
   width: 100%;
   max-width: none;
-  height: 36px;
-  padding: 0 20px;
-  font-size: 12px;
+  height: 54px;
+  min-height: 54px;
+  padding: 0 28px;
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-size: 200% 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .hero__panel--utility.hero__panel--archetype .hero__panel-back {
   margin-top: 0;
-  margin-bottom: 0;
+  margin-bottom: 6px;
   padding-top: 0;
 }
 
@@ -5983,52 +5990,61 @@ html.zegon-reduced-motion .smoke-particle {
 
 @media (max-width: 560px) {
   .archetype-carousel {
-    gap: 4px;
+    gap: 6px;
   }
 
   .hero__panel--utility.hero__panel--archetype {
-    width: min(98vw, 580px);
-    max-width: min(98vw, 580px);
-    min-height: calc(min(98vw, 580px) * 1086 / 1448);
-    padding: 78px 44px 94px;
+    width: min(98vw, 620px);
+    max-width: min(98vw, 620px);
+    min-height: calc(min(98vw, 620px) * 1086 / 1448);
+    padding: 86px 44px 88px;
   }
 
   .archetype-picker__inner {
-    width: 92%;
+    width: 94%;
     max-width: none;
-    padding-bottom: 4px;
+    padding-bottom: 6px;
   }
 
   .hero__panel--archetype .hero__panel-title {
-    font-size: clamp(18px, 4.6vw, 21px);
+    font-size: clamp(20px, 5vw, 24px);
   }
 
   .hero__panel--archetype .archetype-carousel__arrow {
-    width: 26px;
-    height: 46px;
-    font-size: 19px;
+    width: 30px;
+    height: 54px;
+    font-size: 22px;
   }
 
   .hero__panel--archetype .archetype-card__banner {
-    height: 34px;
+    height: 42px;
   }
 
   .hero__panel--archetype .archetype-card__name {
-    font-size: 14px;
+    font-size: 16px;
   }
 
   .hero__panel--archetype .archetype-card__tag {
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .hero__panel--archetype .archetype-card__adv,
   .hero__panel--archetype .archetype-card__trade {
-    font-size: 10px;
+    font-size: 12px;
+  }
+
+  .hero__panel--archetype .duel-length__chip-name {
+    font-size: 12px;
+  }
+
+  .hero__panel--archetype .duel-length__chip-rounds {
+    font-size: 11px;
   }
 
   .hero__panel--utility.hero__panel--archetype .archetype-picker__actions .utility-sprite-button {
-    height: 32px;
-    font-size: 11px;
+    height: 48px;
+    min-height: 48px;
+    font-size: 14px;
   }
 }
 
