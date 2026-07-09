@@ -2,7 +2,10 @@ import {
   gunslingerPortraitPath,
   gunslingerRankName,
 } from "@zegon/game-core";
-import type { PlayerProfile } from "./profileTypes.js";
+import type { GunslingerProfile, PlayerProfile } from "./profileTypes.js";
+
+/** On-chain / wallet metadata is English-first (OpenSea & explorer convention). */
+export const GUNSLINGER_NFT_METADATA_LANG = "en" as const;
 
 export function publicAppBaseUrl(): string {
   return (
@@ -26,9 +29,18 @@ export function resolveGunslingerMetadataUrl(
   return `https://indexer-storage-turbo.0g.ai/download?root=${encodeURIComponent(storedRootOrUri)}`;
 }
 
+function gunslingerNftEnglishDescription(
+  profile: PlayerProfile,
+  gs: GunslingerProfile,
+): string {
+  if (gs.bioLang === "en") return gs.bio;
+  const rankName = gunslingerRankName(gs.rank, "en");
+  return `ZEGON judged ${profile.nickname} as ${rankName}. Gunslinger identity earned through blind duels on ZEGON Duel (0G Galileo).`;
+}
+
 export function buildGunslingerTokenMetadata(
   profile: PlayerProfile,
-  lang: "en" | "es",
+  _lang?: "en" | "es",
 ): Record<string, unknown> | null {
   const gs = profile.gunslinger;
   if (!gs?.rank || !gs.bio || !gs.evaluatedAt) return null;
@@ -36,21 +48,33 @@ export function buildGunslingerTokenMetadata(
   const gender = gs.characterGender ?? "man";
   const base = publicAppBaseUrl();
   const portraitPath = gunslingerPortraitPath(gs.rank, gender);
-  const rankName = gunslingerRankName(gs.rank, lang);
+  const rankNameEn = gunslingerRankName(gs.rank, "en");
+  const characterTrait = gender === "woman" ? "Woman" : "Man";
 
-  return {
-    name: `${profile.nickname} — ${rankName}`,
-    description: gs.bio,
+  const metadata: Record<string, unknown> = {
+    name: `${profile.nickname} — ${rankNameEn}`,
+    description: gunslingerNftEnglishDescription(profile, gs),
     image: `${base}${portraitPath}`,
     external_url: base,
     attributes: [
-      { trait_type: "Rank", value: rankName },
+      { trait_type: "Rank", value: rankNameEn },
       { trait_type: "Rank Level", value: gs.rank },
       { trait_type: "Nickname", value: profile.nickname },
       { trait_type: "Duels Won", value: profile.stats.duelsWon },
       { trait_type: "Duels Played", value: profile.stats.duelsPlayed },
       { trait_type: "Verified Duels", value: profile.stats.verifiedDuels },
-      { trait_type: "Character", value: gender === "woman" ? "Woman" : "Man" },
+      { trait_type: "Character", value: characterTrait },
     ],
   };
+
+  if (gs.bioLang === "es") {
+    metadata.localization = {
+      es: {
+        name: `${profile.nickname} — ${gunslingerRankName(gs.rank, "es")}`,
+        description: gs.bio,
+      },
+    };
+  }
+
+  return metadata;
 }

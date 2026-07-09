@@ -4,6 +4,7 @@ import { EXPLORER_BASE } from "./contract.js";
 import {
   buildGunslingerTokenMetadata,
   gunslingerTokenMetadataUrl,
+  GUNSLINGER_NFT_METADATA_LANG,
 } from "./gunslingerTokenMetadata.js";
 
 const GUNSLINGER_ABI = [
@@ -66,7 +67,7 @@ export class GunslingerNftService {
     return this.contract.tokenOfOwner(ethers.getAddress(owner)) as Promise<bigint>;
   }
 
-  async mintOrUpdate(profile: PlayerProfile, lang: "en" | "es"): Promise<GunslingerMintResult> {
+  async mintOrUpdate(profile: PlayerProfile, _lang: "en" | "es" = GUNSLINGER_NFT_METADATA_LANG): Promise<GunslingerMintResult> {
     if (!this.contract || !this.contractAddress) {
       throw new Error("GUNSLINGER_CONTRACT_NOT_CONFIGURED");
     }
@@ -75,7 +76,7 @@ export class GunslingerNftService {
       throw new Error("GUNSLINGER_NOT_EVALUATED");
     }
 
-    const metadata = buildGunslingerTokenMetadata(profile, lang);
+    const metadata = buildGunslingerTokenMetadata(profile, GUNSLINGER_NFT_METADATA_LANG);
     if (!metadata) {
       throw new Error("GUNSLINGER_NOT_EVALUATED");
     }

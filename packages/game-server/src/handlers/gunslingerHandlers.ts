@@ -6,6 +6,7 @@ import { evaluateGunslingerRank } from "../services/gunslingerEvaluate.js";
 import { getGunslingerNftService } from "../services/gunslingerNft.js";
 import {
   buildGunslingerTokenMetadata,
+  GUNSLINGER_NFT_METADATA_LANG,
   resolveGunslingerMetadataUrl,
 } from "../services/gunslingerTokenMetadata.js";
 import {
@@ -115,9 +116,8 @@ export async function handleGunslingerMint(body: {
     return { accepted: false, reason: "CONTRACT_NOT_CONFIGURED" };
   }
 
-  const lang = body.lang === "es" ? "es" : profile.gunslinger.bioLang ?? "en";
   try {
-    const mint = await nftService.mintOrUpdate(profile, lang);
+    const mint = await nftService.mintOrUpdate(profile);
 
     const updated = await saveGunslingerNft(body.address, {
       tokenId: mint.tokenId,
@@ -226,8 +226,7 @@ export async function handleGunslingerTokenMetadata(address: string): Promise<
   if (!profile?.gunslinger?.rank) {
     return { ok: false, reason: "GUNSLINGER_NOT_EVALUATED" };
   }
-  const lang = profile.gunslinger.bioLang ?? "en";
-  const metadata = buildGunslingerTokenMetadata(profile, lang);
+  const metadata = buildGunslingerTokenMetadata(profile, GUNSLINGER_NFT_METADATA_LANG);
   if (!metadata) {
     return { ok: false, reason: "GUNSLINGER_NOT_EVALUATED" };
   }
