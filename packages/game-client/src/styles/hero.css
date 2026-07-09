@@ -69,6 +69,7 @@ button {
   align-items: stretch;
   background: #030205;
   --hero-shift-x: clamp(28px, 3.5vw, 56px);
+  --hero-footer-reserve: clamp(132px, 21vh, 196px);
 }
 
 html:has(.hero),
@@ -341,7 +342,7 @@ body:has(.hero) {
   width: auto;
   height: auto;
   max-width: min(100%, clamp(500px, 64vw, 1080px));
-  max-height: clamp(660px, calc(100dvh - 140px), 1040px);
+  max-height: clamp(660px, calc(100dvh - var(--hero-footer-reserve, 168px) - 24px), 1040px);
   display: block;
   object-fit: contain;
   object-position: center center;
@@ -595,45 +596,60 @@ body:has(.hero) {
   grid-area: content;
   width: 100%;
   max-width: 100%;
+  max-height: 100%;
   margin: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding:
     clamp(8px, 1.5vh, 16px)
-    clamp(36px, 5.5vw, 96px)
+    clamp(24px, 4vw, 72px)
     clamp(4px, 0.8vh, 8px)
     clamp(16px, 2.5vw, 32px);
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
   align-self: stretch;
 }
 
 .hero__menu {
-  --menu-w: min(100%, 310px);
-  --menu-gap: clamp(5px, 1vh, 8px);
-  --menu-px: 13px;
-  --menu-py: clamp(8px, 1.25vh, 10px);
-  --menu-fs-xs: clamp(9px, 2.1vw, 10px);
-  --menu-fs-sm: clamp(10px, 2.35vw, 11px);
-  --menu-fs-md: clamp(11px, 2.55vw, 13px);
-  --menu-fs-lg: clamp(13px, 2.9vw, 15px);
+  --menu-w: min(100%, clamp(360px, 26vw, 420px));
+  --menu-gap: clamp(6px, 1vh, 9px);
+  --menu-px: 15px;
+  --menu-py: clamp(9px, 1.25vh, 11px);
+  --menu-fs-xs: clamp(10px, 2.1vw, 11px);
+  --menu-fs-sm: clamp(11px, 2.35vw, 12px);
+  --menu-fs-md: clamp(12px, 2.55vw, 14px);
+  --menu-fs-lg: clamp(14px, 2.9vw, 17px);
 
   display: flex;
   flex-direction: column;
   align-items: stretch;
   width: var(--menu-w);
   max-width: var(--menu-w);
-  height: 100%;
-  max-height: 100%;
-  overflow: visible;
-  padding: 0;
+  height: auto;
+  max-height: calc(100dvh - var(--hero-footer-reserve) - clamp(8px, 1.5vh, 16px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(179, 18, 43, 0.55) transparent;
+  padding: 0 2px 4px;
   gap: var(--menu-gap);
   justify-content: center;
   flex-shrink: 0;
   position: relative;
   z-index: 5;
   margin-left: auto;
+}
+
+.hero__menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.hero__menu::-webkit-scrollbar-thumb {
+  background: rgba(179, 18, 43, 0.55);
+  border-radius: 4px;
 }
 
 .hero__menu-head {
@@ -810,7 +826,7 @@ body:has(.hero) {
 }
 
 .hero__menu .hub-nav-btn {
-  min-height: 58px;
+  min-height: 62px;
   padding: var(--menu-py) var(--menu-px);
 }
 
@@ -1829,10 +1845,11 @@ html.zegon-reduced-motion .hero__footer-built:hover {
     align-items: center;
     justify-content: flex-start;
     row-gap: clamp(8px, 2vh, 16px);
-    max-width: min(100%, 310px);
+    max-width: min(100%, clamp(340px, 92vw, 420px));
     padding: 8px 16px 4px;
     min-height: 0;
-    overflow: hidden;
+    max-height: none;
+    overflow: visible;
   }
 
   .hero__character-wrap {
@@ -1862,15 +1879,16 @@ html.zegon-reduced-motion .hero__footer-built:hover {
 
   .hero__menu {
     order: 1;
-    --menu-w: min(100%, 310px);
-    --menu-gap: clamp(5px, 1vh, 7px);
-    --menu-py: clamp(7px, 1.2vh, 9px);
-    --menu-fs-lg: clamp(12px, 3vw, 14px);
-    --menu-fs-md: clamp(11px, 2.45vw, 12px);
-    --menu-fs-sm: clamp(10px, 2.25vw, 11px);
-    --menu-fs-xs: clamp(9px, 2.05vw, 10px);
+    --menu-w: min(100%, clamp(340px, 92vw, 420px));
+    --menu-gap: clamp(6px, 1vh, 8px);
+    --menu-py: clamp(8px, 1.2vh, 10px);
+    --menu-fs-lg: clamp(13px, 3vw, 16px);
+    --menu-fs-md: clamp(12px, 2.65vw, 14px);
+    --menu-fs-sm: clamp(11px, 2.4vw, 12px);
+    --menu-fs-xs: clamp(10px, 2.2vw, 11px);
     width: var(--menu-w);
     max-width: var(--menu-w);
+    max-height: none;
     margin: 0 auto;
     transform: none;
   }
@@ -1912,7 +1930,42 @@ html.zegon-reduced-motion .hero__footer-built:hover {
 
 @media (min-width: 901px) {
   .hero__layout {
-    padding-right: clamp(48px, 6.5vw, 112px);
+    padding-right: clamp(32px, 4.5vw, 80px);
+  }
+}
+
+@media (min-width: 901px) and (max-height: 860px) {
+  .hero {
+    --hero-footer-reserve: clamp(118px, 24vh, 168px);
+  }
+
+  .hero__menu {
+    justify-content: flex-start;
+    --menu-gap: clamp(5px, 0.85vh, 7px);
+    --menu-py: clamp(7px, 1vh, 9px);
+  }
+
+  .hero__character-img {
+    max-height: clamp(360px, calc(100dvh - var(--hero-footer-reserve) - 48px), 680px);
+  }
+}
+
+@media (min-width: 901px) and (max-height: 720px) {
+  .hero {
+    --hero-footer-reserve: clamp(108px, 26vh, 148px);
+  }
+
+  .hero__menu {
+    --menu-fs-lg: clamp(13px, 2.7vw, 15px);
+    --menu-fs-md: clamp(11px, 2.4vw, 13px);
+  }
+
+  .hero__footer {
+    padding-bottom: clamp(4px, 0.8vh, 8px);
+  }
+
+  .hero__footer-built {
+    margin-bottom: clamp(4px, 0.8vh, 8px);
   }
 }
 
@@ -1924,7 +1977,11 @@ html.zegon-reduced-motion .hero__footer-built:hover {
 
 @media (min-width: 1400px) {
   .hero__layout {
-    padding-right: clamp(64px, 5vw, 128px);
+    padding-right: clamp(48px, 4.5vw, 96px);
+  }
+
+  .hero__menu {
+    --menu-w: min(100%, clamp(380px, 24vw, 440px));
   }
 
   .hero__character-wrap {
@@ -2022,6 +2079,32 @@ html.zegon-reduced-motion .hero__footer-built:hover {
 }
 
 /* --- Menú extendido del juego --- */
+
+.hero__menu .saloon-feature,
+.hero__menu .tutorial-hub-btn {
+  padding: var(--menu-py) var(--menu-px);
+}
+
+.hero__menu .saloon-feature__title,
+.hero__menu .tutorial-hub-btn__title {
+  font-size: var(--menu-fs-md);
+}
+
+.hero__menu .saloon-feature__subtitle,
+.hero__menu .tutorial-hub-btn__subtitle {
+  font-size: var(--menu-fs-sm);
+}
+
+.hero__menu .hero__guest-note {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  font-size: var(--menu-fs-xs);
+  line-height: 1.35;
+}
+
+.hero__menu .hero__wallet-stats {
+  font-size: var(--menu-fs-sm);
+}
 
 .hero__menu-grid {
   width: 100%;
@@ -2401,9 +2484,13 @@ html.zegon-reduced-motion .hero__footer-built:hover {
   inset: 0;
   z-index: 40;
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
-  padding: 24px;
+  padding: clamp(12px, 2.5vh, 28px) clamp(12px, 3vw, 24px);
+  max-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: rgba(3,2,5,0.82);
   backdrop-filter: blur(6px);
   animation: overlay-in 0.28s ease-out;
