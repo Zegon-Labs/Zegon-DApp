@@ -33,6 +33,7 @@ export interface GunslingerBurnResult {
   contractAddress: string;
   txHash: string;
   explorerUrl: string;
+  migrated?: boolean;
 }
 
 export class GunslingerNftService {
