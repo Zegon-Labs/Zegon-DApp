@@ -24,6 +24,7 @@ import { drawScanlines } from "../ui/components.js";
 import { C, COLORS } from "../ui/theme.js";
 import { formatScoreBreakdown } from "../ui/scoreBreakdownText.js";
 import { buildChallengeUrlFromResult, generateShareCard, shareOnX } from "../utils/shareCard.js";
+import { notify } from "../lib/toast.js";
 import { playDuelEndSfx, playSfx } from "../services/sfx.js";
 import { trackMetric } from "../services/metrics.js";
 import { playDuelEndVoice, stopAllVoice } from "../services/voice.js";
@@ -293,7 +294,10 @@ export class ResultScene extends Phaser.Scene {
         label: strings.verifyOnChain,
         onClick: () => {
           if (this.duelId) {
-            openVerifyDuelWindow(this.duelId);
+            const opened = openVerifyDuelWindow(this.duelId);
+            if (!opened) {
+              notify.warning(strings.popupBlockedHint);
+            }
           } else {
             this.panelHandle?.setVerifyText(strings.verifyOffline);
           }

@@ -13,6 +13,7 @@ interface PhaserHostProps {
 }
 
 export function PhaserHost({ visible }: PhaserHostProps) {
+  const stageRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Phaser must stay mounted (hidden) so the canvas exists before startScene fires.
@@ -30,17 +31,31 @@ export function PhaserHost({ visible }: PhaserHostProps) {
 
   useEffect(() => {
     if (!visible) stopToBlank();
-    else refreshPhaserScale();
+    else {
+      requestAnimationFrame(() => {
+        refreshPhaserScale();
+        requestAnimationFrame(refreshPhaserScale);
+      });
+    }
   }, [visible]);
 
   useEffect(() => {
+    const stage = stageRef.current;
     const onResize = () => refreshPhaserScale();
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
+    const observer = stage ? new ResizeObserver(onResize) : null;
+    if (stage) observer?.observe(stage);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      observer?.disconnect();
+    };
   }, []);
 
   return (
     <div
+      ref={stageRef}
       className="game-stage"
       style={
         visible

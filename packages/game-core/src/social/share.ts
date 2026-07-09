@@ -27,7 +27,7 @@ export function buildTwitterIntentUrl(text: string, url?: string): string {
   if (url) {
     params.set("url", url);
   }
-  return `https://twitter.com/intent/tweet?${params.toString()}`;
+  return `https://x.com/intent/tweet?${params.toString()}`;
 }
 
 export const ZEGON_X_HANDLE = DEFAULT_TAG;

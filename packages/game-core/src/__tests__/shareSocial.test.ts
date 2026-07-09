@@ -17,7 +17,7 @@ describe("share social", () => {
     const text = buildShareTweetText({ score: 800 });
     const url = "https://zegon.test/?challenge=abc";
     const intent = buildTwitterIntentUrl(text, url);
-    expect(intent.startsWith("https://twitter.com/intent/tweet?")).toBe(true);
+    expect(intent.startsWith("https://x.com/intent/tweet?")).toBe(true);
     expect(intent).toContain(encodeURIComponent("@Zegon_0g"));
     expect(intent).toContain(encodeURIComponent("800"));
     expect(intent).toContain(encodeURIComponent(url));

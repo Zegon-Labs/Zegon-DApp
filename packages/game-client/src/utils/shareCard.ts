@@ -12,6 +12,7 @@ import { getCachedProfile } from "../services/profile.js";
 import { getWalletAddress } from "../services/wallet.js";
 import { t } from "../i18n/index.js";
 import { notify } from "../lib/toast.js";
+import { openExternalTab, navigateExternalTab } from "./externalLink.js";
 
 export interface ShareOptions {
   seed: string;
@@ -208,8 +209,16 @@ export async function shareOnX(
   options: ShareOptions,
 ): Promise<void> {
   const strings = t();
-  const url = await buildShareOnXUrl(result, options);
-  const filename = `zegon-${result.score}.png`;
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://zegon-dapp.vercel.app";
+  const text = buildShareTweetText({
+    score: result.score,
+    verifyRounds: options.verifyProof,
+  });
+
+  // Must open the tab synchronously — async work before window.open gets blocked.
+  const initialUrl = buildTwitterIntentUrl(text, `${origin}/`);
+  openExternalTab(initialUrl, "zegon-share");
 
   let blob: Blob | null = null;
   try {
@@ -224,18 +233,14 @@ export async function shareOnX(
   }
 
   const file = blob
-    ? new File([blob], filename, { type: "image/png" })
+    ? new File([blob], `zegon-${result.score}.png`, { type: "image/png" })
     : null;
 
-  // Touch devices only: native share can attach the actual card image.
   if (isCoarsePointer() && file && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({
         files: [file],
-        text: buildShareTweetText({
-          score: result.score,
-          verifyRounds: options.verifyProof,
-        }),
+        text,
       });
       return;
     } catch {
@@ -243,12 +248,19 @@ export async function shareOnX(
     }
   }
 
-  // Desktop: copy the card to the clipboard (best-effort) so it can be pasted,
-  // then always open the X composer.
+  let challengeUrl = `${origin}/`;
+  try {
+    challengeUrl = await buildChallengeUrlFromResult(result, options);
+  } catch {
+    /* keep home url */
+  }
+
+  const finalUrl = buildTwitterIntentUrl(text, challengeUrl);
+  if (!navigateExternalTab("zegon-share", finalUrl)) {
+    openExternalTab(finalUrl, "zegon-share");
+  }
+
   const copied = blob ? await copyBlobToClipboard(blob) : false;
-
-  window.open(url, "_blank", "noopener,noreferrer,width=550,height=420");
-
   if (copied) {
     notify.success(strings.shareImageCopied);
   }

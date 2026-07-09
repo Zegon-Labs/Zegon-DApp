@@ -323,6 +323,8 @@ export interface LocaleStrings {
   scoreInfoBlindsight: string;
   shareImageCopied: string;
   shareImageDownloaded: string;
+  shareComposerOpened: string;
+  popupBlockedHint: string;
   profileMenu: string;
   profileTitle: string;
   profileReadStat: string;
@@ -756,6 +758,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreInfoBlindsight: "Keep ZEGON's read streak low to avoid penalties",
     shareImageCopied: "Card copied — paste it (Ctrl+V) into your X post",
     shareImageDownloaded: "Card downloaded — attach it to your X post",
+    shareComposerOpened: "X composer opened — paste your card with Ctrl+V if needed",
+    popupBlockedHint: "Pop-up blocked — allow pop-ups for this site and try again",
     profileMenu: "PROFILE",
     profileTitle: "GUNSLINGER PROFILE",
     profileReadStat: "ZEGON read you {read} times in {rounds} rounds",
@@ -1196,6 +1200,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreInfoBlindsight: "Mantené baja la racha de lectura de ZEGON para evitar penalización",
     shareImageCopied: "Tarjeta copiada — pegala (Ctrl+V) en tu post de X",
     shareImageDownloaded: "Tarjeta descargada — adjuntala a tu post de X",
+    shareComposerOpened: "Compositor de X abierto — pega la tarjeta con Ctrl+V si hace falta",
+    popupBlockedHint: "Pop-up bloqueado — permite pop-ups en este sitio e intenta de nuevo",
     profileMenu: "PERFIL",
     profileTitle: "PERFIL DEL PISTOLERO",
     profileReadStat: "ZEGON te leyó {read} veces en {rounds} rondas",

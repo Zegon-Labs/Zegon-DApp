@@ -9,6 +9,15 @@ import { C } from "../ui/theme.js";
 let gameInstance: Phaser.Game | null = null;
 let pendingScene: { scene: string; data?: Record<string, unknown> } | null = null;
 
+const GAME_ASPECT = GAME_WIDTH / GAME_HEIGHT;
+
+/** Wide screens: cover (no side bars). Taller/narrower: contain (no HUD crop). */
+function pickScaleMode(): typeof Phaser.Scale.FIT | typeof Phaser.Scale.ENVELOP {
+  if (typeof window === "undefined") return Phaser.Scale.ENVELOP;
+  const aspect = window.innerWidth / window.innerHeight;
+  return aspect >= GAME_ASPECT ? Phaser.Scale.ENVELOP : Phaser.Scale.FIT;
+}
+
 export function createPhaserGame(parent: HTMLElement): Phaser.Game {
   if (gameInstance) {
     gameInstance.destroy(true);
@@ -22,7 +31,7 @@ export function createPhaserGame(parent: HTMLElement): Phaser.Game {
     parent,
     backgroundColor: C.void,
     scale: {
-      mode: Phaser.Scale.FIT,
+      mode: pickScaleMode(),
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     render: {
@@ -48,7 +57,13 @@ export function destroyPhaserGame(): void {
 
 /** Recompute canvas size after the stage container becomes visible. */
 export function refreshPhaserScale(): void {
-  gameInstance?.scale.refresh();
+  if (!gameInstance) return;
+  const scale = gameInstance.scale;
+  const nextMode = pickScaleMode();
+  if (scale.scaleMode !== nextMode) {
+    scale.scaleMode = nextMode;
+  }
+  scale.refresh();
 }
 
 export function startPhaserScene(scene: string, data?: Record<string, unknown>): void {

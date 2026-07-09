@@ -74,6 +74,11 @@ export default function App() {
   }, [inGame]);
 
   useEffect(() => {
+    document.documentElement.classList.toggle("zegon-in-game", inGame);
+    return () => document.documentElement.classList.remove("zegon-in-game");
+  }, [inGame]);
+
+  useEffect(() => {
     if (profileSetupAddress) playSfx("ui_modal_open");
   }, [profileSetupAddress]);
 

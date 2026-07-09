@@ -603,10 +603,11 @@ function addSpriteBtn(
     })
     .on("pointerdown", () => {
       lbl.setScale(0.96);
-      onClick();
     })
-    .on("pointerup", () => {
+    .on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.wasTouch && pointer.button !== 0) return;
       lbl.setScale(1);
+      onClick();
     });
   container.add(hit);
 }
