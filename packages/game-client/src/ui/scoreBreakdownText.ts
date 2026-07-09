@@ -32,6 +32,8 @@ function lineText(line: ScoreBreakdownLine, strings: LocaleStrings): string {
       return format(strings.scoreLineHpBonus, { points: line.points });
     case "defeat_cap":
       return format(strings.scoreLineDefeatCap, { points: absPoints });
+    case "score_floor":
+      return format(strings.scoreLineScoreFloor, { points: line.points });
     case "daily_multiplier":
       return format(strings.scoreLineDailyMult, {
         points: line.points,
@@ -50,7 +52,8 @@ function formatPenaltySummary(
     .filter(
       (line) =>
         line.points < 0 &&
-        line.reason !== "defeat_cap",
+        line.reason !== "defeat_cap" &&
+        line.reason !== "score_floor",
     )
     .reduce((sum, line) => sum + Math.abs(line.points), 0);
 

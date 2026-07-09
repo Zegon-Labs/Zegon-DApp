@@ -3,10 +3,15 @@ export type AppView =
   | { type: "settings" }
   | { type: "leaderboard" }
   | { type: "achievements" }
-  | { type: "profile" }
+  | { type: "profile"; playerId?: string; returnTo?: "leaderboard" | "hub" }
   | { type: "saloon" }
   | { type: "game" }
-  | { type: "audit"; storageRoot?: string; duelId?: string };
+  | {
+      type: "audit";
+      storageRoot?: string;
+      duelId?: string;
+      returnTo?: "leaderboard" | "hub";
+    };
 
 type NavigateListener = (view: AppView) => void;
 type SceneListener = (scene: string, data?: Record<string, unknown>) => void;

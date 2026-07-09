@@ -1,5 +1,5 @@
 import type { UpgradeLevels, SaloonRelicLevels, SaloonRelicId, CharacterGender } from "@zegon/game-core";
-import { rankMonotonicMerge } from "@zegon/game-core";
+import { rankMonotonicMerge, UPGRADE_ORDER, RELIC_ORDER } from "@zegon/game-core";
 
 export interface GunslingerNftRecord {
   tokenId: string;
@@ -144,8 +144,45 @@ function mergeGunslinger(
   };
 }
 
+function mergeUpgradeLevels(
+  local?: UpgradeLevels,
+  remote?: UpgradeLevels,
+): UpgradeLevels {
+  const merged: UpgradeLevels = {};
+  for (const id of UPGRADE_ORDER) {
+    const level = Math.max(local?.[id] ?? 0, remote?.[id] ?? 0);
+    if (level > 0) merged[id] = level;
+  }
+  return merged;
+}
+
+function mergeRelicLevels(
+  local?: SaloonRelicLevels,
+  remote?: SaloonRelicLevels,
+): SaloonRelicLevels {
+  const merged: SaloonRelicLevels = {};
+  for (const id of RELIC_ORDER) {
+    const count = Math.max(local?.[id] ?? 0, remote?.[id] ?? 0);
+    if (count > 0) merged[id] = count;
+  }
+  return merged;
+}
+
+function pickByUpdatedAt(
+  localVal: number,
+  remoteVal: number,
+  localUpdatedAt: number,
+  remoteUpdatedAt: number,
+): number {
+  if (localUpdatedAt > remoteUpdatedAt) return localVal;
+  if (remoteUpdatedAt > localUpdatedAt) return remoteVal;
+  return Math.max(localVal, remoteVal);
+}
+
 function mergeProfiles(local: PlayerProfile, remote: PlayerProfile): PlayerProfile {
   const xp = Math.max(local.xp ?? 0, remote.xp ?? 0);
+  const localUpdatedAt = local.updatedAt ?? 0;
+  const remoteUpdatedAt = remote.updatedAt ?? 0;
   const mergedRecent = [...new Set([...(remote.recentDuelIds ?? []), ...(local.recentDuelIds ?? [])])].slice(
     0,
     15,
@@ -155,16 +192,21 @@ function mergeProfiles(local: PlayerProfile, remote: PlayerProfile): PlayerProfi
     nickname: remote.nickname || local.nickname,
     xp,
     level: Math.floor(xp / 500) + 1,
-    notches: Math.max(local.notches ?? 0, remote.notches ?? 0),
-    upgrades: { ...local.upgrades, ...remote.upgrades },
-    relics: { ...local.relics, ...remote.relics },
+    notches: pickByUpdatedAt(
+      local.notches ?? 0,
+      remote.notches ?? 0,
+      localUpdatedAt,
+      remoteUpdatedAt,
+    ),
+    upgrades: mergeUpgradeLevels(local.upgrades, remote.upgrades),
+    relics: mergeRelicLevels(local.relics, remote.relics),
     equippedConsumable: remote.equippedConsumable ?? local.equippedConsumable ?? null,
     achievements: [...new Set([...(local.achievements ?? []), ...(remote.achievements ?? [])])],
     unlocks: [...new Set([...(local.unlocks ?? []), ...(remote.unlocks ?? [])])],
-    stats: mergeStats(local.stats, remote.stats, local.updatedAt ?? 0, remote.updatedAt ?? 0),
+    stats: mergeStats(local.stats, remote.stats, localUpdatedAt, remoteUpdatedAt),
     gunslinger: mergeGunslinger(local.gunslinger, remote.gunslinger),
     recentDuelIds: mergedRecent,
-    updatedAt: Math.max(local.updatedAt ?? 0, remote.updatedAt ?? 0),
+    updatedAt: Math.max(localUpdatedAt, remoteUpdatedAt),
   };
 }
 

@@ -4,6 +4,7 @@ import { useLocale } from "../hooks/useLocale.js";
 import { format, type Language, type LocaleStrings } from "../i18n/index.js";
 import { fetchLastDuelAuditForPlayer } from "../services/duelAudit.js";
 import { fetchProfile } from "../services/profile.js";
+import { notify } from "../lib/toast.js";
 import { getWalletAddress, onWalletChange } from "../services/wallet.js";
 import {
   padCountdownUnit,
@@ -166,12 +167,36 @@ export function LeaderboardPanel() {
     try {
       const { entry } = await fetchLastDuelAuditForPlayer(selectedPlayer.playerId);
       if (!entry?.storageRoot) {
+        notify.error(strings.auditNoDuel);
         return;
       }
+      setSelectedPlayer(null);
       gameBridge.navigate({
         type: "audit",
         storageRoot: entry.storageRoot,
         duelId: entry.duelId,
+        returnTo: "leaderboard",
+      });
+    } finally {
+      setAuditBusy(false);
+    }
+  }
+
+  async function viewPlayerProfile() {
+    if (!selectedPlayer || auditBusy) return;
+    setAuditBusy(true);
+    try {
+      const profile = await fetchProfile(selectedPlayer.playerId);
+      if (!profile?.nickname) {
+        notify.error(strings.boardNoPublicProfile);
+        return;
+      }
+      const playerId = selectedPlayer.playerId;
+      setSelectedPlayer(null);
+      gameBridge.navigate({
+        type: "profile",
+        playerId,
+        returnTo: "leaderboard",
       });
     } finally {
       setAuditBusy(false);
@@ -299,39 +324,41 @@ export function LeaderboardPanel() {
           ) : wallet ? (
             <p className="board-footer-rank board-footer-rank--muted">{strings.boardNotRankedYet}</p>
           ) : null}
-
-          {selectedPlayer ? (
-            <div className="board-player-peek" role="region" aria-label={strings.boardPlayerPeekTitle}>
-              <p className="board-player-peek__name">
-                {selectedPlayer.displayName ?? selectedPlayer.nickname ?? selectedPlayer.playerId.slice(0, 10)}
-              </p>
-              <div className="board-player-peek__actions">
-                <button
-                  type="button"
-                  className="btn btn--menu"
-                  disabled={auditBusy}
-                  onClick={() => void viewLastDuelAudit()}
-                >
-                  {strings.boardViewLastDuel}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--menu btn--ghost"
-                  onClick={() => void fetchProfile(selectedPlayer.playerId)}
-                >
-                  {strings.boardViewProfile}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--menu btn--ghost"
-                  onClick={() => setSelectedPlayer(null)}
-                >
-                  {strings.commonCancel}
-                </button>
-              </div>
-            </div>
-          ) : null}
         </div>
+
+        {selectedPlayer ? (
+          <div className="board-player-peek" role="region" aria-label={strings.boardPlayerPeekTitle}>
+            <p className="board-player-peek__name">
+              {selectedPlayer.displayName ?? selectedPlayer.nickname ?? selectedPlayer.playerId.slice(0, 10)}
+            </p>
+            <div className="board-player-peek__actions">
+              <button
+                type="button"
+                className="btn btn--menu"
+                disabled={auditBusy}
+                onClick={() => void viewLastDuelAudit()}
+              >
+                {auditBusy ? strings.saloonBuying : strings.boardViewLastDuel}
+              </button>
+              <button
+                type="button"
+                className="btn btn--menu btn--ghost"
+                disabled={auditBusy}
+                onClick={() => void viewPlayerProfile()}
+              >
+                {strings.boardViewProfile}
+              </button>
+              <button
+                type="button"
+                className="btn btn--menu btn--ghost"
+                disabled={auditBusy}
+                onClick={() => setSelectedPlayer(null)}
+              >
+                {strings.commonCancel}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <button
           type="button"

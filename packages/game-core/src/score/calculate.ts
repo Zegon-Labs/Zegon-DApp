@@ -156,7 +156,7 @@ export function estimateLiveScoreRaw(state: DuelState): number {
   return roundPoints + surpriseBonusTotal - readStreakPenalty;
 }
 
-/** Partial score estimate mid-duel (no victory/defeat cap). */
+/** Partial score estimate mid-duel (no victory/defeat cap, may be negative). */
 export function estimateLiveScore(state: DuelState): number {
-  return Math.max(0, estimateLiveScoreRaw(state));
+  return estimateLiveScoreRaw(state);
 }

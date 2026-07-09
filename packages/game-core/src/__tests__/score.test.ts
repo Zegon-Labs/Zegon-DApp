@@ -4,6 +4,8 @@ import {
   sumCumulativeRoundScores,
   surpriseStreakBonus,
   timesReadPenalty,
+  estimateLiveScore,
+  estimateLiveScoreRaw,
   PlayerAction,
   DuelItemId,
 } from "../index.js";
@@ -113,6 +115,16 @@ describe("score calculation", () => {
     ];
     const total = sumCumulativeRoundScores(logs);
     expect(total).toBe(8 + (8 + 8 + 8) + (8 + 8 + 8 - 15));
+  });
+
+  it("shows negative live score when heavily read", () => {
+    const readHeavy = mockState(
+      [mockLog(true, 0), mockLog(true, 1), mockLog(true, 2)],
+      { readingStreak: 3, zegonHp: 50, playerHp: 80 },
+    );
+    const raw = estimateLiveScoreRaw(readHeavy);
+    expect(raw).toBeLessThan(0);
+    expect(estimateLiveScore(readHeavy)).toBe(raw);
   });
 });
 

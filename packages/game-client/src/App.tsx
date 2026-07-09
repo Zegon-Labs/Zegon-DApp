@@ -139,13 +139,17 @@ export default function App() {
       {!inGame && view.type === "profile" && (
         <>
           <HeroHub />
-          <ProfilePanel />
+          <ProfilePanel playerId={view.playerId} returnTo={view.returnTo} />
         </>
       )}
       {!inGame && view.type === "audit" && (
         <>
           <HeroHub />
-          <DuelAuditPanel storageRoot={view.storageRoot} duelId={view.duelId} />
+          <DuelAuditPanel
+            storageRoot={view.storageRoot}
+            duelId={view.duelId}
+            returnTo={view.returnTo}
+          />
         </>
       )}
       {!inGame && view.type === "saloon" && <UpgradeSaloon />}

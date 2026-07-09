@@ -8,9 +8,10 @@ import type { ParsedDuelAudit } from "@zegon/game-core";
 interface DuelAuditPanelProps {
   storageRoot?: string;
   duelId?: string;
+  returnTo?: "leaderboard" | "hub";
 }
 
-export function DuelAuditPanel({ storageRoot, duelId }: DuelAuditPanelProps) {
+export function DuelAuditPanel({ storageRoot, duelId, returnTo = "hub" }: DuelAuditPanelProps) {
   const { strings } = useLocale();
   const [loading, setLoading] = useState(true);
   const [audit, setAudit] = useState<ParsedDuelAudit | null>(null);
@@ -130,7 +131,9 @@ export function DuelAuditPanel({ storageRoot, duelId }: DuelAuditPanelProps) {
         <button
           type="button"
           className="utility-sprite-button hero__panel-back"
-          onClick={() => gameBridge.navigate({ type: "hub" })}
+          onClick={() =>
+            gameBridge.navigate(returnTo === "leaderboard" ? { type: "leaderboard" } : { type: "hub" })
+          }
         >
           {strings.back}
         </button>

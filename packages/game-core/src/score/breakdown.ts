@@ -17,6 +17,7 @@ export type ScoreBreakdownReason =
   | "clean_victory"
   | "hp_bonus"
   | "defeat_cap"
+  | "score_floor"
   | "daily_multiplier";
 
 export interface ScoreBreakdownLine {
@@ -137,6 +138,14 @@ export function buildScoreBreakdown(
       reason: "daily_multiplier",
       points: total - subtotal,
       multiplier: dailyMult,
+    });
+  }
+
+  const lineSum = lines.reduce((sum, line) => sum + line.points, 0);
+  if (total === 0 && lineSum < 0) {
+    lines.push({
+      reason: "score_floor",
+      points: -lineSum,
     });
   }
 

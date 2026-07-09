@@ -6130,6 +6130,39 @@ html.zegon-reduced-motion .smoke-particle {
   font-size: 16px;
 }
 
+.board-player-peek {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  width: min(92%, 680px);
+  max-width: 680px;
+  margin: 0 auto 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(179, 18, 43, 0.35);
+  background: rgba(10, 9, 17, 0.96);
+  box-shadow: 0 -8px 24px rgba(3, 2, 5, 0.45);
+}
+
+.board-player-peek__name {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ember);
+  text-align: center;
+}
+
+.board-player-peek__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.board-player-peek__actions .btn {
+  pointer-events: auto;
+}
+
 @media (max-width: 720px) {
   .hero__panel--utility.hero__panel--leaderboard {
     width: min(96vw, 580px);

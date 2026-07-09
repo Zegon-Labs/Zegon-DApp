@@ -33,7 +33,12 @@ import {
 import { resolvePlayerHudName } from "../ui/hub/playerHudIdentity.js";
 import { fetchLastDuelAuditForPlayer } from "../services/duelAudit.js";
 
-export function ProfilePanel() {
+interface ProfilePanelProps {
+  playerId?: string;
+  returnTo?: "leaderboard" | "hub";
+}
+
+export function ProfilePanel({ playerId, returnTo = "hub" }: ProfilePanelProps) {
   const { strings, language: lang } = useLocale();
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
   const [, tick] = useState(0);
@@ -46,6 +51,17 @@ export function ProfilePanel() {
   const [auditBusy, setAuditBusy] = useState(false);
 
   useEffect(() => onWalletChange(setWallet), []);
+
+  const viewingAddress = playerId ?? wallet ?? null;
+  const isSelf = Boolean(
+    wallet && viewingAddress && wallet.toLowerCase() === viewingAddress.toLowerCase(),
+  );
+  const isPublicView = Boolean(playerId && !isSelf);
+
+  useEffect(() => {
+    if (!playerId) return;
+    void fetchProfile(playerId).then(() => tick((n) => n + 1));
+  }, [playerId]);
 
   useEffect(() => {
     if (!wallet) {
@@ -68,7 +84,7 @@ export function ProfilePanel() {
     });
   }, [wallet]);
 
-  const profile = wallet ? getCachedProfile(wallet) : null;
+  const profile = viewingAddress ? getCachedProfile(viewingAddress) : null;
   const stats = profile?.stats;
   const xp = profile?.xp ?? 0;
   const prog = xpProgress(xp);
@@ -234,8 +250,54 @@ export function ProfilePanel() {
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
       <div className="hero__panel hero__panel--wide hero__panel--utility">
-        <h2 className="hero__panel-title">{strings.profileTitle}</h2>
-        {!wallet ? (
+        <h2 className="hero__panel-title">
+          {isPublicView && profile?.nickname ? profile.nickname : strings.profileTitle}
+        </h2>
+        {isPublicView ? (
+          <div className="utility-panel-body">
+            {!profile ? (
+              <p className="hero__verify-copy">…</p>
+            ) : (
+              <>
+                <p className="profile-hero-name">{profile.nickname}</p>
+                <p className="profile-hero-stat">
+                  {format(strings.profileReadStat, {
+                    read: stats?.timesReadTotal ?? 0,
+                    rounds: stats?.totalRoundsPlayed ?? stats?.duelsPlayed ?? 0,
+                  })}
+                </p>
+                <div className="profile-stats-grid">
+                  <div className="profile-stat-card">
+                    <span className="profile-stat-card__value">{stats?.duelsWon ?? 0}</span>
+                    <span className="profile-stat-card__label">{strings.profileStatWins}</span>
+                  </div>
+                  <div className="profile-stat-card">
+                    <span className="profile-stat-card__value">{stats?.duelsPlayed ?? 0}</span>
+                    <span className="profile-stat-card__label">{strings.profileStatDuels}</span>
+                  </div>
+                  <div className="profile-stat-card">
+                    <span className="profile-stat-card__value">{stats?.maxReadingStreak ?? 0}</span>
+                    <span className="profile-stat-card__label">{strings.profileStatStreak}</span>
+                  </div>
+                  <div className="profile-stat-card">
+                    <span className="profile-stat-card__value">
+                      {Math.max(stats?.bestGlobalScore ?? 0, stats?.bestDailyScore ?? 0)}
+                    </span>
+                    <span className="profile-stat-card__label">{strings.score}</span>
+                  </div>
+                </div>
+                {evaluated ? (
+                  <p className="gunslinger-rank-label">
+                    {format(strings.gunslingerRankLabel, {
+                      rank: currentRank,
+                      name: gunslingerRankName(currentRank, lang),
+                    })}
+                  </p>
+                ) : null}
+              </>
+            )}
+          </div>
+        ) : !wallet ? (
           <div className="utility-panel-body">
             <p className="hero__verify-copy">{strings.settingsProfileNoWallet}</p>
             <button
@@ -567,7 +629,9 @@ export function ProfilePanel() {
         <button
           type="button"
           className="utility-sprite-button hero__panel-back"
-          onClick={() => gameBridge.navigate({ type: "hub" })}
+          onClick={() =>
+            gameBridge.navigate(returnTo === "leaderboard" ? { type: "leaderboard" } : { type: "hub" })
+          }
         >
           {strings.back}
         </button>

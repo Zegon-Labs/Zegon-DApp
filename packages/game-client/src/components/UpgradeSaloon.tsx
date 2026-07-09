@@ -149,6 +149,7 @@ interface TreePopoverProps {
   equippedFx: string[];
   strings: ReturnType<typeof useLocale>["strings"];
   unlockHint: (id: UpgradeId) => string | null;
+  buying: boolean;
   onBuy: (id: UpgradeId) => void;
 }
 
@@ -160,6 +161,7 @@ function SaloonTreePopover({
   equippedFx,
   strings,
   unlockHint,
+  buying,
   onBuy,
 }: TreePopoverProps) {
   const pos = popoverPosition(node);
@@ -260,12 +262,14 @@ function SaloonTreePopover({
             <button
               type="button"
               className={`saloon-popover__buy${state.affordable ? " saloon-popover__buy--ready" : ""}`}
-              disabled={state.maxed || state.locked}
+              disabled={state.maxed || state.locked || buying}
               onClick={() => isUpgradeNode(node.id) && onBuy(node.id)}
             >
-              {state.maxed
-                ? strings.saloonOwned
-                : strings.saloonUpgradeAction}
+              {buying
+                ? strings.saloonBuying
+                : state.maxed
+                  ? strings.saloonOwned
+                  : strings.saloonUpgradeAction}
             </button>
           </div>
         </>
@@ -281,6 +285,7 @@ export function UpgradeSaloon() {
   const [tab, setTab] = useState<SaloonTab>("tree");
   const [selectedId, setSelectedId] = useState<TreeNodeId | null>(null);
   const [selectedRelic, setSelectedRelic] = useState<SaloonRelicId | null>(null);
+  const [buyingId, setBuyingId] = useState<UpgradeId | SaloonRelicId | null>(null);
 
   useEffect(() => onWalletChange(setWallet), []);
 
@@ -316,28 +321,36 @@ export function UpgradeSaloon() {
   }
 
   async function buyUpgrade(id: UpgradeId) {
-    if (!wallet) return;
-    const ok = await purchaseUpgradeOnServer(wallet, id);
-    if (ok) {
-      playSfx("achievement_unlock");
-      await fetchProfile(wallet);
-      tick((n) => n + 1);
-      notify.success(strings.saloonTitle);
-    } else {
-      notify.error(strings.profileSaveFailed);
+    if (!wallet || buyingId) return;
+    setBuyingId(id);
+    try {
+      const ok = await purchaseUpgradeOnServer(wallet, id);
+      if (ok) {
+        playSfx("achievement_unlock");
+        tick((n) => n + 1);
+        notify.success(strings.saloonTitle);
+      } else {
+        notify.error(strings.profileSaveFailed);
+      }
+    } finally {
+      setBuyingId(null);
     }
   }
 
   async function buyConsumable(id: SaloonRelicId) {
-    if (!wallet) return;
-    const ok = await purchaseRelicOnServer(wallet, id);
-    if (ok) {
-      playSfx("achievement_unlock");
-      await fetchProfile(wallet);
-      tick((n) => n + 1);
-      notify.success(strings.saloonTitle);
-    } else {
-      notify.error(strings.profileSaveFailed);
+    if (!wallet || buyingId) return;
+    setBuyingId(id);
+    try {
+      const ok = await purchaseRelicOnServer(wallet, id);
+      if (ok) {
+        playSfx("achievement_unlock");
+        tick((n) => n + 1);
+        notify.success(strings.saloonTitle);
+      } else {
+        notify.error(strings.profileSaveFailed);
+      }
+    } finally {
+      setBuyingId(null);
     }
   }
 
@@ -534,6 +547,7 @@ export function UpgradeSaloon() {
                 equippedFx={equippedFx}
                 strings={strings}
                 unlockHint={unlockHint}
+                buying={buyingId !== null}
                 onBuy={(id) => void buyUpgrade(id)}
               />
             ) : null}
@@ -641,10 +655,10 @@ export function UpgradeSaloon() {
                         <button
                           type="button"
                           className={`saloon-popover__buy${canBuy ? " saloon-popover__buy--ready" : ""}`}
-                          disabled={!unlocked}
+                          disabled={!unlocked || buyingId !== null}
                           onClick={() => void buyConsumable(id)}
                         >
-                          {strings.saloonBuyAction}
+                          {buyingId === id ? strings.saloonBuying : strings.saloonBuyAction}
                         </button>
                       </div>
                     </div>

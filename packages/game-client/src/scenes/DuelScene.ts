@@ -565,10 +565,9 @@ export class DuelScene extends Phaser.Scene {
 
   private syncLiveScoreAfterRound(): void {
     const state = this.adapter.getState();
-    const score = estimateLiveScore(state);
     const raw = estimateLiveScoreRaw(state);
     const delta = raw - this.liveScoreBeforeRoundRaw;
-    this.combatHud.bumpLiveScore(score, t().score, delta);
+    this.combatHud.bumpLiveScore(raw, t().score, delta);
   }
 
   private handleEvent(event: DuelEvent): void {

@@ -252,6 +252,7 @@ export interface LocaleStrings {
   scoreLineSurprise: string;
   scoreLineVictory: string;
   scoreLineDefeatCap: string;
+  scoreLineScoreFloor: string;
   scorePenaltiesTotal: string;
   scoreLineDailyMult: string;
   scoreRankingTipsTitle: string;
@@ -424,6 +425,7 @@ export interface LocaleStrings {
   saloonUnequip: string;
   saloonUnlockRequires: string;
   saloonUpgradeAction: string;
+  saloonBuying: string;
   saloonBuyAction: string;
   notchCurrencyName: string;
   boardScore: string;
@@ -464,6 +466,7 @@ export interface LocaleStrings {
   boardPlayerPeekTitle: string;
   boardViewLastDuel: string;
   boardViewProfile: string;
+  boardNoPublicProfile: string;
   auditPanelTitle: string;
   auditPanelIntro: string;
   auditRootLabel: string;
@@ -777,6 +780,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreLineSurprise: "+{points} · surprise streak",
     scoreLineVictory: "+{points} · victory",
     scoreLineDefeatCap: "−{points} pts · defeat score cap",
+    scoreLineScoreFloor: "+{points} · minimum ranking score (0 floor)",
     scorePenaltiesTotal: "Total deducted: −{points} pts",
     scoreLineDailyMult: "+{points} · daily streak ×{mult}",
     scoreRankingTipsTitle: "Climb the ranking",
@@ -955,6 +959,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     saloonUnequip: "Unequip",
     saloonUnlockRequires: "Requires {name} at max level",
     saloonUpgradeAction: "Upgrade",
+    saloonBuying: "Buying…",
     saloonBuyAction: "Buy",
     notchCurrencyName: "Notches",
     boardScore: "Score",
@@ -1005,6 +1010,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardPlayerPeekTitle: "Player",
     boardViewLastDuel: "View last duel audit",
     boardViewProfile: "View profile",
+    boardNoPublicProfile: "This player has no public profile yet.",
     auditPanelTitle: "Duel audit",
     auditPanelIntro: "Round-by-round log from 0G Storage. Verify commits and reads.",
     auditRootLabel: "Storage root",
@@ -1316,6 +1322,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     scoreLineSurprise: "+{points} · racha de sorpresa",
     scoreLineVictory: "+{points} · victoria",
     scoreLineDefeatCap: "−{points} pts · tope de puntaje al perder",
+    scoreLineScoreFloor: "+{points} · puntuación mínima de ranking (piso 0)",
     scorePenaltiesTotal: "Total restado: −{points} pts",
     scoreLineDailyMult: "+{points} · racha diaria ×{mult}",
     scoreRankingTipsTitle: "Cómo subir en el ranking",
@@ -1494,6 +1501,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     saloonUnequip: "Quitar",
     saloonUnlockRequires: "Requiere {name} al máximo",
     saloonUpgradeAction: "Mejorar",
+    saloonBuying: "Comprando…",
     saloonBuyAction: "Comprar",
     notchCurrencyName: "Notches",
     boardScore: "Puntaje",
@@ -1542,8 +1550,9 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardLowerBetter: "Más bajo es mejor",
     boardHigherBetter: "Más alto es mejor",
     boardPlayerPeekTitle: "Jugador",
-    boardViewLastDuel: "Ver último duelo",
+    boardViewLastDuel: "Ver auditoría del último duelo",
     boardViewProfile: "Ver perfil",
+    boardNoPublicProfile: "Este jugador aún no tiene perfil público.",
     auditPanelTitle: "Auditoría del duelo",
     auditPanelIntro: "Log ronda a ronda desde 0G Storage. Verificá commits y lecturas.",
     auditRootLabel: "Root de storage",

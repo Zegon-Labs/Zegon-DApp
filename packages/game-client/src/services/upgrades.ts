@@ -1,6 +1,10 @@
 import type { UpgradeId, UpgradeLevels, SaloonRelicId } from "@zegon/game-core";
-import { getCachedProfile } from "./profile.js";
+import { getCachedProfile, mergeRemoteProfile, type PlayerProfile } from "./profile.js";
 import { withSiweAuth } from "./siwe.js";
+
+function applyPurchaseProfile(address: string, profile: PlayerProfile): void {
+  mergeRemoteProfile(address, profile);
+}
 
 export async function purchaseUpgradeOnServer(
   address: string,
@@ -14,12 +18,9 @@ export async function purchaseUpgradeOnServer(
       body: JSON.stringify(payload),
     });
     if (!res.ok) return false;
-    const data = (await res.json()) as { profile?: ReturnType<typeof getCachedProfile> };
+    const data = (await res.json()) as { profile?: PlayerProfile };
     if (data.profile) {
-      localStorage.setItem(
-        `zegon-profile-${address.toLowerCase()}`,
-        JSON.stringify(data.profile),
-      );
+      applyPurchaseProfile(address, data.profile);
     }
     return true;
   } catch {
@@ -39,22 +40,14 @@ export async function purchaseRelicOnServer(
       body: JSON.stringify(payload),
     });
     if (!res.ok) return false;
-    const data = (await res.json()) as { profile?: ReturnType<typeof getCachedProfile> };
+    const data = (await res.json()) as { profile?: PlayerProfile };
     if (data.profile) {
-      localStorage.setItem(
-        `zegon-profile-${address.toLowerCase()}`,
-        JSON.stringify(data.profile),
-      );
+      applyPurchaseProfile(address, data.profile);
     }
     return true;
   } catch {
     return false;
   }
-}
-
-function cacheProfile(address: string, profile: ReturnType<typeof getCachedProfile>): void {
-  if (!profile) return;
-  localStorage.setItem(`zegon-profile-${address.toLowerCase()}`, JSON.stringify(profile));
 }
 
 export async function equipConsumableOnServer(
@@ -69,8 +62,8 @@ export async function equipConsumableOnServer(
       body: JSON.stringify(payload),
     });
     if (!res.ok) return false;
-    const data = (await res.json()) as { profile?: ReturnType<typeof getCachedProfile> };
-    if (data.profile) cacheProfile(address, data.profile);
+    const data = (await res.json()) as { profile?: PlayerProfile };
+    if (data.profile) applyPurchaseProfile(address, data.profile);
     return true;
   } catch {
     return false;
@@ -86,8 +79,8 @@ export async function consumeEquippedOnServer(address: string): Promise<boolean>
       body: JSON.stringify(payload),
     });
     if (!res.ok) return false;
-    const data = (await res.json()) as { profile?: ReturnType<typeof getCachedProfile> };
-    if (data.profile) cacheProfile(address, data.profile);
+    const data = (await res.json()) as { profile?: PlayerProfile };
+    if (data.profile) applyPurchaseProfile(address, data.profile);
     return true;
   } catch {
     return false;
