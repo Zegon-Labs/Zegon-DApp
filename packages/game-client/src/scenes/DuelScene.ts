@@ -14,8 +14,8 @@ import {
   getItemCooldownRounds,
   previewSaloonStatsFromConfig,
   PlayerAction,
-  estimateLiveScore,
   estimateLiveScoreRaw,
+  scoreDeltaFromLastRound,
 } from "@zegon/game-core";
 import {
   blindsightShakeParams,
@@ -131,7 +131,7 @@ export class DuelScene extends Phaser.Scene {
   private challengeConfig?: Partial<DuelConfig>;
   private challengeMeta?: ChallengeMeta;
   private showingRoundResult = false;
-  private liveScoreBeforeRoundRaw = 0;
+  private pendingScoreSync: Phaser.Time.TimerEvent | null = null;
   private lastRoundOutcome: RoundOutcome | null = null;
   private confirmModal: Phaser.GameObjects.Container | null = null;
   private topHudBar!: TopHudBar;
@@ -275,6 +275,10 @@ export class DuelScene extends Phaser.Scene {
     this.historyLog.setTitle(strings.history);
     this.refreshPhaseStatus();
     this.updateHud();
+    if (this.adapter) {
+      const raw = estimateLiveScoreRaw(this.adapter.getState());
+      this.combatHud.bumpLiveScore(raw, strings.score, 0);
+    }
     this.updateActionBarHelp();
     this.refreshRoundResultIfVisible();
     if (this.confirmModal) {
@@ -444,10 +448,10 @@ export class DuelScene extends Phaser.Scene {
         void consumeEquippedOnServer(address).then(() => fetchProfile(address));
       }
       this.duelStartTime = Date.now();
-      this.liveScoreBeforeRoundRaw = 0;
       resetVoiceState();
       playSfx("duel_start");
       playVoice("step_into_dust", { delayMs: 420 });
+      this.combatHud.bumpLiveScore(0, t().score, 0);
       this.updateHud();
       this.updateActionButtons();
     } catch (err) {
@@ -560,13 +564,22 @@ export class DuelScene extends Phaser.Scene {
     ) {
       playZegonMoveSfx(outcome.zegonDecision.zegonMove);
     }
-    this.syncLiveScoreAfterRound();
+    this.queueLiveScoreSync();
+  }
+
+  private queueLiveScoreSync(): void {
+    this.pendingScoreSync?.remove(false);
+    this.pendingScoreSync = this.time.delayedCall(140, () => {
+      this.pendingScoreSync = null;
+      if (!this.adapter) return;
+      this.syncLiveScoreAfterRound();
+    });
   }
 
   private syncLiveScoreAfterRound(): void {
     const state = this.adapter.getState();
     const raw = estimateLiveScoreRaw(state);
-    const delta = raw - this.liveScoreBeforeRoundRaw;
+    const delta = scoreDeltaFromLastRound(state.roundLogs);
     this.combatHud.bumpLiveScore(raw, t().score, delta);
   }
 
@@ -793,8 +806,6 @@ export class DuelScene extends Phaser.Scene {
     );
     this.repositionLoadout();
 
-    const liveScore = estimateLiveScore(state);
-
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
@@ -815,9 +826,6 @@ export class DuelScene extends Phaser.Scene {
       blindsightLabel: `${strings.hudBlindsight}  ${readingStreak}/${deadeyeStreak}`,
       blindsightFlavor: strings.blindsightFlavor,
       nextMoveHint: "",
-      liveScore,
-      liveScoreLabel: strings.score,
-      liveScoreDelta: 0,
     });
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
@@ -848,8 +856,6 @@ export class DuelScene extends Phaser.Scene {
     if (this.showingRoundResult) return;
     if (!this.adapter.isAwaitingPlayer()) return;
     if (!this.adapter.getAvailableActions().includes(action)) return;
-
-    this.liveScoreBeforeRoundRaw = estimateLiveScoreRaw(this.adapter.getState());
 
     this.spriteActionBar.setDimmedAll(true);
     playActionSfx(action);

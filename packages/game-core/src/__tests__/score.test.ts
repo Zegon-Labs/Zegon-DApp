@@ -6,6 +6,8 @@ import {
   timesReadPenalty,
   estimateLiveScore,
   estimateLiveScoreRaw,
+  scoreDeltaFromLastRound,
+  scorePointsForRound,
   PlayerAction,
   DuelItemId,
 } from "../index.js";
@@ -125,6 +127,28 @@ describe("score calculation", () => {
     const raw = estimateLiveScoreRaw(readHeavy);
     expect(raw).toBeLessThan(0);
     expect(estimateLiveScore(readHeavy)).toBe(raw);
+  });
+
+  it("applies read streak penalty only in final score, not live HUD", () => {
+    const logs = [mockLog(true, 0), mockLog(true, 1)];
+    const state = mockState(logs, {
+      readingStreak: 2,
+      zegonHp: 50,
+      playerHp: 0,
+      roundsWonByZegon: 2,
+    });
+    expect(estimateLiveScoreRaw(state)).toBe(-35);
+    const calc = calculateScoreFromState(state);
+    expect(calc.readStreakPenalty).toBe(50);
+    expect(calc.subtotal).toBe(-85);
+  });
+
+  it("uses per-round delta for HUD popups", () => {
+    const logs = [mockLog(false, 0), mockLog(false, 1), mockLog(true, 2)];
+    expect(scorePointsForRound(logs[0]!, 0, 0)).toBe(8);
+    expect(scorePointsForRound(logs[1]!, 0, 1)).toBe(16);
+    expect(scorePointsForRound(logs[2]!, 0, 2)).toBe(-15);
+    expect(scoreDeltaFromLastRound(logs)).toBe(-15);
   });
 });
 

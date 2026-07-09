@@ -149,11 +149,48 @@ export function calculateScoreFromState(
   };
 }
 
-/** Running duel score before floor (for live HUD deltas). */
+/** Points earned or lost on a single round (for HUD delta popups). */
+export function scorePointsForRound(
+  log: RoundLogEntry,
+  timesReadBefore: number,
+  surpriseStreakBefore: number,
+): number {
+  if (log.predictionCorrect) {
+    return -timesReadPenalty(timesReadBefore);
+  }
+  let points = SCORE.UNREAD_ROUND;
+  const streakAfter = surpriseStreakBefore + 1;
+  if (streakAfter >= 2) {
+    points += surpriseStreakBonus(streakAfter);
+  }
+  return points;
+}
+
+/** Delta for the most recent round only — matches the round toast, not streak swings. */
+export function scoreDeltaFromLastRound(roundLogs: readonly RoundLogEntry[]): number {
+  if (roundLogs.length === 0) return 0;
+  let timesRead = 0;
+  let surpriseStreak = 0;
+  for (let i = 0; i < roundLogs.length - 1; i++) {
+    const log = roundLogs[i]!;
+    if (log.predictionCorrect) {
+      timesRead += 1;
+      surpriseStreak = 0;
+    } else {
+      surpriseStreak += 1;
+    }
+  }
+  return scorePointsForRound(
+    roundLogs[roundLogs.length - 1]!,
+    timesRead,
+    surpriseStreak,
+  );
+}
+
+/** Running duel score mid-fight (round points only; streak penalty applies at duel end). */
 export function estimateLiveScoreRaw(state: DuelState): number {
   const { roundPoints, surpriseBonusTotal } = computeRoundPoints(state.roundLogs);
-  const readStreakPenalty = readStreakScorePenalty(state.readingStreak);
-  return roundPoints + surpriseBonusTotal - readStreakPenalty;
+  return roundPoints + surpriseBonusTotal;
 }
 
 /** Partial score estimate mid-duel (no victory/defeat cap, may be negative). */

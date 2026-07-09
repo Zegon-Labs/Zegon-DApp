@@ -5,7 +5,7 @@ import {
   GameCoreAdapter,
   DuelPhase,
 } from "../adapters/GameCoreAdapter.js";
-import { DuelItemId, estimateLiveScore, estimateLiveScoreRaw, getEffectiveDeadeyeStreak, ITEM, PlayerAction } from "@zegon/game-core";
+import { DuelItemId, estimateLiveScoreRaw, scoreDeltaFromLastRound, getEffectiveDeadeyeStreak, ITEM, PlayerAction } from "@zegon/game-core";
 import type { DuelEvent, RoundOutcome } from "@zegon/game-core";
 import {
   blindsightShakeParams,
@@ -121,7 +121,7 @@ export class TutorialScene extends Phaser.Scene {
   private waitingAdvance = false;
   private waitingInstruction = false;
   private localeUnsub: (() => void) | null = null;
-  private liveScoreBeforeRoundRaw = 0;
+  private pendingScoreSync: Phaser.Time.TimerEvent | null = null;
 
   constructor() {
     super("TutorialScene");
@@ -407,6 +407,10 @@ export class TutorialScene extends Phaser.Scene {
     this.topHudBar.updateSurrenderLabel(strings.tutorialSkip);
     this.refreshPhaseStatus();
     this.updateHud();
+    if (this.adapter) {
+      const raw = estimateLiveScoreRaw(this.adapter.getState());
+      this.combatHud.bumpLiveScore(raw, strings.score, 0);
+    }
     if (this.waitingInstruction) {
       this.refreshPracticeInstruction();
     }
@@ -479,7 +483,6 @@ export class TutorialScene extends Phaser.Scene {
     this.spriteActionBar.setDimmedAll(true);
     playActionSfx(PlayerAction.USE_ITEM);
     playSfx("tutorial_correct");
-    this.snapshotLiveScoreBeforeRound();
     void this.adapter.submitAction(PlayerAction.USE_ITEM);
   }
 
@@ -506,7 +509,6 @@ export class TutorialScene extends Phaser.Scene {
       this.playerHandSprite.playFire();
     }
     playSfx("tutorial_correct");
-    this.snapshotLiveScoreBeforeRound();
     void this.adapter.submitAction(action);
   }
 
@@ -621,17 +623,22 @@ export class TutorialScene extends Phaser.Scene {
     } else {
       this.statusLineText.setText(strings.tutorialGood).setColor(COLORS.bone);
     }
-    this.syncLiveScoreAfterRound();
+    this.queueLiveScoreSync();
   }
 
-  private snapshotLiveScoreBeforeRound(): void {
-    this.liveScoreBeforeRoundRaw = estimateLiveScoreRaw(this.adapter.getState());
+  private queueLiveScoreSync(): void {
+    this.pendingScoreSync?.remove(false);
+    this.pendingScoreSync = this.time.delayedCall(140, () => {
+      this.pendingScoreSync = null;
+      if (!this.adapter) return;
+      this.syncLiveScoreAfterRound();
+    });
   }
 
   private syncLiveScoreAfterRound(): void {
     const state = this.adapter.getState();
     const raw = estimateLiveScoreRaw(state);
-    const delta = raw - this.liveScoreBeforeRoundRaw;
+    const delta = scoreDeltaFromLastRound(state.roundLogs);
     this.combatHud.bumpLiveScore(raw, t().score, delta);
   }
 
@@ -721,8 +728,6 @@ export class TutorialScene extends Phaser.Scene {
       (n) => strings.itemCooldownIn.replace("{n}", String(n)),
     );
 
-    const liveScore = estimateLiveScore(state);
-
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
@@ -743,9 +748,6 @@ export class TutorialScene extends Phaser.Scene {
       blindsightFlavor: "",
       nextMoveHint: "",
       zegonStatus: readingStreak >= deadeyeStreak - 1 ? strings.deadeyeNear : undefined,
-      liveScore,
-      liveScoreLabel: strings.score,
-      liveScoreDelta: 0,
     });
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
