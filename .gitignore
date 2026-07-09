@@ -17,3 +17,4 @@ packages/game-server/api/**/*.d.ts
 packages/game-server/api/**/*.d.ts.map
 
 Diálogos ZEGON/
+.env*

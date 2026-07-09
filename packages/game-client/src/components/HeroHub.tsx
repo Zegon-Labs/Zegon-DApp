@@ -90,6 +90,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   } | null>(null);
   const [wins, setWins] = useState(0);
   const [duelsPlayed, setDuelsPlayed] = useState(0);
+  const [notches, setNotches] = useState(0);
   const [showStakeModal, setShowStakeModal] = useState(false);
   const [showScoreInfo, setShowScoreInfo] = useState(false);
   const [showArchetypePicker, setShowArchetypePicker] = useState(false);
@@ -166,6 +167,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
       const profile = address ? getCachedProfile(address) : null;
       setWins(profile?.stats?.duelsWon ?? 0);
       setDuelsPlayed(profile?.stats?.duelsPlayed ?? 0);
+      setNotches(profile?.notches ?? 0);
     }
     syncStats(wallet);
     if (wallet) void fetchProfile(wallet).then(() => syncStats(wallet));
@@ -560,7 +562,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
             </span>
             {wallet && (
               <NotchBalance
-                amount={getCachedProfile(wallet)?.notches ?? 0}
+                amount={notches}
                 size="sm"
                 showLabel={false}
                 className="saloon-feature__cta"

@@ -65,6 +65,72 @@ export function getCachedProfile(address: string): PlayerProfile | null {
   }
 }
 
+function mergeStats(
+  local?: PlayerProfile["stats"],
+  remote?: PlayerProfile["stats"],
+  localUpdatedAt = 0,
+  remoteUpdatedAt = 0,
+): PlayerProfile["stats"] {
+  const l = { ...DEFAULT_STATS, ...local };
+  const r = { ...DEFAULT_STATS, ...remote };
+  const pickGhostTotal = (): number => {
+    if (l.totalRoundsPlayed > r.totalRoundsPlayed) return l.totalRoundScore;
+    if (r.totalRoundsPlayed > l.totalRoundsPlayed) return r.totalRoundScore;
+    return localUpdatedAt >= remoteUpdatedAt ? l.totalRoundScore : r.totalRoundScore;
+  };
+  return {
+    duelsWon: Math.max(l.duelsWon, r.duelsWon),
+    duelsPlayed: Math.max(l.duelsPlayed, r.duelsPlayed),
+    bestDailyScore: Math.max(l.bestDailyScore, r.bestDailyScore),
+    bestGlobalScore: Math.max(l.bestGlobalScore, r.bestGlobalScore),
+    timesReadTotal: Math.max(l.timesReadTotal, r.timesReadTotal),
+    totalRoundsPlayed: Math.max(l.totalRoundsPlayed, r.totalRoundsPlayed),
+    totalRoundScore: pickGhostTotal(),
+    maxReadingStreak: Math.max(l.maxReadingStreak, r.maxReadingStreak),
+    totalPlayTimeMs: Math.max(l.totalPlayTimeMs, r.totalPlayTimeMs),
+    verifiedDuels: Math.max(l.verifiedDuels, r.verifiedDuels),
+    streakDays: Math.max(l.streakDays, r.streakDays),
+    fastestWinMs:
+      l.fastestWinMs === null
+        ? r.fastestWinMs
+        : r.fastestWinMs === null
+          ? l.fastestWinMs
+          : Math.min(l.fastestWinMs, r.fastestWinMs),
+    lastDuelDay:
+      (l.lastDuelDay ?? "") >= (r.lastDuelDay ?? "")
+        ? l.lastDuelDay
+        : r.lastDuelDay,
+  };
+}
+
+function mergeProfiles(local: PlayerProfile, remote: PlayerProfile): PlayerProfile {
+  const xp = Math.max(local.xp ?? 0, remote.xp ?? 0);
+  return {
+    ...remote,
+    nickname: remote.nickname || local.nickname,
+    xp,
+    level: Math.floor(xp / 500) + 1,
+    notches: Math.max(local.notches ?? 0, remote.notches ?? 0),
+    upgrades: { ...local.upgrades, ...remote.upgrades },
+    relics: { ...local.relics, ...remote.relics },
+    equippedConsumable: remote.equippedConsumable ?? local.equippedConsumable ?? null,
+    achievements: [...new Set([...(local.achievements ?? []), ...(remote.achievements ?? [])])],
+    unlocks: [...new Set([...(local.unlocks ?? []), ...(remote.unlocks ?? [])])],
+    stats: mergeStats(local.stats, remote.stats, local.updatedAt ?? 0, remote.updatedAt ?? 0),
+    updatedAt: Math.max(local.updatedAt ?? 0, remote.updatedAt ?? 0),
+  };
+}
+
+export function mergeRemoteProfile(
+  address: string,
+  remote: PlayerProfile,
+): PlayerProfile {
+  const local = getCachedProfile(address);
+  const merged = local ? mergeProfiles(local, remote) : remote;
+  setCachedProfile(merged);
+  return merged;
+}
+
 function setCachedProfile(profile: PlayerProfile): void {
   localStorage.setItem(cacheKey(profile.address), JSON.stringify(profile));
   notify(profile.address, profile);
@@ -83,8 +149,7 @@ export async function fetchProfile(address: string): Promise<PlayerProfile | nul
     if (!res.ok) return getCachedProfile(address);
     const data = (await res.json()) as { profile: PlayerProfile | null };
     if (data.profile) {
-      setCachedProfile(data.profile);
-      return data.profile;
+      return mergeRemoteProfile(address, data.profile);
     }
     return null;
   } catch {
@@ -114,8 +179,7 @@ export async function saveProfile(
   }
 
   const data = (await res.json()) as { profile: PlayerProfile };
-  setCachedProfile(data.profile);
-  return data.profile;
+  return mergeRemoteProfile(address, data.profile);
 }
 
 const DEFAULT_STATS = {

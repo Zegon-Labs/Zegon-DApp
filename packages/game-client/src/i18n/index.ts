@@ -422,7 +422,11 @@ export interface LocaleStrings {
   replaySealedBad: string;
   replayEmpty: string;
   progressEarned: string;
+  progressGhostGain: string;
   progressLevelUp: string;
+  progressNeedsWallet: string;
+  progressNeedsProfile: string;
+  progressSyncPending: string;
   archetypeDifficulty: string;
   seasonClaim: string;
   seasonClaimable: string;
@@ -876,7 +880,11 @@ const LOCALES: Record<Language, LocaleStrings> = {
     replaySealedBad: "✗ Seal order unclear",
     replayEmpty: "No rounds to replay.",
     progressEarned: "+{xp} XP · +{notches} Notches",
+    progressGhostGain: "{ghost} Ghost (ranking)",
     progressLevelUp: "Level {from} → {to}!",
+    progressNeedsWallet: "Connect wallet to earn Notches and save progress.",
+    progressNeedsProfile: "Set a nickname in Settings to earn Notches.",
+    progressSyncPending: "Progress saved locally · syncing to server…",
     archetypeDifficulty: "Difficulty",
     seasonClaim: "Claim season reward",
     seasonClaimable: "You earned a season prize!",
@@ -1328,7 +1336,11 @@ const LOCALES: Record<Language, LocaleStrings> = {
     replaySealedBad: "✗ Orden de sellado incierto",
     replayEmpty: "No hay rondas para el replay.",
     progressEarned: "+{xp} XP · +{notches} Notches",
+    progressGhostGain: "{ghost} Ghost (ranking)",
     progressLevelUp: "¡Nivel {from} → {to}!",
+    progressNeedsWallet: "Conectá wallet para ganar Notches y guardar progreso.",
+    progressNeedsProfile: "Elegí un nickname en Ajustes para ganar Notches.",
+    progressSyncPending: "Progreso guardado localmente · sincronizando con el servidor…",
     archetypeDifficulty: "Dificultad",
     seasonClaim: "Reclamar premio de temporada",
     seasonClaimable: "¡Ganaste un premio de temporada!",

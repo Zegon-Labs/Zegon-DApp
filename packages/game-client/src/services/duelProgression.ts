@@ -6,7 +6,7 @@ import {
   xpForResult,
   type DuelResult,
 } from "@zegon/game-core";
-import { fetchProfile, getCachedProfile, recordLocalProgress, saveProfile } from "./profile.js";
+import { fetchProfile, getCachedProfile, mergeRemoteProfile, recordLocalProgress, saveProfile, type PlayerProfile } from "./profile.js";
 import { withSiweAuth } from "./siwe.js";
 
 async function ensureServerProfile(address: string): Promise<boolean> {
@@ -26,7 +26,7 @@ async function ensureServerProfile(address: string): Promise<boolean> {
 
 async function postProfileStats(
   payload: Record<string, unknown>,
-): Promise<{ ok: boolean; reason?: string }> {
+): Promise<{ ok: boolean; reason?: string; profile?: PlayerProfile }> {
   try {
     const res = await fetch("/api/player/profile/stats", {
       method: "POST",
@@ -36,8 +36,11 @@ async function postProfileStats(
     const body = (await res.json().catch(() => ({}))) as {
       accepted?: boolean;
       reason?: string;
+      profile?: PlayerProfile;
     };
-    if (res.ok && body.accepted !== false) return { ok: true };
+    if (res.ok && body.accepted !== false) {
+      return { ok: true, profile: body.profile };
+    }
     return { ok: false, reason: body.reason ?? `HTTP_${res.status}` };
   } catch {
     return { ok: false, reason: "NETWORK" };
@@ -89,6 +92,9 @@ export async function persistDuelProgression(
       achievements: earned.length > 0 ? earned : undefined,
     });
     const posted = await postProfileStats(payload);
+    if (posted.ok && posted.profile) {
+      mergeRemoteProfile(address, posted.profile);
+    }
     return { earned, notchesGain, xpGain: 0, statsSaved: posted.ok };
   }
 
@@ -156,5 +162,8 @@ export async function persistDuelProgression(
     duelDay: today,
   });
   const posted = await postProfileStats(payload);
+  if (posted.ok && posted.profile) {
+    mergeRemoteProfile(address, posted.profile);
+  }
   return { earned, notchesGain, xpGain, statsSaved: posted.ok };
 }

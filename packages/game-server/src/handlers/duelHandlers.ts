@@ -846,18 +846,6 @@ export async function handleGlobalSubmit(body: {
   const nickname = profile?.nickname ?? body.nickname?.trim();
   await submitGlobalScore(body.playerId, body.score, body.duelId, nickname);
 
-  if (profile) {
-    await updateProfileStats(body.playerId, {
-      globalScore: body.score,
-      won: body.won,
-      timesRead: body.timesRead,
-      roundsPlayed: body.roundsPlayed,
-      maxReadingStreak: body.maxReadingStreak,
-      playTimeMs: body.playTimeMs,
-      verifiedOnChain: body.verifiedOnChain,
-    });
-  }
-
   return { accepted: true };
 }
 
@@ -914,9 +902,6 @@ export async function handleSubmitScore(body: {
 
   await submitScore(body.playerId, body.score, body.seed);
   await updateProfileStats(body.playerId, {
-    xpGain: body.xpGain ?? Math.floor(body.score / 10),
-    won: body.won,
-    timesRead: body.timesRead,
     dailyScore: body.score,
     dailySeed: body.seed,
     duelId: body.duelId,

@@ -4,6 +4,7 @@ import {
   createDailyDuel,
   DUEL,
   DuelWinner,
+  sumCumulativeRoundScores,
   xpForResult,
   type ChallengeMeta,
   type DuelResult,
@@ -57,6 +58,8 @@ export class ResultScene extends Phaser.Scene {
   private duelStartTime = 0;
   private tiebreakRounds: number = DUEL.MAX_ROUNDS_TIEBREAK;
   private progressionNotified = false;
+  private footerProgressLine = "";
+  private footerRankingLine = "";
   private localeUnsub: (() => void) | null = null;
   private walletUnsub: (() => void) | null = null;
 
@@ -93,6 +96,8 @@ export class ResultScene extends Phaser.Scene {
     this.tiebreakRounds = data.tiebreakRounds ?? DUEL.MAX_ROUNDS_TIEBREAK;
     this.scoreSubmitted = false;
     this.progressionNotified = false;
+    this.footerProgressLine = "";
+    this.footerRankingLine = "";
     this.verifyProof = undefined;
     trackMetric("duel_finished");
 
@@ -109,8 +114,6 @@ export class ResultScene extends Phaser.Scene {
       void this.submitDailyScore(this.panelHandle.dailyLabel, this.duelId);
     }
 
-    void this.trySubmitGlobalScore();
-
     if (this.duelId) {
       saveDuelRoundLogs(
         this.duelId,
@@ -126,12 +129,12 @@ export class ResultScene extends Phaser.Scene {
       void this.loadVerifySummary(verifyApiUrl(this.duelId, this.apiBaseUrl));
     }
 
-    void this.applyProgression();
+    void this.runPostDuelTasks();
 
     this.localeUnsub = onLanguageChange(() => this.renderPanel());
     this.walletUnsub = onWalletChange(() => {
       this.renderPanel();
-      void this.trySubmitGlobalScore();
+      void this.runPostDuelTasks();
       if (this.mode === "daily" && this.panelHandle) {
         void this.submitDailyScore(this.panelHandle.dailyLabel, this.duelId);
       }
@@ -377,6 +380,22 @@ export class ResultScene extends Phaser.Scene {
     this.panelHandle = null;
   }
 
+  private refreshResultFooter(color: string = COLORS.cyan): void {
+    const lines = [this.footerProgressLine, this.footerRankingLine].filter(Boolean);
+    if (!lines.length || !this.panelHandle) return;
+    this.panelHandle.dailyLabel
+      .setAlpha(1)
+      .setText(lines.join("\n"))
+      .setColor(color);
+    this.panelHandle.relayoutFooter();
+  }
+
+  private async runPostDuelTasks(): Promise<void> {
+    await this.applyProgression();
+    await this.trySubmitGlobalScore();
+    this.refreshResultFooter();
+  }
+
   private async trySubmitGlobalScore(): Promise<void> {
     if (this.scoreSubmitted || this.mode === "daily") return;
 
@@ -387,24 +406,16 @@ export class ResultScene extends Phaser.Scene {
       return;
     }
     if (!hasNickname(address)) {
-      this.panelHandle?.dailyLabel
-        .setAlpha(1)
-        .setText(strings.globalScoreSubmitProfile)
-        .setColor(COLORS.dust);
+      this.footerRankingLine = strings.globalScoreSubmitProfile;
       return;
     }
     if (!this.duelId) {
-      this.panelHandle?.dailyLabel
-        .setAlpha(1)
-        .setText(strings.globalScoreSubmitNoDuel)
-        .setColor(COLORS.dust);
+      this.footerRankingLine = strings.globalScoreSubmitNoDuel;
       return;
     }
 
-    this.panelHandle?.dailyLabel
-      .setAlpha(1)
-      .setText(strings.globalScoreSubmitting)
-      .setColor(COLORS.dust);
+    this.footerRankingLine = strings.globalScoreSubmitting;
+    this.refreshResultFooter(COLORS.dust);
 
     let onChainOk = false;
     if (isLeaderboardContractConfigured()) {
@@ -412,9 +423,7 @@ export class ResultScene extends Phaser.Scene {
       if (res.ok) {
         onChainOk = true;
         this.scoreSubmitted = true;
-        this.panelHandle?.dailyLabel
-          .setText(strings.globalScoreSubmitted)
-          .setColor(COLORS.cyan);
+        this.footerRankingLine = strings.globalScoreSubmitted;
         playSfx("verify_success");
       }
       // On-chain failures fall back to the API submit below.
@@ -444,29 +453,31 @@ export class ResultScene extends Phaser.Scene {
       if (body.accepted) {
         this.scoreSubmitted = true;
         if (!onChainOk) {
-          this.panelHandle?.dailyLabel
-            .setText(strings.globalScoreSubmittedApi)
-            .setColor(COLORS.cyan);
+          this.footerRankingLine = strings.globalScoreSubmittedApi;
           playSfx("verify_success");
         }
       } else if (!onChainOk) {
-        this.panelHandle?.dailyLabel
-          .setText(strings.globalScoreSubmitFailed)
-          .setColor(COLORS.ember);
+        this.footerRankingLine = strings.globalScoreSubmitFailed;
       }
     } catch {
       if (!onChainOk) {
-        this.panelHandle?.dailyLabel
-          .setText(strings.globalScoreSubmitFailed)
-          .setColor(COLORS.ember);
+        this.footerRankingLine = strings.globalScoreSubmitFailed;
       }
     }
   }
 
   private async applyProgression(verifiedOnChain = false): Promise<void> {
     if (this.progressionNotified && !verifiedOnChain) return;
+    const strings = t();
     const address = getWalletAddress();
-    if (!address) return;
+    if (!address) {
+      this.footerProgressLine = strings.progressNeedsWallet;
+      return;
+    }
+    if (!hasNickname(address)) {
+      this.footerProgressLine = strings.progressNeedsProfile;
+      return;
+    }
 
     const playTimeMs = Math.max(0, Date.now() - this.duelStartTime);
     const before = getCachedProfile(address);
@@ -480,11 +491,12 @@ export class ResultScene extends Phaser.Scene {
     });
 
     this.progressionNotified = true;
-    const strings = t();
     const after = getCachedProfile(address);
     const afterLevel = after ? xpProgress(after.xp ?? 0).level : beforeLevel;
 
+    const ghostGain = sumCumulativeRoundScores(this.result.roundLogs);
     let progressLine = format(strings.progressEarned, { xp: xpGain, notches: notchesGain });
+    progressLine += `\n${format(strings.progressGhostGain, { ghost: ghostGain >= 0 ? `+${ghostGain}` : String(ghostGain) })}`;
     if (afterLevel > beforeLevel) {
       progressLine += `\n${format(strings.progressLevelUp, { from: beforeLevel, to: afterLevel })}`;
     }
@@ -493,14 +505,10 @@ export class ResultScene extends Phaser.Scene {
       progressLine += `\n🏅 ${earned.join(", ")}`;
     }
     if (!statsSaved) {
-      progressLine += `\n${strings.globalScoreSubmitProfile}`;
+      progressLine += `\n${strings.progressSyncPending}`;
     }
 
-    this.panelHandle?.dailyLabel
-      .setAlpha(1)
-      .setText(progressLine)
-      .setColor(COLORS.cyan);
-    this.panelHandle?.relayoutFooter();
+    this.footerProgressLine = progressLine;
   }
 
   private async submitDailyScore(
@@ -569,8 +577,9 @@ export class ResultScene extends Phaser.Scene {
       );
       if (data.verified) {
         playSfx("verify_success");
-        void this.trySubmitGlobalScore();
         await this.applyProgression(true);
+        await this.trySubmitGlobalScore();
+        this.refreshResultFooter();
       }
     } catch {
       this.panelHandle?.setVerifyText(strings.verifyPending);
