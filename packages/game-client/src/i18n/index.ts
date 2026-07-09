@@ -352,6 +352,12 @@ export interface LocaleStrings {
   gunslingerMinting: string;
   gunslingerUpdateNft: string;
   gunslingerMinted: string;
+  gunslingerNftRewardTitle: string;
+  gunslingerNftViewToken: string;
+  gunslingerNftViewTx: string;
+  gunslingerNftViewMetadata: string;
+  gunslingerNftDownloadPortrait: string;
+  gunslingerNftWalletHint: string;
   gunslingerMintFailed: string;
   gunslingerMintContractMissing: string;
   gunslingerMintPortraitMissing: string;
@@ -824,6 +830,13 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerMinting: "Minting on 0G Galileo…",
     gunslingerUpdateNft: "Update NFT metadata",
     gunslingerMinted: "NFT minted — view on explorer",
+    gunslingerNftRewardTitle: "Your Gunslinger NFT",
+    gunslingerNftViewToken: "View NFT on 0G Explorer",
+    gunslingerNftViewTx: "Mint transaction",
+    gunslingerNftViewMetadata: "NFT metadata (JSON)",
+    gunslingerNftDownloadPortrait: "Download portrait image",
+    gunslingerNftWalletHint:
+      "To see it in MetaMask: 0G Galileo network → Import NFT → contract {contract} · token ID {tokenId}.",
     gunslingerMintFailed: "Mint failed — try again later",
     gunslingerMintContractMissing: "NFT contract not configured on server yet.",
     gunslingerMintPortraitMissing: "Portrait asset missing — contact support.",
@@ -1305,6 +1318,13 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerMinting: "Minteando en 0G Galileo…",
     gunslingerUpdateNft: "Actualizar metadata del NFT",
     gunslingerMinted: "NFT minteado — ver en explorer",
+    gunslingerNftRewardTitle: "Tu NFT Gunslinger",
+    gunslingerNftViewToken: "Ver NFT en 0G Explorer",
+    gunslingerNftViewTx: "Transacción de mint",
+    gunslingerNftViewMetadata: "Metadata del NFT (JSON)",
+    gunslingerNftDownloadPortrait: "Descargar retrato",
+    gunslingerNftWalletHint:
+      "Para verlo en MetaMask: red 0G Galileo → Importar NFT → contrato {contract} · token ID {tokenId}.",
     gunslingerMintFailed: "Mint falló — probá más tarde",
     gunslingerMintContractMissing: "Contrato NFT no configurado en el servidor.",
     gunslingerMintPortraitMissing: "Falta el retrato — contactá soporte.",

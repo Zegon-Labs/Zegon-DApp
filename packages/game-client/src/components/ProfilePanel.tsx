@@ -86,6 +86,18 @@ export function ProfilePanel() {
   const nftNeedsUpdate =
     Boolean(gs?.nft) && (gs?.nft?.rankAtMint ?? 0) < currentRank;
 
+  const nftExplorerBase = "https://chainscan-galileo.0g.ai";
+  const nftTokenUrl =
+    gs?.nft?.contractAddress && gs.nft.tokenId
+      ? `${nftExplorerBase}/token/${gs.nft.contractAddress}/instance/${gs.nft.tokenId}`
+      : undefined;
+  const nftMetadataUrl = wallet
+    ? `/api/player/gunslinger/token-metadata?address=${encodeURIComponent(wallet)}`
+    : undefined;
+  const portraitDownloadName = evaluated
+    ? `zegon-gunslinger-rank-${currentRank}-${gender}.png`
+    : "zegon-gunslinger-portrait.png";
+
   async function handleSaveNickname(): Promise<void> {
     if (!wallet || nickBusy) return;
     const check = validateNickname(nickname);
@@ -378,15 +390,60 @@ export function ProfilePanel() {
                 </p>
               ) : null}
               {actionMsg ? <p className="gunslinger-action-msg">{actionMsg}</p> : null}
-              {gs?.nft?.txHash ? (
-                <a
-                  className="gunslinger-explorer-link"
-                  href={`https://chainscan-galileo.0g.ai/tx/${gs.nft.txHash}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  0G Explorer
-                </a>
+              {gs?.nft ? (
+                <div className="gunslinger-nft-reward">
+                  <h4 className="gunslinger-nft-reward__title">{strings.gunslingerNftRewardTitle}</h4>
+                  <p className="gunslinger-nft-reward__id">
+                    #{gs.nft.tokenId}
+                    {gs.nft.contractAddress ? (
+                      <>
+                        {" "}
+                        ·{" "}
+                        <code>{gs.nft.contractAddress.slice(0, 6)}…{gs.nft.contractAddress.slice(-4)}</code>
+                      </>
+                    ) : null}
+                  </p>
+                  <ul className="gunslinger-nft-reward__links">
+                    {nftTokenUrl ? (
+                      <li>
+                        <a href={nftTokenUrl} target="_blank" rel="noreferrer">
+                          {strings.gunslingerNftViewToken}
+                        </a>
+                      </li>
+                    ) : null}
+                    {gs.nft.txHash ? (
+                      <li>
+                        <a
+                          href={`${nftExplorerBase}/tx/${gs.nft.txHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {strings.gunslingerNftViewTx}
+                        </a>
+                      </li>
+                    ) : null}
+                    {nftMetadataUrl ? (
+                      <li>
+                        <a href={nftMetadataUrl} target="_blank" rel="noreferrer">
+                          {strings.gunslingerNftViewMetadata}
+                        </a>
+                      </li>
+                    ) : null}
+                    <li>
+                      <a href={portraitSrc} download={portraitDownloadName} target="_blank" rel="noreferrer">
+                        {strings.gunslingerNftDownloadPortrait}
+                      </a>
+                    </li>
+                  </ul>
+                  {gs.nft.contractAddress && gs.nft.tokenId ? (
+                    <p className="gunslinger-nft-reward__hint">
+                      {format(strings.gunslingerNftWalletHint, {
+                        contract: gs.nft.contractAddress,
+                        tokenId: gs.nft.tokenId,
+                      })}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
             </section>
 
