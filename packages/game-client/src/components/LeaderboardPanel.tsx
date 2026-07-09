@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { gameBridge } from "../game/bridge.js";
 import { useLocale } from "../hooks/useLocale.js";
-import { format } from "../i18n/index.js";
+import { format, type LocaleStrings } from "../i18n/index.js";
 import { fetchProfile } from "../services/profile.js";
 import { getWalletAddress, onWalletChange } from "../services/wallet.js";
 
@@ -17,7 +17,7 @@ interface BoardEntry {
 
 const BOARDS: BoardId[] = ["score", "hunter", "veteran", "ghost", "speed", "verified"];
 
-function boardLabel(id: BoardId, strings: ReturnType<typeof useLocale>["strings"]): string {
+function boardLabel(id: BoardId, strings: LocaleStrings): string {
   const map: Record<BoardId, string> = {
     score: strings.boardScore,
     hunter: strings.boardHunter,
@@ -27,6 +27,22 @@ function boardLabel(id: BoardId, strings: ReturnType<typeof useLocale>["strings"
     verified: strings.boardVerified,
   };
   return map[id];
+}
+
+function boardDescription(id: BoardId, strings: LocaleStrings): string {
+  const map: Record<BoardId, string> = {
+    score: strings.boardDescScore,
+    hunter: strings.boardDescHunter,
+    veteran: strings.boardDescVeteran,
+    ghost: strings.boardDescGhost,
+    speed: strings.boardDescSpeed,
+    verified: strings.boardDescVerified,
+  };
+  return map[id];
+}
+
+function boardSortHint(id: BoardId, strings: LocaleStrings): string {
+  return id === "ghost" || id === "speed" ? strings.boardLowerBetter : strings.boardHigherBetter;
 }
 
 function formatValue(id: BoardId, value: number): string {
@@ -86,21 +102,25 @@ export function LeaderboardPanel() {
   }, [board, wallet]);
 
   const walletLower = wallet?.toLowerCase();
+  const activeLabel = boardLabel(board, strings);
 
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
-      <div className="hero__panel hero__panel--wide hero__panel--utility">
+      <div className="hero__panel hero__panel--wide hero__panel--utility hero__panel--leaderboard">
         <h2 className="hero__panel-title">{strings.globalLeaderboardTitle}</h2>
-        <p className="hero__verify-copy" style={{ marginTop: 0 }}>
-          {format(strings.boardSeasonRemaining, { days: seasonDays })} ·{" "}
-          {format(strings.boardPrizePool, { pool: prizePool })}
+        <p className="board-intro">{strings.boardGlobalIntro}</p>
+        <p className="board-how-to">{strings.boardGlobalHowTo}</p>
+        <p className="board-season">
+          {format(strings.boardSeasonExplain, { days: seasonDays, pool: prizePool })}
         </p>
 
-        <div className="board-tabs">
+        <div className="board-tabs" role="tablist" aria-label={strings.globalLeaderboardTitle}>
           {BOARDS.map((id) => (
             <button
               key={id}
               type="button"
+              role="tab"
+              aria-selected={board === id}
               className={`board-tab${board === id ? " board-tab--active" : ""}`}
               onClick={() => setBoard(id)}
             >
@@ -109,17 +129,28 @@ export function LeaderboardPanel() {
           ))}
         </div>
 
+        <div className="board-desc" role="tabpanel">
+          <p className="board-desc__title">
+            {activeLabel}
+            <span className="board-desc__hint">{boardSortHint(board, strings)}</span>
+          </p>
+          <p className="board-desc__body">{boardDescription(board, strings)}</p>
+        </div>
+
         <div className="leaderboard-table">
           <div className="leaderboard-table__head">
             <span>{strings.leaderboardColRank}</span>
             <span>{strings.leaderboardColPlayer}</span>
-            <span>{boardLabel(board, strings)}</span>
+            <span>{activeLabel}</span>
           </div>
 
           {loading ? (
             <p className="hero__leaderboard-empty">…</p>
           ) : entries.length === 0 ? (
-            <p className="hero__leaderboard-empty">{strings.leaderboardEmpty}</p>
+            <div className="hero__leaderboard-empty hero__leaderboard-empty--block">
+              <p>{strings.boardGlobalEmpty}</p>
+              <p className="hero__leaderboard-empty__hint">{strings.boardGlobalEmptyHint}</p>
+            </div>
           ) : (
             entries.map((e, i) => {
               const isYou = walletLower && e.playerId.toLowerCase() === walletLower;
@@ -131,28 +162,32 @@ export function LeaderboardPanel() {
                   className={`leaderboard-table__row leaderboard-table__row--btn${isYou ? " leaderboard-table__row--you" : ""}`}
                   onClick={() => void fetchProfile(e.playerId)}
                 >
-                  <span>{i + 1}</span>
-                  <span>
+                  <span className="leaderboard-table__rank">{i + 1}</span>
+                  <span className="leaderboard-table__name">
                     {name}
                     {isYou && (
                       <span className="leaderboard-table__you"> ({strings.leaderboardYou})</span>
                     )}
                   </span>
-                  <span>{formatValue(board, e.value)}</span>
+                  <span className="leaderboard-table__value">{formatValue(board, e.value)}</span>
                 </button>
               );
             })
           )}
         </div>
 
-        {playerRank?.rank && (
+        {wallet && playerRank?.rank ? (
           <p className="board-footer-rank">
             {format(strings.boardYourRank, {
               rank: playerRank.rank,
               pct: Math.max(1, Math.round((playerRank.rank / Math.max(playerRank.total, 1)) * 100)),
             })}
+            {playerRank.value !== null &&
+              ` · ${format(strings.boardYourStat, { value: formatValue(board, playerRank.value) })}`}
           </p>
-        )}
+        ) : wallet ? (
+          <p className="board-footer-rank board-footer-rank--muted">{strings.boardNotRankedYet}</p>
+        ) : null}
 
         <button
           type="button"

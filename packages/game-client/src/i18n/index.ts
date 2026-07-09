@@ -383,6 +383,21 @@ export interface LocaleStrings {
   boardYourRank: string;
   boardSeasonRemaining: string;
   boardPrizePool: string;
+  boardGlobalIntro: string;
+  boardGlobalHowTo: string;
+  boardDescScore: string;
+  boardDescHunter: string;
+  boardDescVeteran: string;
+  boardDescGhost: string;
+  boardDescSpeed: string;
+  boardDescVerified: string;
+  boardSeasonExplain: string;
+  boardGlobalEmpty: string;
+  boardGlobalEmptyHint: string;
+  boardNotRankedYet: string;
+  boardYourStat: string;
+  boardLowerBetter: string;
+  boardHigherBetter: string;
   replayTitle: string;
   replayWatch: string;
   replayRound: string;
@@ -800,6 +815,30 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardYourRank: "Your rank: #{rank} · Top {pct}%",
     boardSeasonRemaining: "Season · {days}d left",
     boardPrizePool: "Prize pool: {pool} OG",
+    boardGlobalIntro:
+      "Six leaderboards for different play styles. Your nickname shows here after you finish a duel with wallet connected.",
+    boardGlobalHowTo: "How to join: connect wallet → choose nickname → finish a duel.",
+    boardDescScore:
+      "Your best single-duel score. Higher is better — win clean and avoid being read by ZEGON.",
+    boardDescHunter:
+      "Total duels won against ZEGON. More wins rank you higher on this board.",
+    boardDescVeteran:
+      "Total rounds played across all duels. Shows who keeps dueling the most.",
+    boardDescGhost:
+      "How often ZEGON reads you (%). Lower is better — unpredictable players rank higher. Requires 20+ rounds played.",
+    boardDescSpeed:
+      "Your fastest duel win time. Lower is better — quick victories rank higher.",
+    boardDescVerified:
+      "Duels fully verified on-chain — ZEGON sealed each round before you moved.",
+    boardSeasonExplain:
+      "Season ends in {days} days. Top players on the Score board may split {pool} OG at season end.",
+    boardGlobalEmpty: "No players on this board yet.",
+    boardGlobalEmptyHint:
+      "Be the first: connect wallet, set a nickname, and finish a duel.",
+    boardNotRankedYet: "You are not on this board yet — play a duel to appear.",
+    boardYourStat: "Your best: {value}",
+    boardLowerBetter: "Lower is better",
+    boardHigherBetter: "Higher is better",
     replayTitle: "DUEL REPLAY",
     replayWatch: "Watch replay",
     replayRound: "Round {n}",
@@ -1215,6 +1254,30 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardYourRank: "Tu puesto: #{rank} · Top {pct}%",
     boardSeasonRemaining: "Temporada · {days}d restantes",
     boardPrizePool: "Premio: {pool} OG",
+    boardGlobalIntro:
+      "Seis rankings según distintos estilos de juego. Tu nickname aparece acá después de terminar un duelo con wallet conectada.",
+    boardGlobalHowTo: "Cómo entrar: conectá wallet → elegí nickname → terminá un duelo.",
+    boardDescScore:
+      "Tu mejor puntaje en un solo duelo. Más alto es mejor — ganá limpio y evitá que ZEGON te lea.",
+    boardDescHunter:
+      "Total de duelos ganados contra ZEGON. Más victorias = mejor puesto.",
+    boardDescVeteran:
+      "Total de rondas jugadas en todos los duelos. Mide quién sigue volviendo a jugar.",
+    boardDescGhost:
+      "Qué tan seguido ZEGON te lee (%). Más bajo es mejor — jugadores impredecibles suben. Requiere 20+ rondas.",
+    boardDescSpeed:
+      "Tu victoria más rápida. Más bajo es mejor — duelos cortos ganados rankean más alto.",
+    boardDescVerified:
+      "Duelos verificados on-chain — ZEGON selló cada ronda antes de tu jugada.",
+    boardSeasonExplain:
+      "La temporada termina en {days} días. Los mejores en Puntaje pueden repartir {pool} OG al cierre.",
+    boardGlobalEmpty: "Todavía no hay jugadores en este ranking.",
+    boardGlobalEmptyHint:
+      "Sé el primero: conectá wallet, elegí nickname y terminá un duelo.",
+    boardNotRankedYet: "Todavía no estás en este ranking — jugá un duelo para aparecer.",
+    boardYourStat: "Tu mejor marca: {value}",
+    boardLowerBetter: "Más bajo es mejor",
+    boardHigherBetter: "Más alto es mejor",
     replayTitle: "REPLAY DEL DUELO",
     replayWatch: "Ver replay",
     replayRound: "Ronda {n}",
