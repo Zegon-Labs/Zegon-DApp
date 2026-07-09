@@ -168,6 +168,27 @@ export async function handleGunslingerBurn(body: {
   }
 
   try {
+    const onChainToken: bigint = await nftService.tokenOfOwner(body.address);
+    if (onChainToken === 0n) {
+      const storedContract = profile.gunslinger.nft.contractAddress?.toLowerCase();
+      const currentContract = nftService.getContractAddress()?.toLowerCase();
+      if (storedContract && currentContract && storedContract !== currentContract) {
+        const updated = await clearGunslingerNft(body.address);
+        return {
+          accepted: true,
+          profile: updated,
+          burn: {
+            tokenId: profile.gunslinger.nft.tokenId,
+            contractAddress: profile.gunslinger.nft.contractAddress,
+            txHash: "",
+            explorerUrl: "",
+            migrated: true,
+          },
+        };
+      }
+      return { accepted: false, reason: "NFT_NOT_ON_CHAIN" };
+    }
+
     const burn = await nftService.burnForOwner(body.address);
     const updated = await clearGunslingerNft(body.address);
     return { accepted: true, profile: updated, burn };

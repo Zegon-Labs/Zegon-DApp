@@ -362,6 +362,7 @@ export interface LocaleStrings {
   gunslingerNftBurning: string;
   gunslingerNftBurnConfirm: string;
   gunslingerNftBurned: string;
+  gunslingerNftBurnMigrated: string;
   gunslingerNftBurnFailed: string;
   gunslingerNftBurnNotSupported: string;
   gunslingerMintFailed: string;
@@ -848,6 +849,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerNftBurnConfirm:
       "Burn your Gunslinger NFT on-chain? This is permanent. You can mint a fresh one afterward.",
     gunslingerNftBurned: "NFT burned — you can mint again.",
+    gunslingerNftBurnMigrated:
+      "Old NFT slot cleared (previous contract). You can mint fresh on the new contract.",
     gunslingerNftBurnFailed: "Burn failed — try again later.",
     gunslingerNftBurnNotSupported: "Burn not available yet — contract upgrade pending.",
     gunslingerMintFailed: "Mint failed — try again later",
@@ -1343,6 +1346,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerNftBurnConfirm:
       "¿Quemar tu NFT Gunslinger on-chain? Es permanente. Después podés mintear uno nuevo.",
     gunslingerNftBurned: "NFT quemado — podés mintear de nuevo.",
+    gunslingerNftBurnMigrated:
+      "Slot del NFT anterior liberado (contrato previo). Podés mintear uno nuevo.",
     gunslingerNftBurnFailed: "Quema falló — probá más tarde.",
     gunslingerNftBurnNotSupported: "Quema no disponible aún — falta actualizar el contrato.",
     gunslingerMintFailed: "Mint falló — probá más tarde",

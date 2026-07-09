@@ -167,7 +167,11 @@ export function ProfilePanel() {
     const res = await burnGunslingerNft(wallet);
     setBurnBusy(false);
     if (res.ok) {
-      setActionMsg(strings.gunslingerNftBurned);
+      setActionMsg(
+        res.burn && "migrated" in res.burn && res.burn.migrated
+          ? strings.gunslingerNftBurnMigrated
+          : strings.gunslingerNftBurned,
+      );
       tick((n) => n + 1);
     } else if (res.reason === "BURN_NOT_SUPPORTED") {
       setActionMsg(strings.gunslingerNftBurnNotSupported);

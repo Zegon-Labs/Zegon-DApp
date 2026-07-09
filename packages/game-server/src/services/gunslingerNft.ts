@@ -60,6 +60,11 @@ export class GunslingerNftService {
     return this.contractAddress;
   }
 
+  async tokenOfOwner(owner: string): Promise<bigint> {
+    if (!this.contract) return 0n;
+    return this.contract.tokenOfOwner(ethers.getAddress(owner)) as Promise<bigint>;
+  }
+
   async mintOrUpdate(profile: PlayerProfile, lang: "en" | "es"): Promise<GunslingerMintResult> {
     if (!this.contract || !this.contractAddress) {
       throw new Error("GUNSLINGER_CONTRACT_NOT_CONFIGURED");
