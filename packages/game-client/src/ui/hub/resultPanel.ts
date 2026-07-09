@@ -142,8 +142,11 @@ function statLineStyle(line: string, compact = false): {
   if (t.startsWith("+")) {
     return { color: COLORS.verified, fontSize: bodyPx, fontFamily: FONT };
   }
-  if (t.startsWith("-")) {
+  if (t.startsWith("-") || t.startsWith("−") || t.startsWith("–")) {
     return { color: COLORS.blood, fontSize: bodyPx, fontFamily: FONT };
+  }
+  if (/^(Total deducted|Total restado|Puntos restados)/i.test(t)) {
+    return { color: COLORS.blood, fontSize: bodyPx, fontFamily: FONT_DISPLAY, letterSpacing: 1 };
   }
   if (/^(Puntuación|Score)\s*:/i.test(t)) {
     return { color: COLORS.gold, fontSize: scorePx, fontFamily: FONT_DISPLAY, letterSpacing: 2 };
@@ -159,6 +162,7 @@ function extraGapBefore(line: string, compact: boolean): number {
   const t = line.trim();
   if (/^(Desglose|Score breakdown)/i.test(t)) return compact ? 9 : 12;
   if (/^(Puntuación|Score)\s*:/i.test(t)) return compact ? 6 : 9;
+  if (/^(Total deducted|Total restado)/i.test(t)) return compact ? 4 : 6;
   return 0;
 }
 

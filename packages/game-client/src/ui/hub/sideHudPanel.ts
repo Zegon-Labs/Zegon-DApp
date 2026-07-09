@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { C } from "../theme.js";
+import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
 import { preloadZegonDamagePortrait } from "./zegonDamagePortrait.js";
 
 // ── Asset keys ─────────────────────────────────────────────────────────────
@@ -52,6 +52,8 @@ export interface SideHudPanelOptions {
   depth?: number;
   /** Optional hits label under the bar (player upgrades). */
   showHitsSubtitle?: boolean;
+  /** Live duel score under the HP bar (ZEGON panel). */
+  showLiveScore?: boolean;
 }
 
 // ── Class ───────────────────────────────────────────────────────────────────
@@ -67,6 +69,10 @@ export class SideHudPanel {
   private readonly hpGfx: Phaser.GameObjects.Graphics;
   private readonly subtitleText: Phaser.GameObjects.Text | null;
   private readonly showSubtitle: boolean;
+  private readonly scoreLabelText: Phaser.GameObjects.Text | null;
+  private readonly scoreValueText: Phaser.GameObjects.Text | null;
+  private readonly showLiveScore: boolean;
+  private displayedScore = 0;
 
   constructor(scene: Phaser.Scene, opts: SideHudPanelOptions) {
     this.scene = scene;
@@ -74,6 +80,7 @@ export class SideHudPanel {
     const depth   = opts.depth ?? 9;
     const panelH  = opts.panelH ?? 80;
     this.showSubtitle = Boolean(opts.showHitsSubtitle);
+    this.showLiveScore = Boolean(opts.showLiveScore);
 
     // Both panels use the SAME fixed display width so they look identical in size.
     // scaleX compresses/stretches the image to PANEL_DISPLAY_W; scaleY sets the height.
@@ -148,6 +155,34 @@ export class SideHudPanel {
     } else {
       this.subtitleText = null;
     }
+
+    if (this.showLiveScore) {
+      const scoreCenterX = this.barX + this.barW / 2;
+      const scoreTopY = this.barY + this.barH + 8;
+      this.scoreLabelText = scene.add
+        .text(scoreCenterX, scoreTopY, "", {
+          fontFamily: FONT_DISPLAY,
+          fontSize: "10px",
+          color: COLORS.dust,
+          letterSpacing: 2,
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(depth + 2);
+      this.scoreValueText = scene.add
+        .text(scoreCenterX, scoreTopY + 12, "0", {
+          fontFamily: FONT,
+          fontSize: "24px",
+          color: COLORS.gold,
+          stroke: "#0A0911",
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(depth + 2);
+      this.objs.push(this.scoreLabelText, this.scoreValueText);
+    } else {
+      this.scoreLabelText = null;
+      this.scoreValueText = null;
+    }
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -158,6 +193,72 @@ export class SideHudPanel {
       this.subtitleText.setText(hitsLabel ?? "");
       this.subtitleText.setVisible(Boolean(hitsLabel));
     }
+  }
+
+  updateLiveScore(score: number, label: string, delta = 0): void {
+    if (!this.scoreValueText || !this.scoreLabelText) return;
+    this.scoreLabelText.setText(label.toUpperCase());
+    const prev = this.displayedScore;
+    this.displayedScore = score;
+    this.scoreValueText.setText(String(score));
+    if (score < 0) {
+      this.scoreValueText.setColor(COLORS.blood);
+    } else if (score === 0) {
+      this.scoreValueText.setColor(COLORS.dust);
+    } else {
+      this.scoreValueText.setColor(COLORS.gold);
+    }
+    if (delta !== 0) {
+      this.playScoreDelta(delta);
+    } else if (prev !== score) {
+      this.scene.tweens.add({
+        targets: this.scoreValueText,
+        scale: 1.12,
+        duration: 90,
+        yoyo: true,
+        ease: "Sine.Out",
+      });
+    }
+  }
+
+  private playScoreDelta(delta: number): void {
+    if (!this.scoreValueText) return;
+    const sign = delta > 0 ? "+" : "−";
+    const label = `${sign}${Math.abs(delta)}`;
+    const color = delta > 0 ? COLORS.verified : COLORS.blood;
+    const cx = this.scoreValueText.x;
+    const cy = this.scoreValueText.y + 10;
+    const float = this.scene.add
+      .text(cx, cy, label, {
+        fontFamily: FONT,
+        fontSize: "20px",
+        color,
+        stroke: "#0A0911",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(30);
+    this.scene.tweens.add({
+      targets: this.scoreValueText,
+      scale: 1.18,
+      duration: 120,
+      yoyo: true,
+      ease: "Back.Out",
+    });
+    this.scene.tweens.add({
+      targets: float,
+      y: cy - 36,
+      alpha: 0,
+      duration: 850,
+      ease: "Cubic.Out",
+      onComplete: () => float.destroy(),
+    });
+  }
+
+  liveScoreAnchor(): { x: number; y: number } {
+    const cx = this.barX + this.barW / 2;
+    const cy = this.barY + this.barH + 28;
+    return { x: cx, y: cy };
   }
 
   playHit(previousHp: number, newHp: number, maxHp: number): void {

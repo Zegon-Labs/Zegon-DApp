@@ -120,6 +120,14 @@ export function buildScoreBreakdown(
     tips.push("tip_defeat_cap");
   }
 
+  const preAdjustmentSum = lines.reduce((sum, line) => sum + line.points, 0);
+  if (calc.defeatCapApplied && preAdjustmentSum > calc.subtotal) {
+    lines.push({
+      reason: "defeat_cap",
+      points: calc.subtotal - preAdjustmentSum,
+    });
+  }
+
   const subtotal = lines.reduce((sum, line) => sum + line.points, 0);
   const dailyMult = dailyStreakMultiplier(options?.dailyStreakDays ?? 0);
   const total = calc.total;

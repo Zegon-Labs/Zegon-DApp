@@ -249,6 +249,8 @@ export interface LocaleStrings {
   scoreLineTimesRead: string;
   scoreLineSurprise: string;
   scoreLineVictory: string;
+  scoreLineDefeatCap: string;
+  scorePenaltiesTotal: string;
   scoreLineDailyMult: string;
   scoreRankingTipsTitle: string;
   scoreRankingTip1: string;
@@ -675,15 +677,17 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryYouLostAllLives: "You lost all your lives",
     scoreBreakdownTitle: "Score breakdown",
     scoreLineUnread: "+{points} · {count} rounds unread",
-    scoreLineReadPenalty: "−{points} · read {count}×",
-    scoreLineReadStreak: "−{points} · final read streak {count}",
+    scoreLineReadPenalty: "−{points} pts · ZEGON read you {count}×",
+    scoreLineReadStreak: "−{points} pts · final read streak {count}",
     scoreLineCleanVictory: "+{points} · clean victory (never read)",
     scoreLineHpBonus: "+{points} · HP remaining bonus",
     scoreLineRounds: "+{points} · {count} rounds played",
     scoreLineBlindsight: "+{points} · low read streak bonus",
-    scoreLineTimesRead: "−{points} · read {count}×",
+    scoreLineTimesRead: "−{points} pts · read {count}×",
     scoreLineSurprise: "+{points} · surprise streak",
     scoreLineVictory: "+{points} · victory",
+    scoreLineDefeatCap: "−{points} pts · defeat score cap",
+    scorePenaltiesTotal: "Total deducted: −{points} pts",
     scoreLineDailyMult: "+{points} · daily streak ×{mult}",
     scoreRankingTipsTitle: "Climb the ranking",
     scoreRankingTip1: "Vary SHOOT and DODGE — repeats get read.",
@@ -1117,15 +1121,17 @@ const LOCALES: Record<Language, LocaleStrings> = {
     roundSummaryYouLostAllLives: "Perdiste todas tus vidas",
     scoreBreakdownTitle: "Desglose de puntos",
     scoreLineUnread: "+{points} · {count} rondas sin leer",
-    scoreLineReadPenalty: "−{points} · leído {count}×",
-    scoreLineReadStreak: "−{points} · racha final de lectura {count}",
+    scoreLineReadPenalty: "−{points} pts · ZEGON te leyó {count}×",
+    scoreLineReadStreak: "−{points} pts · racha final de lectura {count}",
     scoreLineCleanVictory: "+{points} · victoria limpia (nunca leído)",
     scoreLineHpBonus: "+{points} · bonus por PS restantes",
     scoreLineRounds: "+{points} · {count} rondas jugadas",
     scoreLineBlindsight: "+{points} · bonus por racha baja",
-    scoreLineTimesRead: "−{points} · leído {count}×",
+    scoreLineTimesRead: "−{points} pts · leído {count}×",
     scoreLineSurprise: "+{points} · racha de sorpresa",
     scoreLineVictory: "+{points} · victoria",
+    scoreLineDefeatCap: "−{points} pts · tope de puntaje al perder",
+    scorePenaltiesTotal: "Total restado: −{points} pts",
     scoreLineDailyMult: "+{points} · racha diaria ×{mult}",
     scoreRankingTipsTitle: "Cómo subir en el ranking",
     scoreRankingTip1: "Variá DISPARAR y ESQUIVAR — repetir te delata.",

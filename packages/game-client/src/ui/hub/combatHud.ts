@@ -24,6 +24,9 @@ export interface CombatHudState {
   blindsightFlavor: string;
   nextMoveHint: string;
   zegonStatus?: string;
+  liveScore?: number;
+  liveScoreLabel?: string;
+  liveScoreDelta?: number;
 }
 
 export interface CombatHudFighterLayout {
@@ -80,6 +83,7 @@ export class CombatHud {
       y: fighterLayout?.zegonPanelY ?? defaultZegonY,
       panelH,
       depth,
+      showLiveScore: true,
     });
 
     this.blindsightMeter = opts?.hideBlindsight ? null : new BlindsightMeter(scene, depth);
@@ -95,6 +99,13 @@ export class CombatHud {
       state.playerHitsLabel,
     );
     this.zegonPanel.update(state.zegonHp, state.zegonMaxHp);
+    if (state.liveScore !== undefined) {
+      this.zegonPanel.updateLiveScore(
+        state.liveScore,
+        state.liveScoreLabel ?? "SCORE",
+        state.liveScoreDelta ?? 0,
+      );
+    }
     this.blindsightMeter?.update(
       state.blindsightLabel,
       state.readingStreak,

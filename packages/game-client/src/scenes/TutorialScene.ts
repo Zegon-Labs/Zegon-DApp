@@ -5,7 +5,7 @@ import {
   GameCoreAdapter,
   DuelPhase,
 } from "../adapters/GameCoreAdapter.js";
-import { DuelItemId, getEffectiveDeadeyeStreak, ITEM, PlayerAction } from "@zegon/game-core";
+import { DuelItemId, estimateLiveScore, getEffectiveDeadeyeStreak, ITEM, PlayerAction } from "@zegon/game-core";
 import type { DuelEvent, RoundOutcome } from "@zegon/game-core";
 import {
   blindsightShakeParams,
@@ -120,6 +120,7 @@ export class TutorialScene extends Phaser.Scene {
   private waitingAdvance = false;
   private waitingInstruction = false;
   private localeUnsub: (() => void) | null = null;
+  private liveScorePrev = 0;
 
   constructor() {
     super("TutorialScene");
@@ -702,6 +703,13 @@ export class TutorialScene extends Phaser.Scene {
       (n) => strings.itemCooldownIn.replace("{n}", String(n)),
     );
 
+    const liveScore = estimateLiveScore(state);
+    let liveScoreDelta = 0;
+    if (liveScore !== this.liveScorePrev) {
+      liveScoreDelta = liveScore - this.liveScorePrev;
+      this.liveScorePrev = liveScore;
+    }
+
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
@@ -722,6 +730,9 @@ export class TutorialScene extends Phaser.Scene {
       blindsightFlavor: "",
       nextMoveHint: "",
       zegonStatus: readingStreak >= deadeyeStreak - 1 ? strings.deadeyeNear : undefined,
+      liveScore,
+      liveScoreLabel: strings.score,
+      liveScoreDelta,
     });
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);

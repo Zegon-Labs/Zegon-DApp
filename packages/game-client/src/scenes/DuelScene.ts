@@ -14,6 +14,7 @@ import {
   getItemCooldownRounds,
   previewSaloonStatsFromConfig,
   PlayerAction,
+  estimateLiveScore,
 } from "@zegon/game-core";
 import {
   blindsightShakeParams,
@@ -128,6 +129,7 @@ export class DuelScene extends Phaser.Scene {
   private challengeConfig?: Partial<DuelConfig>;
   private challengeMeta?: ChallengeMeta;
   private showingRoundResult = false;
+  private liveScorePrev = 0;
   private lastRoundOutcome: RoundOutcome | null = null;
   private confirmModal: Phaser.GameObjects.Container | null = null;
   private topHudBar!: TopHudBar;
@@ -776,6 +778,13 @@ export class DuelScene extends Phaser.Scene {
       getLanguage(),
     );
 
+    const liveScore = estimateLiveScore(state);
+    let liveScoreDelta = 0;
+    if (liveScore !== this.liveScorePrev) {
+      liveScoreDelta = liveScore - this.liveScorePrev;
+      this.liveScorePrev = liveScore;
+    }
+
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
       zegonHp: this.adapter.getZegonHp(),
@@ -796,6 +805,9 @@ export class DuelScene extends Phaser.Scene {
       blindsightLabel: `${strings.hudBlindsight}  ${readingStreak}/${deadeyeStreak}`,
       blindsightFlavor: strings.blindsightFlavor,
       nextMoveHint: "",
+      liveScore,
+      liveScoreLabel: strings.score,
+      liveScoreDelta,
     });
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
