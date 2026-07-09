@@ -1,13 +1,47 @@
 import { useEffect, useState } from "react";
 import { gameBridge } from "../game/bridge.js";
 import { useLocale } from "../hooks/useLocale.js";
-import { format, type LocaleStrings } from "../i18n/index.js";
+import { format, type Language, type LocaleStrings } from "../i18n/index.js";
+import { fetchLastDuelAuditForPlayer } from "../services/duelAudit.js";
 import { fetchProfile } from "../services/profile.js";
 import { getWalletAddress, onWalletChange } from "../services/wallet.js";
 import {
   padCountdownUnit,
   seasonCountdownFromMs,
 } from "../utils/seasonCountdown.js";
+
+type TournamentStatus = "upcoming" | "active" | "ended";
+
+interface TournamentPhaseDto {
+  id: string;
+  nameEn: string;
+  nameEs: string;
+  startAt: number;
+  endAt: number;
+}
+
+interface TournamentDto {
+  status: TournamentStatus;
+  phase: TournamentPhaseDto | null;
+  msRemaining: number;
+}
+
+function phaseName(phase: TournamentPhaseDto | null, lang: Language): string {
+  if (!phase) return "";
+  return lang === "es" ? phase.nameEs : phase.nameEn;
+}
+
+function tournamentBannerTitle(
+  tournament: TournamentDto | null,
+  strings: LocaleStrings,
+  lang: Language,
+): string {
+  if (!tournament) return strings.boardSeasonEndsIn;
+  if (tournament.status === "ended") return strings.boardTournamentEnded;
+  if (tournament.status === "upcoming") return strings.boardTournamentStartsIn;
+  const name = phaseName(tournament.phase, lang);
+  return name ? `${name} · ${strings.boardPhaseEndsIn}` : strings.boardSeasonEndsIn;
+}
 
 type BoardId = "score" | "hunter" | "veteran" | "ghost" | "speed" | "verified";
 
@@ -55,7 +89,7 @@ function formatValue(id: BoardId, value: number): string {
 }
 
 export function LeaderboardPanel() {
-  const { strings } = useLocale();
+  const { strings, language: lang } = useLocale();
   const [board, setBoard] = useState<BoardId>("ghost");
   const [entries, setEntries] = useState<BoardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +101,9 @@ export function LeaderboardPanel() {
   } | null>(null);
   const [seasonEndAt, setSeasonEndAt] = useState<number | null>(null);
   const [seasonMsRemaining, setSeasonMsRemaining] = useState(0);
+  const [tournament, setTournament] = useState<TournamentDto | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<BoardEntry | null>(null);
+  const [auditBusy, setAuditBusy] = useState(false);
 
   useEffect(() => onWalletChange(setWallet), []);
 
@@ -83,11 +120,17 @@ export function LeaderboardPanel() {
           entries: BoardEntry[];
           playerRank?: { rank: number | null; total: number; value: number | null };
           season?: { msRemaining: number; season: { prizePoolWei: string } };
+          tournament?: TournamentDto;
         };
         if (cancelled) return;
         setEntries(data.entries ?? []);
         setPlayerRank(data.playerRank ?? null);
-        if (data.season) {
+        if (data.tournament) {
+          setTournament(data.tournament);
+          setSeasonEndAt(Date.now() + data.tournament.msRemaining);
+          setSeasonMsRemaining(data.tournament.msRemaining);
+        } else if (data.season) {
+          setTournament(null);
           setSeasonEndAt(Date.now() + data.season.msRemaining);
           setSeasonMsRemaining(data.season.msRemaining);
         }
@@ -113,10 +156,34 @@ export function LeaderboardPanel() {
     return () => window.clearInterval(id);
   }, [seasonEndAt]);
 
+  async function openPlayerAudit(entry: BoardEntry) {
+    setSelectedPlayer(entry);
+  }
+
+  async function viewLastDuelAudit() {
+    if (!selectedPlayer || auditBusy) return;
+    setAuditBusy(true);
+    try {
+      const { entry } = await fetchLastDuelAuditForPlayer(selectedPlayer.playerId);
+      if (!entry?.storageRoot) {
+        return;
+      }
+      gameBridge.navigate({
+        type: "audit",
+        storageRoot: entry.storageRoot,
+        duelId: entry.duelId,
+      });
+    } finally {
+      setAuditBusy(false);
+    }
+  }
   const walletLower = wallet?.toLowerCase();
   const activeLabel = boardLabel(board, strings);
   const countdown = seasonCountdownFromMs(seasonMsRemaining);
-  const seasonActive = seasonEndAt !== null && countdown.totalMs > 0;
+  const tournamentEnded = tournament?.status === "ended";
+  const showCountdown =
+    seasonEndAt !== null && countdown.totalMs > 0 && !tournamentEnded;
+  const bannerTitle = tournamentBannerTitle(tournament, strings, lang);
 
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
@@ -128,9 +195,9 @@ export function LeaderboardPanel() {
 
           <section className="board-season-banner" aria-live="polite">
             <p className="board-season-banner__title">
-              {seasonActive ? strings.boardSeasonEndsIn : strings.boardSeasonEnded}
+              {bannerTitle}
             </p>
-            {seasonActive ? (
+            {showCountdown ? (
               <div className="season-countdown" role="timer">
                 <div className="season-countdown__unit">
                   <span className="season-countdown__value">{countdown.days}</span>
@@ -204,7 +271,7 @@ export function LeaderboardPanel() {
                     type="button"
                     key={`${e.playerId}-${i}`}
                     className={`leaderboard-table__row leaderboard-table__row--btn${isYou ? " leaderboard-table__row--you" : ""}`}
-                    onClick={() => void fetchProfile(e.playerId)}
+                    onClick={() => void openPlayerAudit(e)}
                   >
                     <span className="leaderboard-table__rank">{i + 1}</span>
                     <span className="leaderboard-table__name">
@@ -231,6 +298,38 @@ export function LeaderboardPanel() {
             </p>
           ) : wallet ? (
             <p className="board-footer-rank board-footer-rank--muted">{strings.boardNotRankedYet}</p>
+          ) : null}
+
+          {selectedPlayer ? (
+            <div className="board-player-peek" role="region" aria-label={strings.boardPlayerPeekTitle}>
+              <p className="board-player-peek__name">
+                {selectedPlayer.displayName ?? selectedPlayer.nickname ?? selectedPlayer.playerId.slice(0, 10)}
+              </p>
+              <div className="board-player-peek__actions">
+                <button
+                  type="button"
+                  className="btn btn--menu"
+                  disabled={auditBusy}
+                  onClick={() => void viewLastDuelAudit()}
+                >
+                  {strings.boardViewLastDuel}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--menu btn--ghost"
+                  onClick={() => void fetchProfile(selectedPlayer.playerId)}
+                >
+                  {strings.boardViewProfile}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--menu btn--ghost"
+                  onClick={() => setSelectedPlayer(null)}
+                >
+                  {strings.commonCancel}
+                </button>
+              </div>
+            </div>
           ) : null}
         </div>
 

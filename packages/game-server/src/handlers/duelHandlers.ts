@@ -2,6 +2,7 @@ import { randomBytes, createHash } from "node:crypto";
 import {
   DuelConfig,
   DummyZegonBrain,
+  ChallengerStyleBrain,
   DuelItemId,
   PlayerAction,
   RoundContext,
@@ -12,11 +13,20 @@ import {
   DEFAULT_DUEL_CONFIG,
   shouldAutoEvaluateGunslinger,
   withUniqueDuelSeed,
+  resolveStyleChallenge,
+  isTournamentActive,
 } from "@zegon/game-core";
 import { computeCommitHash, computeInputHash } from "../services/commit.js";
 import { EXPLORER_BASE, getContractService } from "../services/contract.js";
 import { getLeaderboard, submitScore, type LeaderboardEntry } from "../services/leaderboard.js";
-import { createChallengeLink, getChallengeLink } from "../services/challengeLinks.js";
+import { createChallengeLink, getChallengeLink, updateChallengeLink } from "../services/challengeLinks.js";
+import { loadChallengerStyleProfile, loadChallengerStyleSummary } from "../services/challengeStyle.js";
+import { getLastDuelAuditForPlayer } from "../services/duelAuditIndex.js";
+import {
+  getMatchPoolContractAddress,
+  isMatchPoolConfigured,
+  settleMatch,
+} from "../services/matchPool.js";
 import {
   submitGlobalScore,
 } from "../services/globalLeaderboard.js";
@@ -47,12 +57,13 @@ import {
 } from "../services/statsLeaderboard.js";
 import {
   getSeasonInfo,
+  getTournamentInfo,
   getPlayerSeasonClaim,
   closeSeason,
 } from "../services/seasons.js";
 import { getOGComputeService } from "../services/ogCompute.js";
 import { loadSession, saveSession } from "../services/sessionStore.js";
-import { storeDuelLog, loadDuelLogPayload } from "../services/storage.js";
+import { storeDuelLog, loadDuelLogPayload, fetchStorageJson } from "../services/storage.js";
 import {
   getPoolInfo,
   getPoolContractAddress,
@@ -399,10 +410,12 @@ export async function handleRoundCommit(body: {
       brainMode = "dummy";
     }
   } else {
-    decision = await new DummyZegonBrain(
-      session.config.seed,
-      body.locale ?? "en",
-    ).decide(body.context);
+    const styleProfile = session.config.challengerStyleProfile;
+    const brain =
+      styleProfile != null
+        ? new ChallengerStyleBrain(session.config.seed, styleProfile, body.locale ?? "en")
+        : new DummyZegonBrain(session.config.seed, body.locale ?? "en");
+    decision = await brain.decide(body.context);
     brainMode = "dummy";
   }
 
@@ -544,6 +557,9 @@ export async function handleRecordDuel(body: {
   attestationHash: string;
   sessionToken?: string;
   roundLogs?: ClientRoundLog[];
+  playerId?: string;
+  score?: number;
+  won?: boolean;
 }): Promise<{
   stored: boolean;
   storageRoot?: string;
@@ -582,7 +598,11 @@ export async function handleRecordDuel(body: {
 
   let storage: Awaited<ReturnType<typeof storeDuelLog>>;
   try {
-    storage = await storeDuelLog(body.duelId, session.logs);
+    storage = await storeDuelLog(body.duelId, session.logs, {
+      playerId: body.playerId,
+      won: body.won ?? body.result === 1,
+      score: body.score,
+    });
   } catch (err) {
     console.error("storeDuelLog failed:", err);
     storage = { localPath: undefined };
@@ -782,6 +802,7 @@ export async function handleGlobalLeaderboard(query?: {
   }>;
   playerRank?: { rank: number | null; total: number; value: number | null };
   season?: Awaited<ReturnType<typeof getSeasonInfo>>;
+  tournament?: ReturnType<typeof getTournamentInfo>;
 }> {
   const board = (query?.board ?? "ghost") as StatsBoardType;
   const validBoards: StatsBoardType[] = [
@@ -807,12 +828,13 @@ export async function handleGlobalLeaderboard(query?: {
   });
 
   const season = await getSeasonInfo();
+  const tournament = getTournamentInfo();
   let playerRank;
   if (query?.address && isWalletAddress(query.address)) {
     playerRank = await getPlayerRank(query.address, boardType);
   }
 
-  return { board: boardType, entries: enriched, playerRank, season };
+  return { board: boardType, entries: enriched, playerRank, season, tournament };
 }
 
 export async function handleGlobalSubmit(body: {
@@ -1068,16 +1090,211 @@ export async function handleDailyEnterCheck(body: {
 
 export async function handleCreateChallengeLink(body: {
   payload: Record<string, unknown>;
-}): Promise<{ id: string; urlPath: string }> {
-  const { id } = await createChallengeLink(body.payload ?? {});
-  return { id, urlPath: `?c=${id}` };
+}): Promise<{ id: string; urlPath: string; matchId?: string }> {
+  const payload = body.payload ?? {};
+  const challengeKind = payload.challengeKind === "style" ? "style" : "score";
+
+  if (challengeKind === "style") {
+    const duelId = typeof payload.challengerDuelId === "string" ? payload.challengerDuelId : "";
+    const storageRoot = typeof payload.storageRoot === "string" ? payload.storageRoot : undefined;
+    if (!duelId && !storageRoot) {
+      throw new Error("STYLE_CHALLENGE_REQUIRES_LOG");
+    }
+    const profile = await loadChallengerStyleProfile(duelId, storageRoot);
+    if (!profile) {
+      throw new Error("CHALLENGER_LOG_UNAVAILABLE");
+    }
+    payload.challengeKind = "style";
+  }
+
+  const { id, matchId } = await createChallengeLink(payload);
+  return { id, urlPath: `?c=${id}`, matchId };
 }
 
 export async function handleGetChallengeLink(
   id: string,
-): Promise<{ payload: Record<string, unknown> | null }> {
+): Promise<{
+  payload: Record<string, unknown> | null;
+  status?: string;
+  expired?: boolean;
+  styleSummary?: { rounds: number; reads: number; won?: boolean };
+}> {
   const entry = await getChallengeLink(id);
-  return { payload: entry?.payload ?? null };
+  if (!entry) return { payload: null, expired: true };
+
+  const payload = entry.payload;
+  let styleSummary;
+  if (payload.challengeKind === "style" && typeof payload.challengerDuelId === "string") {
+    styleSummary =
+      (await loadChallengerStyleSummary(
+        payload.challengerDuelId,
+        typeof payload.storageRoot === "string" ? payload.storageRoot : undefined,
+        payload.challengerWon === true,
+      )) ?? undefined;
+  }
+
+  return {
+    payload: {
+      ...payload,
+      challengeId: id,
+      matchId: entry.matchId ?? payload.matchId,
+    },
+    status: entry.status,
+    expired: entry.status === "expired",
+    styleSummary,
+  };
+}
+
+export async function handleAcceptChallenge(body: {
+  id: string;
+  defenderAddress: string;
+  staked?: boolean;
+}): Promise<{
+  accepted: boolean;
+  reason?: string;
+  config?: Partial<DuelConfig>;
+  challengerStyleProfile?: Awaited<ReturnType<typeof loadChallengerStyleProfile>>;
+  matchId?: string;
+}> {
+  if (!isWalletAddress(body.defenderAddress)) {
+    return { accepted: false, reason: "INVALID_ADDRESS" };
+  }
+
+  const entry = await getChallengeLink(body.id);
+  if (!entry || entry.status === "expired") {
+    return { accepted: false, reason: "EXPIRED" };
+  }
+  if (entry.status !== "open") {
+    return { accepted: false, reason: "NOT_OPEN" };
+  }
+  if (!isTournamentActive()) {
+    return { accepted: false, reason: "TOURNAMENT_ENDED" };
+  }
+
+  const payload = entry.payload;
+  const staked = payload.staked === true || body.staked === true;
+  if (staked && payload.staked !== true) {
+    return { accepted: false, reason: "STAKE_MISMATCH" };
+  }
+
+  let challengerStyleProfile;
+  if (payload.challengeKind === "style") {
+    const duelId = String(payload.challengerDuelId ?? "");
+    challengerStyleProfile = await loadChallengerStyleProfile(
+      duelId,
+      typeof payload.storageRoot === "string" ? payload.storageRoot : undefined,
+    );
+    if (!challengerStyleProfile) {
+      return { accepted: false, reason: "STYLE_UNAVAILABLE" };
+    }
+  }
+
+  await updateChallengeLink(body.id, {
+    status: "accepted",
+    defenderAddress: body.defenderAddress.toLowerCase(),
+  });
+
+  const config: Partial<DuelConfig> = {
+    seed: typeof payload.seed === "string" ? payload.seed : undefined,
+    archetype: typeof payload.archetype === "string" ? payload.archetype : undefined,
+    mode: "challenge",
+    challengeKind: payload.challengeKind === "style" ? "style" : "score",
+    challengeId: body.id,
+    challengerStyleProfile: challengerStyleProfile ?? undefined,
+  };
+
+  return {
+    accepted: true,
+    config,
+    challengerStyleProfile: challengerStyleProfile ?? undefined,
+    matchId: entry.matchId,
+  };
+}
+
+export async function handleResolveChallenge(body: {
+  id: string;
+  defenderDuelId: string;
+  defenderWon: boolean;
+  challengerAddress?: string;
+}): Promise<{
+  resolved: boolean;
+  outcome?: "defender" | "challenger" | "draw";
+  settleTxHash?: string;
+}> {
+  const entry = await getChallengeLink(body.id);
+  if (!entry) return { resolved: false };
+
+  if (entry.status === "resolved" && entry.winner) {
+    return { resolved: true, outcome: entry.winner };
+  }
+
+  const challengerWon = entry.payload.challengerWon === true;
+  const outcome = resolveStyleChallenge(challengerWon, body.defenderWon);
+
+  await updateChallengeLink(body.id, {
+    status: "resolved",
+    defenderDuelId: body.defenderDuelId,
+    defenderWon: body.defenderWon,
+    winner: outcome,
+  });
+
+  let settleTxHash: string | undefined;
+  if (entry.matchId && isMatchPoolConfigured() && outcome !== "draw") {
+    const challengerAddr =
+      typeof entry.payload.challengerAddress === "string"
+        ? entry.payload.challengerAddress
+        : body.challengerAddress;
+    const defenderAddr = entry.defenderAddress;
+    const winnerAddr =
+      outcome === "defender" ? defenderAddr : outcome === "challenger" ? challengerAddr : undefined;
+    if (winnerAddr && isWalletAddress(winnerAddr)) {
+      const settled = await settleMatch(entry.matchId, winnerAddr);
+      settleTxHash = settled?.txHash;
+    }
+  }
+
+  return { resolved: true, outcome, settleTxHash };
+}
+
+export async function handleAuditStorage(query: {
+  root?: string;
+}): Promise<{ root?: string; payload: unknown | null }> {
+  if (!query.root) return { payload: null };
+  const payload = await fetchStorageJson(query.root);
+  return { root: query.root, payload };
+}
+
+export async function handleLastDuelAudit(query: {
+  address?: string;
+}): Promise<{ entry: Awaited<ReturnType<typeof getLastDuelAuditForPlayer>> }> {
+  if (!query.address || !isWalletAddress(query.address)) {
+    return { entry: null };
+  }
+  const entry = await getLastDuelAuditForPlayer(query.address);
+  return { entry };
+}
+
+export async function handleMatchPoolInfo(): Promise<{
+  configured: boolean;
+  poolAddress?: string;
+  minStake?: string;
+}> {
+  const poolAddress = getMatchPoolContractAddress() ?? undefined;
+  if (!isMatchPoolConfigured()) {
+    return { configured: false, poolAddress };
+  }
+  return { configured: true, poolAddress, minStake: "0.01" };
+}
+
+export async function handleMatchSettle(body: {
+  matchId: string;
+  winner: string;
+}): Promise<{ success: boolean; txHash?: string }> {
+  if (!isWalletAddress(body.winner)) {
+    return { success: false };
+  }
+  const result = await settleMatch(body.matchId, body.winner);
+  return { success: Boolean(result?.txHash), txHash: result?.txHash };
 }
 
 export async function handleTrackMetric(body: {

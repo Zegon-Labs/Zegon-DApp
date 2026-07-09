@@ -16,5 +16,7 @@ describe("challenge short links", () => {
 
     const stored = await getChallengeLink(id);
     expect(stored?.payload).toMatchObject(payload);
+    expect(stored?.status).toBe("open");
+    expect(stored?.expiresAt).toBeGreaterThan(stored!.createdAt);
   });
 });

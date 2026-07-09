@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { getTournamentPhaseInfo, type TournamentPhaseInfo } from "@zegon/game-core";
 import { leaderboardDir } from "../utils/paths.js";
 import { loadPersistedJson, savePersistedJson } from "./jsonBlobStore.js";
 import type { PlayerProfile } from "./profileTypes.js";
@@ -159,6 +160,10 @@ export async function getSeasonInfo(): Promise<{
   const season = await getActiveSeason();
   const msRemaining = Math.max(0, season.endAt - Date.now());
   return { season, msRemaining };
+}
+
+export function getTournamentInfo(): TournamentPhaseInfo {
+  return getTournamentPhaseInfo();
 }
 
 export async function closeSeason(seasonId: string): Promise<Season> {

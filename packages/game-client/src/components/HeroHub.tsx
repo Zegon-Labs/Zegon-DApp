@@ -12,7 +12,7 @@ import {
 } from "../services/wallet.js";
 import { fetchProfile, getCachedProfile, hasNickname, onProfileChange } from "../services/profile.js";
 import { isTutorialDone } from "../tutorial/steps.js";
-import { getDailyArchetype, getMsUntilDailyReset, formatDailyCountdown, resolveChallengeFromSearch, buildTwitterIntentUrl, type ChallengeMeta, type ChallengePayload, type DuelConfig } from "@zegon/game-core";
+import { getDailyArchetype, getMsUntilDailyReset, formatDailyCountdown, resolveChallengeFromSearch, buildTwitterIntentUrl, isShortChallengeId, type ChallengeMeta, type ChallengePayload, type DuelConfig } from "@zegon/game-core";
 import { format, type LocaleStrings } from "../i18n/index.js";
 import {
   checkDailyEntered,
@@ -27,6 +27,12 @@ import { trackMetric } from "../services/metrics.js";
 import { HeroCharacter } from "./HeroCharacter.js";
 import { NotchBalance } from "./NotchCoin.js";
 import { DailyStakeModal } from "./DailyStakeModal.js";
+import { MatchStakeModal } from "./MatchStakeModal.js";
+import {
+  enterMatchAsDefender,
+  fetchMatchPoolInfo,
+  MatchStakeError,
+} from "../services/matchStake.js";
 import { ScoreInfoModal } from "./ScoreInfoModal.js";
 import { ArchetypePickerModal } from "./ArchetypePickerModal.js";
 import { DUEL_LENGTH_PRESETS } from "@zegon/game-core";
@@ -92,6 +98,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   const [duelsPlayed, setDuelsPlayed] = useState(0);
   const [notches, setNotches] = useState(0);
   const [showStakeModal, setShowStakeModal] = useState(false);
+  const [showMatchStakeModal, setShowMatchStakeModal] = useState(false);
+  const [matchPoolInfo, setMatchPoolInfo] = useState<Awaited<ReturnType<typeof fetchMatchPoolInfo>> | null>(null);
   const [showScoreInfo, setShowScoreInfo] = useState(false);
   const [showArchetypePicker, setShowArchetypePicker] = useState(false);
   const [seasonClaimable, setSeasonClaimable] = useState(false);
@@ -105,6 +113,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
 
   useEffect(() => {
     void fetchDailyPool().then(setPoolInfo);
+    void fetchMatchPoolInfo().then(setMatchPoolInfo);
     void fetchHealth().then((h) => {
       setBrainLabel(h.brainMode === "tee" ? "0G TEE" : "Dummy Brain");
     });
@@ -129,7 +138,12 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           }
         },
       );
-      if (parsed?.meta.challengerScore) {
+      if (parsed && (parsed.meta.challengeKind === "style" || (parsed.meta.challengerScore ?? 0) > 0)) {
+        const params = new URLSearchParams(window.location.search);
+        const c = params.get("c");
+        if (c && isShortChallengeId(c)) {
+          parsed.meta.challengeId = c;
+        }
         setPendingChallenge(parsed);
       }
     })();
@@ -260,17 +274,61 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
     });
   }
 
-  function acceptChallenge() {
+  function requestAcceptChallenge() {
     if (!pendingChallenge) return;
+    if (pendingChallenge.meta.staked && matchPoolInfo?.configured && matchPoolInfo.poolAddress) {
+      setShowMatchStakeModal(true);
+      return;
+    }
+    void acceptChallenge();
+  }
+
+  async function acceptChallenge() {
+    if (!pendingChallenge) return;
+    const walletAddr = getWalletAddress();
+    if (!walletAddr) {
+      notify.error(strings.challengeNeedsWallet);
+      return;
+    }
+
+    const challengeId = pendingChallenge.meta.challengeId;
+    let config = pendingChallenge.config;
+    let meta = pendingChallenge.meta;
+
+    if (challengeId) {
+      try {
+        const res = await fetch(`/api/challenge/${challengeId}/accept`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: challengeId, defenderAddress: walletAddr }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as {
+            accepted?: boolean;
+            config?: Partial<DuelConfig>;
+            reason?: string;
+          };
+          if (data.accepted && data.config) {
+            config = { ...config, ...data.config, mode: "challenge" };
+          } else if (!data.accepted) {
+            notify.error(data.reason ?? strings.challengeExpired);
+            return;
+          }
+        }
+      } catch {
+        /* proceed with local config */
+      }
+    }
+
     const url = new URL(window.location.href);
     url.searchParams.delete("c");
     url.searchParams.delete("challenge");
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
     gameBridge.startScene("DuelScene", {
       mode: "standard",
-      archetypeId: (pendingChallenge.config.archetype as "reader") ?? "reader",
-      challengeConfig: pendingChallenge.config,
-      challengeMeta: pendingChallenge.meta,
+      archetypeId: (config.archetype as "reader") ?? "reader",
+      challengeConfig: config,
+      challengeMeta: meta,
     });
     setPendingChallenge(null);
   }
@@ -291,6 +349,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
 
   const challengeName = pendingChallenge?.meta.challengerName ?? "Someone";
   const challengeScore = pendingChallenge?.meta.challengerScore ?? 0;
+  const isStyleChallenge = pendingChallenge?.meta.challengeKind === "style";
 
   useLayoutEffect(() => {
     const layout = hubLayoutRef.current;
@@ -382,13 +441,17 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           </div>
 
           <div className="hero__actions">
-          {pendingChallenge && challengeScore > 0 && (
+          {pendingChallenge && (isStyleChallenge || challengeScore > 0) && (
             <div className="challenge-banner challenge-banner--card" role="status">
               <p className="challenge-banner__title">
-                {format(strings.challengeCardTitle, { name: challengeName })}
+                {isStyleChallenge
+                  ? format(strings.challengeStyleTitle, { name: challengeName })
+                  : format(strings.challengeCardTitle, { name: challengeName })}
               </p>
               <p className="challenge-banner__text">
-                {format(strings.challengeBanner, { name: challengeName, score: challengeScore })}
+                {isStyleChallenge
+                  ? format(strings.challengeStyleBanner, { name: challengeName })
+                  : format(strings.challengeBanner, { name: challengeName, score: challengeScore })}
               </p>
               {pendingChallenge.meta.challengerTimesRead != null &&
                 pendingChallenge.meta.challengerRounds != null && (
@@ -403,7 +466,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
                 <button
                   type="button"
                   className="btn btn--menu challenge-banner__accept"
-                  onClick={acceptChallenge}
+                  onClick={requestAcceptChallenge}
                 >
                   {strings.challengeAccept}
                 </button>
@@ -736,6 +799,36 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           }}
           onStake={handleStakeDaily}
           onPlayFree={startDaily}
+        />
+      )}
+
+      {showMatchStakeModal && matchPoolInfo?.poolAddress && pendingChallenge?.meta.matchId && (
+        <MatchStakeModal
+          minStake={matchPoolInfo.minStake ?? "0.01"}
+          poolAddress={matchPoolInfo.poolAddress}
+          onClose={() => {
+            playSfx("ui_modal_close");
+            setShowMatchStakeModal(false);
+          }}
+          onPlayFree={() => {
+            setShowMatchStakeModal(false);
+            void acceptChallenge();
+          }}
+          onStake={async (amountEth) => {
+            try {
+              await enterMatchAsDefender(
+                matchPoolInfo.poolAddress!,
+                pendingChallenge.meta.matchId!,
+                amountEth,
+              );
+              setShowMatchStakeModal(false);
+              await acceptChallenge();
+            } catch (err) {
+              if (err instanceof MatchStakeError) {
+                notify.error(strings[STAKE_ERROR_KEYS[err.code]] ?? err.message);
+              }
+            }
+          }}
         />
       )}
 

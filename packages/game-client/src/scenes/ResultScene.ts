@@ -180,10 +180,29 @@ export class ResultScene extends Phaser.Scene {
 
   private buildChallengeCompareLine(strings: ReturnType<typeof t>): string | null {
     const meta = this.challengeMeta;
-    if (!meta?.challengerScore || meta.challengerScore <= 0) return null;
+    if (!meta) return null;
     const name = meta.challengerName ?? "Challenger";
     const youWon = this.result.winner === "PLAYER";
     const theyWon = meta.challengerWon === true;
+
+    if (meta.challengeKind === "style") {
+      let verdict: string;
+      if (youWon && !theyWon) {
+        verdict = format(strings.challengeStyleWin, { name });
+      } else if (!youWon && theyWon) {
+        verdict = format(strings.challengeStyleLose, { name });
+      } else {
+        verdict = format(strings.challengeStyleDraw, { name });
+      }
+      void this.resolveStyleChallenge(meta, youWon);
+      return [
+        strings.challengeStyleCompareTitle,
+        format(strings.challengeStyleArbiter, { name }),
+        verdict,
+      ].join("\n");
+    }
+
+    if (!meta.challengerScore || meta.challengerScore <= 0) return null;
     const statsYou = format(strings.challengeCompareYou, {
       score: this.result.score,
       reads: this.result.timesRead,
@@ -214,6 +233,23 @@ export class ResultScene extends Phaser.Scene {
     ]
       .filter(Boolean)
       .join("\n");
+  }
+
+  private async resolveStyleChallenge(meta: ChallengeMeta, defenderWon: boolean): Promise<void> {
+    if (!meta.challengeId || !this.duelId) return;
+    try {
+      await fetch(`/api/challenge/${meta.challengeId}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: meta.challengeId,
+          defenderDuelId: this.duelId,
+          defenderWon,
+        }),
+      });
+    } catch {
+      /* best-effort */
+    }
   }
 
   private getShareOptions() {

@@ -114,6 +114,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (slug[0] === "challenge" && slug[1] && req.method === "GET") {
       return res.status(200).json(await h.handleGetChallengeLink(slug[1]));
     }
+    if (slug[0] === "challenge" && slug[1] && slug[2] === "accept" && req.method === "POST") {
+      return res.status(200).json(await h.handleAcceptChallenge({ ...req.body, id: slug[1] }));
+    }
+    if (slug[0] === "challenge" && slug[1] && slug[2] === "resolve" && req.method === "POST") {
+      return res.status(200).json(await h.handleResolveChallenge({ ...req.body, id: slug[1] }));
+    }
+    if (slug[0] === "audit" && slug[1] === "storage" && req.method === "GET") {
+      const root = typeof req.query.root === "string" ? req.query.root : undefined;
+      return res.status(200).json(await h.handleAuditStorage({ root }));
+    }
+    if (slug[0] === "player" && slug[2] === "last-duel-audit" && req.method === "GET") {
+      const address = slug[1] ?? "";
+      return res.status(200).json(await h.handleLastDuelAudit({ address }));
+    }
+    if (slug[0] === "match" && slug[1] === "pool" && req.method === "GET") {
+      return res.status(200).json(await h.handleMatchPoolInfo());
+    }
+    if (slug[0] === "match" && slug[1] === "settle" && req.method === "POST") {
+      return res.status(200).json(await h.handleMatchSettle(req.body));
+    }
     if (slug[0] === "metrics" && slug[1] === "track" && req.method === "POST") {
       return res.status(200).json(await h.handleTrackMetric(req.body));
     }

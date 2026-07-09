@@ -42,6 +42,15 @@ export function transitionPhase(
 }
 
 export function buildRoundContext(state: DuelState): RoundContext {
+  const timesReadSoFar = state.roundLogs.filter((l) => l.predictionCorrect).length;
+  const itemHistory = state.roundLogs
+    .map((l) => l.itemUsed)
+    .filter((id): id is NonNullable<typeof id> => Boolean(id));
+  const itemUsageCounts: Partial<Record<string, number>> = {};
+  for (const id of itemHistory) {
+    itemUsageCounts[id] = (itemUsageCounts[id] ?? 0) + 1;
+  }
+
   return {
     roundIndex: state.roundIndex,
     playerHistory: state.playerHistory,
@@ -57,6 +66,10 @@ export function buildRoundContext(state: DuelState): RoundContext {
     isDeadeye: state.isDeadeye,
     modifiers: state.config.modifiers,
     archetype: state.config.archetype,
+    timesReadSoFar,
+    itemHistory,
+    itemUsageCounts,
+    challengerStyle: state.config.challengerStyleProfile,
   };
 }
 

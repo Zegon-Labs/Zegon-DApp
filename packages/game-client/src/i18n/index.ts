@@ -288,6 +288,15 @@ export interface LocaleStrings {
   challengeCompareYou: string;
   challengeCompareThem: string;
   challengeCompareWin: string;
+  challengeStyleTitle: string;
+  challengeStyleBanner: string;
+  challengeStyleCompareTitle: string;
+  challengeStyleArbiter: string;
+  challengeStyleWin: string;
+  challengeStyleLose: string;
+  challengeStyleDraw: string;
+  challengeNeedsWallet: string;
+  challengeExpired: string;
   copiedChallenge: string;
   winsVsZegon: string;
   achievementsWins: string;
@@ -428,6 +437,9 @@ export interface LocaleStrings {
   boardPrizePool: string;
   boardSeasonEndsIn: string;
   boardSeasonEnded: string;
+  boardPhaseEndsIn: string;
+  boardTournamentStartsIn: string;
+  boardTournamentEnded: string;
   boardSeasonPrizeExplain: string;
   boardSeasonUnitDays: string;
   boardSeasonUnitHours: string;
@@ -449,6 +461,32 @@ export interface LocaleStrings {
   boardYourTotal: string;
   boardLowerBetter: string;
   boardHigherBetter: string;
+  boardPlayerPeekTitle: string;
+  boardViewLastDuel: string;
+  boardViewProfile: string;
+  auditPanelTitle: string;
+  auditPanelIntro: string;
+  auditRootLabel: string;
+  auditIndexerLink: string;
+  auditLoadFailed: string;
+  auditDuelId: string;
+  auditRoundTitle: string;
+  auditPredicted: string;
+  auditZegonMove: string;
+  auditPlayerAction: string;
+  auditItemUsed: string;
+  auditReadResult: string;
+  auditReadYes: string;
+  auditReadNo: string;
+  auditCommit: string;
+  auditNoDuel: string;
+  profileViewLastDuelAudit: string;
+  matchStakeTitle: string;
+  matchStakeIntro: string;
+  matchStakeDisclaimer: string;
+  matchStakeAmountLabel: string;
+  matchStakeConfirm: string;
+  matchStakePlayFree: string;
   replayTitle: string;
   replayWatch: string;
   replayRound: string;
@@ -775,6 +813,16 @@ const LOCALES: Record<Language, LocaleStrings> = {
     challengeCompareYou: "You · {score} pts · read {reads}× · {rounds} rounds",
     challengeCompareThem: "{name} · {score} pts · read {reads}× · {rounds} rounds",
     challengeCompareWin: "You won the challenge!",
+    challengeStyleTitle: "Style challenge from {name}",
+    challengeStyleBanner:
+      "ZEGON read {name}'s duel and will mimic their rhythm. Same seed — can you beat their outcome?",
+    challengeStyleCompareTitle: "— Style PvP —",
+    challengeStyleArbiter: "ZEGON arbitrated {name}'s duel log.",
+    challengeStyleWin: "You beat {name}'s style!",
+    challengeStyleLose: "{name}'s style still wins.",
+    challengeStyleDraw: "Draw — both matched {name}'s duel fate.",
+    challengeNeedsWallet: "Connect wallet to accept this challenge.",
+    challengeExpired: "This challenge expired.",
     copiedChallenge: "Challenge link copied",
     winsVsZegon: "Wins vs ZEGON: {wins} / {played} duels",
     achievementsWins: "Duels won: {wins} · played: {played}",
@@ -920,6 +968,9 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardPrizePool: "Prize pool: {pool} OG",
     boardSeasonEndsIn: "Season ends in",
     boardSeasonEnded: "Season ended",
+    boardPhaseEndsIn: "ends in",
+    boardTournamentStartsIn: "Tournament starts in",
+    boardTournamentEnded: "Tournament finished",
     boardSeasonPrizeExplain:
       "Top Score board players will be announced on our X. Stay tuned!",
     boardSeasonUnitDays: "Days",
@@ -951,6 +1002,32 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardYourTotal: "Your total: {value}",
     boardLowerBetter: "Lower is better",
     boardHigherBetter: "Higher is better",
+    boardPlayerPeekTitle: "Player",
+    boardViewLastDuel: "View last duel audit",
+    boardViewProfile: "View profile",
+    auditPanelTitle: "Duel audit",
+    auditPanelIntro: "Round-by-round log from 0G Storage. Verify commits and reads.",
+    auditRootLabel: "Storage root",
+    auditIndexerLink: "Open in 0G indexer",
+    auditLoadFailed: "Could not load duel log.",
+    auditDuelId: "Duel {id}",
+    auditRoundTitle: "Round {round}",
+    auditPredicted: "ZEGON predicted",
+    auditZegonMove: "ZEGON move",
+    auditPlayerAction: "Player action",
+    auditItemUsed: "Item",
+    auditReadResult: "Read?",
+    auditReadYes: "Yes",
+    auditReadNo: "No",
+    auditCommit: "Commit hash",
+    auditNoDuel: "No verified duel log found yet.",
+    profileViewLastDuelAudit: "Audit my last duel",
+    matchStakeTitle: "Stake this match",
+    matchStakeIntro: "Optional symmetric stake on Galileo testnet. Both players must deposit the same amount.",
+    matchStakeDisclaimer: "OG testnet · no real value",
+    matchStakeAmountLabel: "Stake (OG)",
+    matchStakeConfirm: "Stake & continue",
+    matchStakePlayFree: "Play free",
     replayTitle: "DUEL REPLAY",
     replayWatch: "Watch replay",
     replayRound: "Round {n}",
@@ -1275,6 +1352,16 @@ const LOCALES: Record<Language, LocaleStrings> = {
     challengeCompareYou: "Vos · {score} pts · leído {reads}× · {rounds} rondas",
     challengeCompareThem: "{name} · {score} pts · leído {reads}× · {rounds} rondas",
     challengeCompareWin: "¡Ganaste el desafío!",
+    challengeStyleTitle: "Reto de estilo de {name}",
+    challengeStyleBanner:
+      "ZEGON leyó el duelo de {name} e imitará su ritmo. Misma seed — ¿puedes superar su resultado?",
+    challengeStyleCompareTitle: "— PvP de estilo —",
+    challengeStyleArbiter: "ZEGON arbitró el log del duelo de {name}.",
+    challengeStyleWin: "¡Venciste el estilo de {name}!",
+    challengeStyleLose: "El estilo de {name} sigue ganando.",
+    challengeStyleDraw: "Empate — ambos igualaron el destino del duelo de {name}.",
+    challengeNeedsWallet: "Conectá wallet para aceptar este reto.",
+    challengeExpired: "Este reto expiró.",
     copiedChallenge: "Link de desafío copiado",
     winsVsZegon: "Victorias vs ZEGON: {wins} / {played} duelos",
     achievementsWins: "Duelos ganados: {wins} · jugados: {played}",
@@ -1420,6 +1507,9 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardPrizePool: "Premio: {pool} OG",
     boardSeasonEndsIn: "La temporada termina en",
     boardSeasonEnded: "Temporada finalizada",
+    boardPhaseEndsIn: "termina en",
+    boardTournamentStartsIn: "El torneo empieza en",
+    boardTournamentEnded: "Torneo finalizado",
     boardSeasonPrizeExplain:
       "Anunciaremos a los mejores del ranking Puntaje en nuestro X. Stay tuned!",
     boardSeasonUnitDays: "Días",
@@ -1451,6 +1541,32 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardYourTotal: "Tu total: {value}",
     boardLowerBetter: "Más bajo es mejor",
     boardHigherBetter: "Más alto es mejor",
+    boardPlayerPeekTitle: "Jugador",
+    boardViewLastDuel: "Ver último duelo",
+    boardViewProfile: "Ver perfil",
+    auditPanelTitle: "Auditoría del duelo",
+    auditPanelIntro: "Log ronda a ronda desde 0G Storage. Verificá commits y lecturas.",
+    auditRootLabel: "Root de storage",
+    auditIndexerLink: "Abrir en indexer 0G",
+    auditLoadFailed: "No se pudo cargar el log del duelo.",
+    auditDuelId: "Duelo {id}",
+    auditRoundTitle: "Ronda {round}",
+    auditPredicted: "ZEGON predijo",
+    auditZegonMove: "Movimiento ZEGON",
+    auditPlayerAction: "Acción del jugador",
+    auditItemUsed: "Ítem",
+    auditReadResult: "¿Lectura?",
+    auditReadYes: "Sí",
+    auditReadNo: "No",
+    auditCommit: "Hash commit",
+    auditNoDuel: "Aún no hay log verificado.",
+    profileViewLastDuelAudit: "Auditar mi último duelo",
+    matchStakeTitle: "Apostar este match",
+    matchStakeIntro: "Apuesta simétrica opcional en Galileo testnet. Ambos deben depositar lo mismo.",
+    matchStakeDisclaimer: "OG testnet · sin valor real",
+    matchStakeAmountLabel: "Apuesta (OG)",
+    matchStakeConfirm: "Apostar y continuar",
+    matchStakePlayFree: "Jugar gratis",
     replayTitle: "REPLAY DEL DUELO",
     replayWatch: "Ver replay",
     replayRound: "Ronda {n}",

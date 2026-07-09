@@ -31,6 +31,7 @@ import {
   truncateAddress,
 } from "../services/wallet.js";
 import { resolvePlayerHudName } from "../ui/hub/playerHudIdentity.js";
+import { fetchLastDuelAuditForPlayer } from "../services/duelAudit.js";
 
 export function ProfilePanel() {
   const { strings, language: lang } = useLocale();
@@ -42,6 +43,7 @@ export function ProfilePanel() {
   const [actionMsg, setActionMsg] = useState("");
   const [nickname, setNickname] = useState("");
   const [nickBusy, setNickBusy] = useState(false);
+  const [auditBusy, setAuditBusy] = useState(false);
 
   useEffect(() => onWalletChange(setWallet), []);
 
@@ -529,6 +531,32 @@ export function ProfilePanel() {
                   return <li key={id}>{lang === "es" ? ach.nameEs : ach.nameEn}</li>;
                 })}
               </ul>
+            )}
+            {wallet && (
+              <button
+                type="button"
+                className="btn btn--menu profile-audit-btn"
+                disabled={auditBusy}
+                onClick={() => {
+                  if (!wallet) return;
+                  setAuditBusy(true);
+                  void fetchLastDuelAuditForPlayer(wallet)
+                    .then(({ entry }) => {
+                      if (!entry?.storageRoot) {
+                        notify.error(strings.auditNoDuel);
+                        return;
+                      }
+                      gameBridge.navigate({
+                        type: "audit",
+                        storageRoot: entry.storageRoot,
+                        duelId: entry.duelId,
+                      });
+                    })
+                    .finally(() => setAuditBusy(false));
+                }}
+              >
+                {strings.profileViewLastDuelAudit}
+              </button>
             )}
               </>
             ) : (

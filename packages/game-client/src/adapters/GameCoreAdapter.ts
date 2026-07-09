@@ -1,4 +1,5 @@
 import { getLanguage } from "../i18n/index.js";
+import { getWalletAddress } from "../services/wallet.js";
 import { saveDuelSessionToken, saveDuelRoundLogs } from "../services/duelSessionStorage.js";
 import {
   assertCanPerformAction,
@@ -10,6 +11,7 @@ import {
   DuelState,
   DuelWinner,
   DummyZegonBrain,
+  ChallengerStyleBrain,
   DEFAULT_DUEL_CONFIG,
   IZegonBrain,
   DuelItemId,
@@ -209,7 +211,11 @@ export class GameCoreAdapter {
       brain = this.apiBrain;
     } else {
       this.apiBrain = null;
-      brain = new DummyZegonBrain(seed, getLanguage());
+      const styleProfile = (config as DuelConfig).challengerStyleProfile;
+      brain =
+        styleProfile != null
+          ? new ChallengerStyleBrain(seed, styleProfile, getLanguage())
+          : new DummyZegonBrain(seed, getLanguage());
     }
 
     this.brain = brain;
@@ -461,6 +467,9 @@ export class GameCoreAdapter {
           result: resultCode,
           attestationHash,
           sessionToken: this._sessionToken ?? undefined,
+          playerId: getWalletAddress() ?? undefined,
+          score: result.score,
+          won: result.winner === DuelWinner.PLAYER,
           roundLogs: result.roundLogs.map((log) => ({
             roundIndex: log.roundIndex,
             playerAction: log.playerAction,

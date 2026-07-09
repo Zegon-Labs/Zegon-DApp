@@ -5,7 +5,8 @@ export type AppView =
   | { type: "achievements" }
   | { type: "profile" }
   | { type: "saloon" }
-  | { type: "game" };
+  | { type: "game" }
+  | { type: "audit"; storageRoot?: string; duelId?: string };
 
 type NavigateListener = (view: AppView) => void;
 type SceneListener = (scene: string, data?: Record<string, unknown>) => void;

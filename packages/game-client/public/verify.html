@@ -394,8 +394,40 @@
           </div>`;
       }
 
+      async function renderAuditFromRoot(root) {
+        const content = document.getElementById("content");
+        content.innerHTML = `<p class="meta">${T.loading}</p>`;
+        let payload = null;
+        try {
+          const direct = await fetch(`https://indexer-storage-turbo.0g.ai/download?root=${encodeURIComponent(root)}`);
+          if (direct.ok) payload = await direct.json();
+        } catch { /* */ }
+        if (!payload) {
+          const proxy = await fetch(`/api/audit/storage?root=${encodeURIComponent(root)}`);
+          if (proxy.ok) {
+            const data = await proxy.json();
+            payload = data.payload;
+          }
+        }
+        if (!payload || !Array.isArray(payload.logs)) {
+          content.innerHTML = `<p class="error">${T.loadFailed ?? "Could not load log."}</p>`;
+          return;
+        }
+        let html = `<div class="duel-id-box"><div class="duel-id-box__label">Storage root</div><div class="duel-id-box__value">${root}</div></div>`;
+        payload.logs.forEach((log, i) => {
+          const round = (log.roundIndex ?? i) + 1;
+          html += `<section class="round"><h3>Round ${round}</h3><pre class="meta">${JSON.stringify(log, null, 2)}</pre></section>`;
+        });
+        content.innerHTML = html;
+      }
+
       async function main() {
         const params = new URLSearchParams(location.search);
+        const root = params.get("root");
+        if (root) {
+          await renderAuditFromRoot(root);
+          return;
+        }
         const rawDuelId = params.get("duel");
         const { id: duelId, badParam } = resolveDuelId(rawDuelId);
         const content = document.getElementById("content");

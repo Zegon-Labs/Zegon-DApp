@@ -66,6 +66,17 @@ export interface RoundContext {
   timesReadSoFar?: number;
   itemUsageCounts?: Partial<Record<DuelItemId, number>>;
   itemHistory?: readonly DuelItemId[];
+  challengerStyle?: ChallengerStyleProfile;
+}
+
+export interface ChallengerStyleProfile {
+  actionFreq: Partial<Record<PlayerAction, number>>;
+  transitions: Partial<Record<string, number>>;
+  rounds: Array<{
+    roundIndex: number;
+    playerAction: PlayerAction;
+    itemUsed?: string;
+  }>;
 }
 
 export interface ZegonDecision {
@@ -140,6 +151,10 @@ export interface DuelConfig {
   itemCooldownReduction?: number;
   /** Round limit before the rounds-won tie-break (default DUEL.MAX_ROUNDS_TIEBREAK). */
   tiebreakRounds?: number;
+  /** PvP style challenge: challenger duel fingerprint for ZEGON arbiter. */
+  challengerStyleProfile?: ChallengerStyleProfile;
+  challengeKind?: "style" | "score";
+  challengeId?: string;
 }
 
 export interface DuelState {

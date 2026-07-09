@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { ethers } from "ethers";
 import { duelLogDir } from "../utils/paths.js";
+import { indexDuelAudit, type DuelAuditEntry } from "./duelAuditIndex.js";
 
 const DATA_DIR = duelLogDir();
 const INDEXER_RPC =
@@ -149,9 +150,22 @@ export async function loadDuelLogPayload(
   }
 }
 
+export async function fetchStorageJson(rootHash: string): Promise<unknown | null> {
+  try {
+    const res = await fetch(storageDownloadUrl(rootHash), {
+      headers: { accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 export async function storeDuelLog(
   duelId: string,
   logs: unknown[],
+  meta?: Pick<DuelAuditEntry, "playerId" | "won" | "score">,
 ): Promise<StorageResult> {
   const payload = { duelId, logs, storedAt: Date.now() };
   const localPath = await storeLocal(duelId, payload);
@@ -163,5 +177,19 @@ export async function storeDuelLog(
 
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
   const uploaded = await uploadBytes(bytes);
-  return { ...uploaded, localPath };
+  const result = { ...uploaded, localPath };
+
+  if (uploaded.rootHash) {
+    await indexDuelAudit({
+      duelId,
+      playerId: meta?.playerId,
+      storageRoot: uploaded.rootHash,
+      storageUrl: storageDownloadUrl(uploaded.rootHash),
+      finishedAt: Date.now(),
+      won: meta?.won,
+      score: meta?.score,
+    }).catch(() => undefined);
+  }
+
+  return result;
 }

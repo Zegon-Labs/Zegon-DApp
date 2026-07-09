@@ -11,6 +11,12 @@ export interface ChallengeMeta {
   challengerWon?: boolean;
   /** Full duel seed from challenger (for cloned ZEGON). */
   challengerSeed?: string;
+  challengeKind?: "style" | "score";
+  storageRoot?: string;
+  challengeId?: string;
+  staked?: boolean;
+  matchId?: string;
+  challengerAddress?: string;
 }
 
 export type ChallengePayload = Partial<DuelConfig> & ChallengeMeta;
@@ -58,6 +64,12 @@ export function extractChallengeMeta(payload: ChallengePayload): ChallengeMeta {
     challengerRounds: payload.challengerRounds,
     challengerWon: payload.challengerWon,
     challengerSeed: payload.seed,
+    challengeKind: payload.challengeKind,
+    storageRoot: payload.storageRoot,
+    challengeId: payload.challengeId,
+    staked: payload.staked,
+    matchId: payload.matchId,
+    challengerAddress: payload.challengerAddress,
   };
 }
 
@@ -88,6 +100,12 @@ export function payloadFromParts(
     challengerTimesRead: _tr,
     challengerRounds: _rp,
     challengerWon: _w,
+    challengeKind: _ck,
+    storageRoot: _sr,
+    challengeId: _ci,
+    staked: _st,
+    matchId: _mi,
+    challengerAddress: _ca,
     ...configFields
   } = payload;
   return {

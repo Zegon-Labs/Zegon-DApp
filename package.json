@@ -14,6 +14,7 @@
     "compile": "pnpm --filter @zegon/contracts compile",
     "deploy:galileo": "pnpm --filter @zegon/contracts run deploy",
     "deploy:pool": "pnpm --filter @zegon/contracts run deploy:pool",
+    "deploy:match-pool": "pnpm --filter @zegon/contracts run deploy:match-pool",
     "smoke:galileo": "pnpm --filter @zegon/contracts smoke:galileo",
     "smoke:compute": "pnpm --filter @zegon/game-server smoke:compute"
   },

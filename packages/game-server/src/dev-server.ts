@@ -21,6 +21,12 @@ import {
   handleDailyEnterCheck,
   handleCreateChallengeLink,
   handleGetChallengeLink,
+  handleAcceptChallenge,
+  handleResolveChallenge,
+  handleAuditStorage,
+  handleLastDuelAudit,
+  handleMatchPoolInfo,
+  handleMatchSettle,
   handleAuthNonce,
   handlePurchaseUpgrade,
   handlePurchaseRelic,
@@ -243,8 +249,59 @@ const server = createServer(async (req, res) => {
     }
 
     if (url.startsWith("/api/challenge/") && req.method === "GET") {
-      const id = url.split("/").pop() ?? "";
+      const parts = url.split("/");
+      const id = parts[3] ?? "";
       const result = await handleGetChallengeLink(id);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.match(/^\/api\/challenge\/[^/]+\/accept$/) && req.method === "POST") {
+      const id = url.split("/")[3] ?? "";
+      const body = (await parseBody(req)) as Parameters<typeof handleAcceptChallenge>[0];
+      const result = await handleAcceptChallenge({ ...body, id });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.match(/^\/api\/challenge\/[^/]+\/resolve$/) && req.method === "POST") {
+      const id = url.split("/")[3] ?? "";
+      const body = (await parseBody(req)) as Parameters<typeof handleResolveChallenge>[0];
+      const result = await handleResolveChallenge({ ...body, id });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.startsWith("/api/audit/storage") && req.method === "GET") {
+      const parsed = new URL(url, "http://localhost");
+      const root = parsed.searchParams.get("root") ?? undefined;
+      const result = await handleAuditStorage({ root });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.match(/^\/api\/player\/[^/]+\/last-duel-audit$/) && req.method === "GET") {
+      const address = url.split("/")[3] ?? "";
+      const result = await handleLastDuelAudit({ address });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/match/pool" && req.method === "GET") {
+      const result = await handleMatchPoolInfo();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url === "/api/match/settle" && req.method === "POST") {
+      const body = (await parseBody(req)) as Parameters<typeof handleMatchSettle>[0];
+      const result = await handleMatchSettle(body);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;

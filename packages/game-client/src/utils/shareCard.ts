@@ -108,6 +108,10 @@ export function buildChallengePayloadFromResult(
     archetype?: string;
     duelId?: string | null;
     mode?: "standard" | "daily";
+    storageRoot?: string;
+    styleChallenge?: boolean;
+    staked?: boolean;
+    matchId?: string;
   },
 ): ChallengePayload {
   const address = getWalletAddress();
@@ -116,16 +120,23 @@ export function buildChallengePayloadFromResult(
     profile?.nickname ??
     (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : undefined);
 
+  const styleChallenge = options.styleChallenge !== false;
+
   return {
     seed: options.seed,
     archetype: options.archetype,
     mode: options.mode === "daily" ? "daily" : "standard",
+    challengeKind: styleChallenge ? "style" : "score",
     challengerScore: result.score,
     challengerName,
     challengerDuelId: options.duelId ?? undefined,
     challengerTimesRead: result.timesRead,
     challengerRounds: result.roundsPlayed,
     challengerWon: result.winner === DuelWinner.PLAYER,
+    storageRoot: options.storageRoot,
+    staked: options.staked,
+    matchId: options.matchId,
+    challengerAddress: address ?? undefined,
   };
 }
 
@@ -152,7 +163,7 @@ export async function buildChallengeUrlFromResult(
       body: JSON.stringify({ payload }),
     });
     if (res.ok) {
-      const data = (await res.json()) as { id?: string };
+      const data = (await res.json()) as { id?: string; matchId?: string };
       if (data.id) return buildShortChallengeUrl(home, data.id);
     }
   } catch {

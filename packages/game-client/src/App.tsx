@@ -6,6 +6,7 @@ import { LeaderboardPanel } from "./components/LeaderboardPanel.js";
 import { PhaserHost } from "./components/PhaserHost.js";
 import { ProfileSetupModal } from "./components/ProfileSetupModal.js";
 import { ProfilePanel } from "./components/ProfilePanel.js";
+import { DuelAuditPanel } from "./components/DuelAuditPanel.js";
 import { UpgradeSaloon } from "./components/UpgradeSaloon.js";
 import { useReplayOverlay } from "./components/ReplayPanel.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
@@ -139,6 +140,12 @@ export default function App() {
         <>
           <HeroHub />
           <ProfilePanel />
+        </>
+      )}
+      {!inGame && view.type === "audit" && (
+        <>
+          <HeroHub />
+          <DuelAuditPanel storageRoot={view.storageRoot} duelId={view.duelId} />
         </>
       )}
       {!inGame && view.type === "saloon" && <UpgradeSaloon />}

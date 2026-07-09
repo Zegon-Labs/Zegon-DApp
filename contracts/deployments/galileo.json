@@ -8,5 +8,7 @@
   "poolDeployedAt": "2026-06-20T00:21:27.465Z",
   "gunslingerAddress": "0x23D671FaEd3adA290601990D45A959F1b60BFdb4",
   "gunslingerOperator": "0xcDFE7233fb5E4710591bbA906a5C72F171297EAa",
-  "gunslingerDeployedAt": "2026-07-09T07:10:46.487Z"
+  "gunslingerDeployedAt": "2026-07-09T07:10:46.487Z",
+  "matchPoolAddress": "0xA1085dfb4F440739B754DE6e911D0AedD56cFb4d",
+  "matchPoolDeployedAt": "2026-07-09T08:59:50.280Z"
 }
