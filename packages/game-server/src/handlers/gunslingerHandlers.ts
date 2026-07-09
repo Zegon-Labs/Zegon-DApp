@@ -5,6 +5,10 @@ import {
 import { evaluateGunslingerRank } from "../services/gunslingerEvaluate.js";
 import { getGunslingerNftService } from "../services/gunslingerNft.js";
 import {
+  buildGunslingerTokenMetadata,
+  resolveGunslingerMetadataUrl,
+} from "../services/gunslingerTokenMetadata.js";
+import {
   getProfile,
   saveGunslingerNft,
   setGunslingerGender,
@@ -139,9 +143,30 @@ export async function handleGunslingerMetadata(address: string): Promise<{
   metadataUrl?: string;
 }> {
   const profile = await getProfile(address);
-  const root = profile?.gunslinger?.nft?.metadataRootHash;
+  const stored = profile?.gunslinger?.nft?.metadataRootHash;
   return {
     profile,
-    metadataUrl: root ? `https://indexer-storage-turbo.0g.ai/download?root=${root}` : undefined,
+    metadataUrl: isWalletAddress(address)
+      ? resolveGunslingerMetadataUrl(address, stored)
+      : undefined,
   };
+}
+
+export async function handleGunslingerTokenMetadata(address: string): Promise<
+  | { ok: true; metadata: Record<string, unknown> }
+  | { ok: false; reason: string }
+> {
+  if (!isWalletAddress(address)) {
+    return { ok: false, reason: "INVALID_ADDRESS" };
+  }
+  const profile = await getProfile(address);
+  if (!profile?.gunslinger?.rank) {
+    return { ok: false, reason: "GUNSLINGER_NOT_EVALUATED" };
+  }
+  const lang = profile.gunslinger.bioLang ?? "en";
+  const metadata = buildGunslingerTokenMetadata(profile, lang);
+  if (!metadata) {
+    return { ok: false, reason: "GUNSLINGER_NOT_EVALUATED" };
+  }
+  return { ok: true, metadata };
 }

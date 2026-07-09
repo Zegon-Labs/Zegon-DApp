@@ -359,6 +359,7 @@ export interface LocaleStrings {
   gunslingerRankCurrent: string;
   gunslingerRankAchieved: string;
   gunslingerRankPath: string;
+  gunslingerRankPathHint: string;
   saloonMenu: string;
   saloonTitle: string;
   saloonBuy: string;
@@ -829,6 +830,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerRankCurrent: "Current",
     gunslingerRankAchieved: "Achieved",
     gunslingerRankPath: "Rank path",
+    gunslingerRankPathHint:
+      "Ranks come from ZEGON's AI judgment of your duel history. Play duels, then request judgment below.",
     saloonMenu: "THE SMITH",
     saloonTitle: "UPGRADE YOUR DRAW",
     saloonBuy: "Upgrade ({cost} N)",
@@ -1307,6 +1310,8 @@ const LOCALES: Record<Language, LocaleStrings> = {
     gunslingerRankCurrent: "Actual",
     gunslingerRankAchieved: "Alcanzado",
     gunslingerRankPath: "Camino de rango",
+    gunslingerRankPathHint:
+      "Los rangos los asigna la IA de ZEGON según tu historial de duelos. Jugá duelos y pedí juicio abajo.",
     saloonMenu: "EL HERRERO",
     saloonTitle: "MEJORA TU DISPARO",
     saloonBuy: "Mejorar ({cost} N)",

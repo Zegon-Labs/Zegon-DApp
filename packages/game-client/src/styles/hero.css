@@ -4027,6 +4027,13 @@ html.zegon-reduced-motion .smoke-particle {
   color: var(--dust);
 }
 
+.gunslinger-rank-path__hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--dust);
+}
+
 .gunslinger-rank-ladder {
   list-style: none;
   margin: 0 0 12px;
@@ -4128,8 +4135,9 @@ html.zegon-reduced-motion .smoke-particle {
   display: block;
   margin-top: 2px;
   font-size: 11px;
-  line-height: 1.35;
+  line-height: 1.45;
   color: var(--dust);
+  opacity: 0.95;
 }
 
 .gunslinger-rank-step__badge {

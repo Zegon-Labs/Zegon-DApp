@@ -92,9 +92,33 @@ export function gunslingerRankName(rank: number, lang: "en" | "es"): string {
   return lang === "es" ? def.nameEs : def.nameEn;
 }
 
-export function gunslingerUnlockHint(rank: number, lang: "en" | "es"): string {
+export function gunslingerUnlockHint(
+  rank: number,
+  lang: "en" | "es",
+  opts?: { evaluated?: boolean },
+): string {
+  const es = lang === "es";
+  const min = GUNSLINGER_EVAL_MIN_DUELS;
+  const since = GUNSLINGER_EVAL_MIN_DUELS_SINCE_LAST;
+  const cooldownH = Math.round(GUNSLINGER_MANUAL_EVAL_COOLDOWN_MS / (60 * 60 * 1000));
+
+  if (!opts?.evaluated) {
+    if (rank === 1) {
+      return es
+        ? `Cómo desbloquear: jugá ${min} duelos y tocá «Pedir juicio a ZEGON» abajo.`
+        : `How to unlock: play ${min} duels, then tap «Ask ZEGON to judge me» below.`;
+    }
+    return es
+      ? `Primero desbloqueá rango 1 con la evaluación inicial (${min} duelos + botón abajo).`
+      : `Unlock rank 1 first with your first judgment (${min} duels + button below).`;
+  }
+
   const def = getGunslingerRankDef(rank);
-  return lang === "es" ? def.unlockHintEs : def.unlockHintEn;
+  const flavor = es ? def.unlockHintEs : def.unlockHintEn;
+  const steps = es
+    ? `Cómo subir: jugá ${since}+ duelos nuevos, mejorá lecturas y sorpresas en combate, pedí re-evaluación (esperá ${cooldownH}h entre pedidos).`
+    : `How to climb: play ${since}+ new duels, improve reads and surprises in combat, request re-judgment (${cooldownH}h cooldown).`;
+  return `${steps} ${flavor}`;
 }
 
 /** Public URL path under game-client /public (spaces encoded). */

@@ -1,16 +1,10 @@
 import { ethers } from "ethers";
-import {
-  gunslingerPortraitRelativePath,
-  gunslingerRankName,
-} from "@zegon/game-core";
 import type { PlayerProfile } from "./profileTypes.js";
-import {
-  readPortraitBytes,
-  storageDownloadUrl,
-  uploadBytesToStorage,
-  uploadJsonToStorage,
-} from "./storage.js";
 import { EXPLORER_BASE } from "./contract.js";
+import {
+  buildGunslingerTokenMetadata,
+  gunslingerTokenMetadataUrl,
+} from "./gunslingerTokenMetadata.js";
 
 const GUNSLINGER_ABI = [
   "function mint(address to, string uri) external returns (uint256)",
@@ -66,45 +60,12 @@ export class GunslingerNftService {
       throw new Error("GUNSLINGER_NOT_EVALUATED");
     }
 
-    const gender = gs.characterGender ?? "man";
-    const relativePath = gunslingerPortraitRelativePath(gs.rank, gender);
-    const portraitBytes = await readPortraitBytes(relativePath);
-    if (!portraitBytes) {
-      throw new Error("PORTRAIT_NOT_FOUND");
+    const metadata = buildGunslingerTokenMetadata(profile, lang);
+    if (!metadata) {
+      throw new Error("GUNSLINGER_NOT_EVALUATED");
     }
 
-    const portraitKey = `gunslinger-portrait-${profile.address}-${gs.rank}-${gender}`;
-    const portraitUpload = await uploadBytesToStorage(portraitKey, portraitBytes);
-    if (!portraitUpload.rootHash) {
-      throw new Error("PORTRAIT_UPLOAD_FAILED");
-    }
-
-    const rankName = gunslingerRankName(gs.rank, lang);
-    const metadata = {
-      name: `${profile.nickname} — ${rankName}`,
-      description: gs.bio,
-      image: storageDownloadUrl(portraitUpload.rootHash),
-      external_url: process.env.SIWE_DOMAIN
-        ? `https://${process.env.SIWE_DOMAIN}`
-        : "https://zegon-dapp.vercel.app",
-      attributes: [
-        { trait_type: "Rank", value: rankName },
-        { trait_type: "Rank Level", value: gs.rank },
-        { trait_type: "Nickname", value: profile.nickname },
-        { trait_type: "Duels Won", value: profile.stats.duelsWon },
-        { trait_type: "Duels Played", value: profile.stats.duelsPlayed },
-        { trait_type: "Verified Duels", value: profile.stats.verifiedDuels },
-        { trait_type: "Character", value: gender === "woman" ? "Woman" : "Man" },
-      ],
-    };
-
-    const metadataKey = `gunslinger-metadata-${profile.address}-${Date.now()}`;
-    const metadataUpload = await uploadJsonToStorage(metadataKey, metadata);
-    if (!metadataUpload.rootHash) {
-      throw new Error("METADATA_UPLOAD_FAILED");
-    }
-
-    const tokenUri = storageDownloadUrl(metadataUpload.rootHash);
+    const tokenUri = gunslingerTokenMetadataUrl(profile.address);
     const owner = profile.address;
     const existingToken: bigint = await this.contract.tokenOfOwner(owner);
     let txHash: string;
@@ -128,8 +89,7 @@ export class GunslingerNftService {
     return {
       tokenId,
       contractAddress: this.contractAddress,
-      metadataRootHash: metadataUpload.rootHash,
-      portraitRootHash: portraitUpload.rootHash,
+      metadataRootHash: tokenUri,
       tokenUri,
       txHash,
       explorerUrl: `${EXPLORER_BASE}/tx/${txHash}`,

@@ -1246,4 +1246,5 @@ export {
   handleGunslingerPreference,
   handleGunslingerMint,
   handleGunslingerMetadata,
+  handleGunslingerTokenMetadata,
 } from "./gunslingerHandlers.js";

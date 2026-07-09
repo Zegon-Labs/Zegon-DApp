@@ -32,6 +32,7 @@ import {
   handleGunslingerPreference,
   handleGunslingerMint,
   handleGunslingerMetadata,
+  handleGunslingerTokenMetadata,
 } from "./handlers/duelHandlers.js";
 import { handleHealth } from "./handlers/healthHandler.js";
 
@@ -312,6 +313,24 @@ const server = createServer(async (req, res) => {
       const result = await handleGunslingerMetadata(address);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
+      return;
+    }
+
+    if (url.startsWith("/api/player/gunslinger/token-metadata") && req.method === "GET") {
+      const parsed = new URL(url, "http://localhost");
+      const address = parsed.searchParams.get("address") ?? "";
+      const result = await handleGunslingerTokenMetadata(address);
+      if (!result.ok) {
+        const status = result.reason === "INVALID_ADDRESS" ? 400 : 404;
+        res.writeHead(status, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(result));
+        return;
+      }
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=60",
+      });
+      res.end(JSON.stringify(result.metadata));
       return;
     }
 

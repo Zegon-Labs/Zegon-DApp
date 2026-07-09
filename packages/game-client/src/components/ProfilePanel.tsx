@@ -95,7 +95,32 @@ export function ProfilePanel() {
       setActionMsg(strings.gunslingerMinted);
       tick((n) => n + 1);
     } else {
-      setActionMsg(strings.gunslingerMintFailed);
+      setActionMsg(mintErrorMessage(res.reason, strings));
+    }
+  }
+
+  function mintErrorMessage(
+    reason: string | undefined,
+    s: typeof strings,
+  ): string {
+    switch (reason) {
+      case "CONTRACT_NOT_CONFIGURED":
+        return s.gunslingerMintContractMissing;
+      case "PORTRAIT_NOT_FOUND":
+        return s.gunslingerMintPortraitMissing;
+      case "STORAGE_UPLOAD_FAILED":
+      case "PORTRAIT_UPLOAD_FAILED":
+      case "METADATA_UPLOAD_FAILED":
+        return s.gunslingerMintStorageFailed;
+      case "GUNSLINGER_NOT_EVALUATED":
+        return s.gunslingerEvalNeedDuels;
+      case "SIWE_REQUIRED":
+      case "SIWE_INVALID":
+        return s.gunslingerMintFailed;
+      default:
+        return reason && reason !== "MINT_FAILED" && !reason.startsWith("HTTP_")
+          ? `${s.gunslingerMintFailed} (${reason})`
+          : s.gunslingerMintFailed;
     }
   }
 
@@ -160,12 +185,14 @@ export function ProfilePanel() {
               </div>
 
               <h4 className="gunslinger-rank-path__title">{strings.gunslingerRankPath}</h4>
+              <p className="gunslinger-rank-path__hint">{strings.gunslingerRankPathHint}</p>
               <ol className="gunslinger-rank-ladder" aria-label={strings.gunslingerRankPath}>
                 {GUNSLINGER_RANKS.map((def) => {
                   const isCurrent = evaluated && currentRank === def.rank;
                   const isAchieved = evaluated && currentRank > def.rank;
                   const isLocked = !evaluated || currentRank < def.rank;
                   const rankName = lang === "es" ? def.nameEs : def.nameEn;
+                  const unlockHint = gunslingerUnlockHint(def.rank, lang, { evaluated });
                   return (
                     <li
                       key={def.rank}
@@ -176,7 +203,7 @@ export function ProfilePanel() {
                         isLocked ? " gunslinger-rank-step--locked" : "",
                       ].join("")}
                       aria-current={isCurrent ? "step" : undefined}
-                      title={isLocked ? gunslingerUnlockHint(def.rank, lang) : undefined}
+                      title={isLocked ? unlockHint : undefined}
                     >
                       <div className="gunslinger-rank-step__portrait" aria-hidden="true">
                         <img
@@ -194,7 +221,7 @@ export function ProfilePanel() {
                               {strings.gunslingerRankLocked}
                             </span>
                             <span className="gunslinger-rank-step__hint">
-                              {gunslingerUnlockHint(def.rank, lang)}
+                              {unlockHint}
                             </span>
                           </>
                         ) : isCurrent ? (
