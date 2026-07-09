@@ -143,6 +143,13 @@ export function gunslingerPortraitRelativePath(
   return `character/${folder}/${file}`;
 }
 
+export function isGunslingerEvaluated(
+  gunslinger: { rank?: number; evaluatedAt?: number; bio?: string } | null | undefined,
+): boolean {
+  if (!gunslinger) return false;
+  return (gunslinger.rank ?? 0) > 0 && Boolean(gunslinger.evaluatedAt || gunslinger.bio?.trim());
+}
+
 export function canRequestManualGunslingerEval(
   duelsPlayed: number,
   gunslinger: {
@@ -152,12 +159,13 @@ export function canRequestManualGunslingerEval(
   } | null | undefined,
   now = Date.now(),
 ): { ok: true } | { ok: false; reason: "NEED_DUELS" | "COOLDOWN" | "NEED_NEW_DUELS" } {
-  if (duelsPlayed < GUNSLINGER_EVAL_MIN_DUELS) {
-    return { ok: false, reason: "NEED_DUELS" };
-  }
   if (!gunslinger?.evaluatedAt) {
+    if (duelsPlayed < GUNSLINGER_EVAL_MIN_DUELS) {
+      return { ok: false, reason: "NEED_DUELS" };
+    }
     return { ok: true };
   }
+
   const duelsSince = duelsPlayed - (gunslinger.duelsAtEvaluation ?? 0);
   if (duelsSince < GUNSLINGER_EVAL_MIN_DUELS_SINCE_LAST) {
     return { ok: false, reason: "NEED_NEW_DUELS" };

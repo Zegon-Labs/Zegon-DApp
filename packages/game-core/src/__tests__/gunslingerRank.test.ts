@@ -45,6 +45,12 @@ describe("gunslingerRank", () => {
     ).toBe(true);
   });
 
+  it("does not block re-eval with NEED_DUELS once already evaluated", () => {
+    const evaluated = { evaluatedAt: Date.now(), duelsAtEvaluation: 8 };
+    expect(canRequestManualGunslingerEval(2, evaluated).reason).toBe("NEED_NEW_DUELS");
+    expect(canRequestManualGunslingerEval(11, evaluated).ok).toBe(true);
+  });
+
   it("auto eval every 10 duels since last", () => {
     expect(shouldAutoEvaluateGunslinger(5, null)).toBe(true);
     expect(

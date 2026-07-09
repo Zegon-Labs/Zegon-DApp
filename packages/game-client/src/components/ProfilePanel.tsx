@@ -3,6 +3,7 @@ import {
   ACHIEVEMENTS,
   GUNSLINGER_RANKS,
   canRequestManualGunslingerEval,
+  isGunslingerEvaluated,
   gunslingerPortraitPath,
   gunslingerRankName,
   gunslingerUnlockHint,
@@ -70,7 +71,7 @@ export function ProfilePanel() {
   const gs = profile?.gunslinger;
   const gender: CharacterGender = gs?.characterGender ?? "man";
   const currentRank = gs?.rank ?? 0;
-  const evaluated = Boolean(gs?.evaluatedAt && currentRank > 0);
+  const evaluated = isGunslingerEvaluated(gs);
 
   const evalGate = useMemo(
     () =>
@@ -367,7 +368,7 @@ export function ProfilePanel() {
                   </button>
                 ) : null}
               </div>
-              {!evalGate.ok && !evaluated ? (
+              {!evalGate.ok ? (
                 <p className="gunslinger-action-hint">
                   {evalGate.reason === "NEED_DUELS"
                     ? strings.gunslingerEvalNeedDuels
