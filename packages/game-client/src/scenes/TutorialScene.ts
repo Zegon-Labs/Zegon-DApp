@@ -5,7 +5,7 @@ import {
   GameCoreAdapter,
   DuelPhase,
 } from "../adapters/GameCoreAdapter.js";
-import { DuelItemId, estimateLiveScore, getEffectiveDeadeyeStreak, ITEM, PlayerAction } from "@zegon/game-core";
+import { DuelItemId, estimateLiveScore, estimateLiveScoreRaw, getEffectiveDeadeyeStreak, ITEM, PlayerAction } from "@zegon/game-core";
 import type { DuelEvent, RoundOutcome } from "@zegon/game-core";
 import {
   blindsightShakeParams,
@@ -120,7 +120,7 @@ export class TutorialScene extends Phaser.Scene {
   private waitingAdvance = false;
   private waitingInstruction = false;
   private localeUnsub: (() => void) | null = null;
-  private liveScorePrev = 0;
+  private liveScoreBeforeRoundRaw = 0;
 
   constructor() {
     super("TutorialScene");
@@ -475,6 +475,7 @@ export class TutorialScene extends Phaser.Scene {
     this.spriteActionBar.setDimmedAll(true);
     playActionSfx(PlayerAction.USE_ITEM);
     playSfx("tutorial_correct");
+    this.snapshotLiveScoreBeforeRound();
     void this.adapter.submitAction(PlayerAction.USE_ITEM);
   }
 
@@ -501,6 +502,7 @@ export class TutorialScene extends Phaser.Scene {
       this.playerHandSprite.playFire();
     }
     playSfx("tutorial_correct");
+    this.snapshotLiveScoreBeforeRound();
     void this.adapter.submitAction(action);
   }
 
@@ -615,6 +617,19 @@ export class TutorialScene extends Phaser.Scene {
     } else {
       this.statusLineText.setText(strings.tutorialGood).setColor(COLORS.bone);
     }
+    this.syncLiveScoreAfterRound();
+  }
+
+  private snapshotLiveScoreBeforeRound(): void {
+    this.liveScoreBeforeRoundRaw = estimateLiveScoreRaw(this.adapter.getState());
+  }
+
+  private syncLiveScoreAfterRound(): void {
+    const state = this.adapter.getState();
+    const score = estimateLiveScore(state);
+    const raw = estimateLiveScoreRaw(state);
+    const delta = raw - this.liveScoreBeforeRoundRaw;
+    this.combatHud.bumpLiveScore(score, t().score, delta);
   }
 
   private playArenaFlash(color: number, alpha = 0.7, radius = 60): void {
@@ -704,11 +719,6 @@ export class TutorialScene extends Phaser.Scene {
     );
 
     const liveScore = estimateLiveScore(state);
-    let liveScoreDelta = 0;
-    if (liveScore !== this.liveScorePrev) {
-      liveScoreDelta = liveScore - this.liveScorePrev;
-      this.liveScorePrev = liveScore;
-    }
 
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
@@ -732,7 +742,7 @@ export class TutorialScene extends Phaser.Scene {
       zegonStatus: readingStreak >= deadeyeStreak - 1 ? strings.deadeyeNear : undefined,
       liveScore,
       liveScoreLabel: strings.score,
-      liveScoreDelta,
+      liveScoreDelta: 0,
     });
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);

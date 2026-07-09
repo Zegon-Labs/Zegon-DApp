@@ -66,6 +66,8 @@ export class SideHudPanel {
   private readonly barY: number;
   private readonly barW: number;
   private readonly barH: number;
+  private readonly panelTopY: number;
+  private readonly panelHeight: number;
   private readonly hpGfx: Phaser.GameObjects.Graphics;
   private readonly subtitleText: Phaser.GameObjects.Text | null;
   private readonly showSubtitle: boolean;
@@ -137,6 +139,8 @@ export class SideHudPanel {
     this.barW = Math.round((barSrcX1 - barSrcX0) * scaleX);
     this.barH = BAR_H_PX;
     this.barY = Math.round(opts.y + (panelH - this.barH) / 2);  // centered
+    this.panelTopY = opts.y;
+    this.panelHeight = panelH;
 
     this.hpGfx = scene.add.graphics().setDepth(depth + 2);
     this.objs.push(this.hpGfx);
@@ -158,20 +162,20 @@ export class SideHudPanel {
 
     if (this.showLiveScore) {
       const scoreCenterX = this.barX + this.barW / 2;
-      const scoreTopY = this.barY + this.barH + 8;
+      const scoreTopY = this.panelTopY + this.panelHeight + 14;
       this.scoreLabelText = scene.add
         .text(scoreCenterX, scoreTopY, "", {
           fontFamily: FONT_DISPLAY,
-          fontSize: "10px",
+          fontSize: "11px",
           color: COLORS.dust,
           letterSpacing: 2,
         })
         .setOrigin(0.5, 0)
         .setDepth(depth + 2);
       this.scoreValueText = scene.add
-        .text(scoreCenterX, scoreTopY + 12, "0", {
+        .text(scoreCenterX, scoreTopY + 14, "0", {
           fontFamily: FONT,
-          fontSize: "24px",
+          fontSize: "28px",
           color: COLORS.gold,
           stroke: "#0A0911",
           strokeThickness: 3,
@@ -257,7 +261,7 @@ export class SideHudPanel {
 
   liveScoreAnchor(): { x: number; y: number } {
     const cx = this.barX + this.barW / 2;
-    const cy = this.barY + this.barH + 28;
+    const cy = this.panelTopY + this.panelHeight + 36;
     return { x: cx, y: cy };
   }
 

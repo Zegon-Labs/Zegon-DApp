@@ -135,6 +135,10 @@ export class CombatHud {
     return { x: this.zegonPanel.hpBarCenterX(), y: this.zegonPanel.hpBarCenterY() };
   }
 
+  bumpLiveScore(score: number, label: string, delta: number): void {
+    this.zegonPanel.updateLiveScore(score, label, delta);
+  }
+
   destroy(): void {
     this.playerPanel.destroy();
     this.zegonPanel.destroy();

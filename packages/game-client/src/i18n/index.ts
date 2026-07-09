@@ -387,6 +387,13 @@ export interface LocaleStrings {
   boardYourRank: string;
   boardSeasonRemaining: string;
   boardPrizePool: string;
+  boardSeasonEndsIn: string;
+  boardSeasonEnded: string;
+  boardSeasonPrizeExplain: string;
+  boardSeasonUnitDays: string;
+  boardSeasonUnitHours: string;
+  boardSeasonUnitMinutes: string;
+  boardSeasonUnitSeconds: string;
   boardGlobalIntro: string;
   boardGlobalHowTo: string;
   boardDescScore: string;
@@ -824,6 +831,14 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardYourRank: "Your rank: #{rank} · Top {pct}%",
     boardSeasonRemaining: "Season · {days}d left",
     boardPrizePool: "Prize pool: {pool} OG",
+    boardSeasonEndsIn: "Season ends in",
+    boardSeasonEnded: "Season ended",
+    boardSeasonPrizeExplain:
+      "Top Score board players will be announced on our X. Stay tuned!",
+    boardSeasonUnitDays: "Days",
+    boardSeasonUnitHours: "Hrs",
+    boardSeasonUnitMinutes: "Min",
+    boardSeasonUnitSeconds: "Sec",
     boardGlobalIntro:
       "Six leaderboards for different play styles. Your nickname shows here after you finish a duel with wallet connected.",
     boardGlobalHowTo: "How to join: connect wallet → choose nickname → finish a duel.",
@@ -1268,6 +1283,14 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardYourRank: "Tu puesto: #{rank} · Top {pct}%",
     boardSeasonRemaining: "Temporada · {days}d restantes",
     boardPrizePool: "Premio: {pool} OG",
+    boardSeasonEndsIn: "La temporada termina en",
+    boardSeasonEnded: "Temporada finalizada",
+    boardSeasonPrizeExplain:
+      "Anunciaremos a los mejores del ranking Puntaje en nuestro X. Stay tuned!",
+    boardSeasonUnitDays: "Días",
+    boardSeasonUnitHours: "Hrs",
+    boardSeasonUnitMinutes: "Min",
+    boardSeasonUnitSeconds: "Seg",
     boardGlobalIntro:
       "Seis rankings según distintos estilos de juego. Tu nickname aparece acá después de terminar un duelo con wallet conectada.",
     boardGlobalHowTo: "Cómo entrar: conectá wallet → elegí nickname → terminá un duelo.",

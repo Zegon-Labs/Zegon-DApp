@@ -15,6 +15,7 @@ import {
   previewSaloonStatsFromConfig,
   PlayerAction,
   estimateLiveScore,
+  estimateLiveScoreRaw,
 } from "@zegon/game-core";
 import {
   blindsightShakeParams,
@@ -129,7 +130,7 @@ export class DuelScene extends Phaser.Scene {
   private challengeConfig?: Partial<DuelConfig>;
   private challengeMeta?: ChallengeMeta;
   private showingRoundResult = false;
-  private liveScorePrev = 0;
+  private liveScoreBeforeRoundRaw = 0;
   private lastRoundOutcome: RoundOutcome | null = null;
   private confirmModal: Phaser.GameObjects.Container | null = null;
   private topHudBar!: TopHudBar;
@@ -439,6 +440,7 @@ export class DuelScene extends Phaser.Scene {
         void consumeEquippedOnServer(address).then(() => fetchProfile(address));
       }
       this.duelStartTime = Date.now();
+      this.liveScoreBeforeRoundRaw = 0;
       resetVoiceState();
       playSfx("duel_start");
       playVoice("step_into_dust", { delayMs: 420 });
@@ -554,6 +556,15 @@ export class DuelScene extends Phaser.Scene {
     ) {
       playZegonMoveSfx(outcome.zegonDecision.zegonMove);
     }
+    this.syncLiveScoreAfterRound();
+  }
+
+  private syncLiveScoreAfterRound(): void {
+    const state = this.adapter.getState();
+    const score = estimateLiveScore(state);
+    const raw = estimateLiveScoreRaw(state);
+    const delta = raw - this.liveScoreBeforeRoundRaw;
+    this.combatHud.bumpLiveScore(score, t().score, delta);
   }
 
   private handleEvent(event: DuelEvent): void {
@@ -779,11 +790,6 @@ export class DuelScene extends Phaser.Scene {
     );
 
     const liveScore = estimateLiveScore(state);
-    let liveScoreDelta = 0;
-    if (liveScore !== this.liveScorePrev) {
-      liveScoreDelta = liveScore - this.liveScorePrev;
-      this.liveScorePrev = liveScore;
-    }
 
     this.combatHud.update({
       playerHp: this.adapter.getPlayerHp(),
@@ -807,7 +813,7 @@ export class DuelScene extends Phaser.Scene {
       nextMoveHint: "",
       liveScore,
       liveScoreLabel: strings.score,
-      liveScoreDelta,
+      liveScoreDelta: 0,
     });
 
     this.topHudBar.updateStreak(strings.hudBlindsight, readingStreak, deadeyeStreak);
@@ -828,6 +834,8 @@ export class DuelScene extends Phaser.Scene {
     if (this.showingRoundResult) return;
     if (!this.adapter.isAwaitingPlayer()) return;
     if (!this.adapter.getAvailableActions().includes(action)) return;
+
+    this.liveScoreBeforeRoundRaw = estimateLiveScoreRaw(this.adapter.getState());
 
     this.spriteActionBar.setDimmedAll(true);
     playActionSfx(action);

@@ -5451,6 +5451,79 @@ html.zegon-reduced-motion .smoke-particle {
   color: var(--dust);
 }
 
+.board-season-banner {
+  margin: 0 0 14px;
+  padding: 14px 12px 12px;
+  border: 1px solid rgba(232, 178, 58, 0.45);
+  background:
+    linear-gradient(180deg, rgba(179, 18, 43, 0.16) 0%, rgba(10, 9, 17, 0.88) 100%);
+  box-shadow:
+    0 0 24px rgba(179, 18, 43, 0.18),
+    inset 0 0 0 1px rgba(232, 178, 58, 0.08);
+}
+
+.board-season-banner__title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: clamp(13px, 2.4vw, 16px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  line-height: 1.2;
+}
+
+.board-season-banner__prize {
+  margin: 10px 0 0;
+  font-size: clamp(12px, 2vw, 14px);
+  line-height: 1.4;
+  color: var(--bone);
+}
+
+.season-countdown {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(4px, 1.2vw, 10px);
+}
+
+.season-countdown__unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: clamp(52px, 12vw, 72px);
+}
+
+.season-countdown__unit--seconds .season-countdown__value {
+  color: var(--ember);
+}
+
+.season-countdown__value {
+  font-family: var(--font-mono);
+  font-size: clamp(34px, 7vw, 52px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(232, 178, 58, 0.35);
+}
+
+.season-countdown__label {
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: clamp(9px, 1.6vw, 11px);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dust);
+}
+
+.season-countdown__sep {
+  margin-bottom: clamp(14px, 3vw, 22px);
+  font-family: var(--font-mono);
+  font-size: clamp(24px, 5vw, 36px);
+  line-height: 1;
+  color: rgba(232, 178, 58, 0.55);
+}
+
 .board-desc {
   margin-bottom: 8px;
   padding: 8px 10px;
@@ -5545,7 +5618,7 @@ html.zegon-reduced-motion .smoke-particle {
 
 .hero__panel--leaderboard .board-intro,
 .hero__panel--leaderboard .board-how-to,
-.hero__panel--leaderboard .board-season {
+.hero__panel--leaderboard .board-season-banner {
   flex-shrink: 0;
   text-align: center;
 }
@@ -5557,15 +5630,13 @@ html.zegon-reduced-motion .smoke-particle {
 }
 
 .hero__panel--leaderboard .board-how-to {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-size: 14px;
   line-height: 1.4;
 }
 
-.hero__panel--leaderboard .board-season {
-  margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.4;
+.hero__panel--leaderboard .board-season-banner {
+  margin: 0 0 14px;
 }
 
 .hero__panel--leaderboard .board-desc {

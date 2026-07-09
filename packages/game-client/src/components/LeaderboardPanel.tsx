@@ -4,6 +4,10 @@ import { useLocale } from "../hooks/useLocale.js";
 import { format, type LocaleStrings } from "../i18n/index.js";
 import { fetchProfile } from "../services/profile.js";
 import { getWalletAddress, onWalletChange } from "../services/wallet.js";
+import {
+  padCountdownUnit,
+  seasonCountdownFromMs,
+} from "../utils/seasonCountdown.js";
 
 type BoardId = "score" | "hunter" | "veteran" | "ghost" | "speed" | "verified";
 
@@ -61,8 +65,8 @@ export function LeaderboardPanel() {
     total: number;
     value: number | null;
   } | null>(null);
-  const [seasonDays, setSeasonDays] = useState(0);
-  const [prizePool, setPrizePool] = useState("0");
+  const [seasonEndAt, setSeasonEndAt] = useState<number | null>(null);
+  const [seasonMsRemaining, setSeasonMsRemaining] = useState(0);
 
   useEffect(() => onWalletChange(setWallet), []);
 
@@ -84,9 +88,8 @@ export function LeaderboardPanel() {
         setEntries(data.entries ?? []);
         setPlayerRank(data.playerRank ?? null);
         if (data.season) {
-          setSeasonDays(Math.ceil(data.season.msRemaining / (24 * 60 * 60 * 1000)));
-          const wei = BigInt(data.season.season.prizePoolWei || "0");
-          setPrizePool((Number(wei) / 1e18).toFixed(2));
+          setSeasonEndAt(Date.now() + data.season.msRemaining);
+          setSeasonMsRemaining(data.season.msRemaining);
         }
       } catch {
         if (!cancelled) setEntries([]);
@@ -100,8 +103,20 @@ export function LeaderboardPanel() {
     };
   }, [board, wallet]);
 
+  useEffect(() => {
+    if (seasonEndAt === null) return;
+    const tick = () => {
+      setSeasonMsRemaining(Math.max(0, seasonEndAt - Date.now()));
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [seasonEndAt]);
+
   const walletLower = wallet?.toLowerCase();
   const activeLabel = boardLabel(board, strings);
+  const countdown = seasonCountdownFromMs(seasonMsRemaining);
+  const seasonActive = seasonEndAt !== null && countdown.totalMs > 0;
 
   return (
     <div className="hero__overlay" role="dialog" aria-modal="true">
@@ -110,9 +125,38 @@ export function LeaderboardPanel() {
           <h2 className="hero__panel-title">{strings.globalLeaderboardTitle}</h2>
           <p className="board-intro">{strings.boardGlobalIntro}</p>
           <p className="board-how-to">{strings.boardGlobalHowTo}</p>
-          <p className="board-season">
-            {format(strings.boardSeasonExplain, { days: seasonDays, pool: prizePool })}
-          </p>
+
+          <section className="board-season-banner" aria-live="polite">
+            <p className="board-season-banner__title">
+              {seasonActive ? strings.boardSeasonEndsIn : strings.boardSeasonEnded}
+            </p>
+            {seasonActive ? (
+              <div className="season-countdown" role="timer">
+                <div className="season-countdown__unit">
+                  <span className="season-countdown__value">{countdown.days}</span>
+                  <span className="season-countdown__label">{strings.boardSeasonUnitDays}</span>
+                </div>
+                <span className="season-countdown__sep" aria-hidden="true">:</span>
+                <div className="season-countdown__unit">
+                  <span className="season-countdown__value">{padCountdownUnit(countdown.hours)}</span>
+                  <span className="season-countdown__label">{strings.boardSeasonUnitHours}</span>
+                </div>
+                <span className="season-countdown__sep" aria-hidden="true">:</span>
+                <div className="season-countdown__unit">
+                  <span className="season-countdown__value">{padCountdownUnit(countdown.minutes)}</span>
+                  <span className="season-countdown__label">{strings.boardSeasonUnitMinutes}</span>
+                </div>
+                <span className="season-countdown__sep" aria-hidden="true">:</span>
+                <div className="season-countdown__unit season-countdown__unit--seconds">
+                  <span className="season-countdown__value">{padCountdownUnit(countdown.seconds)}</span>
+                  <span className="season-countdown__label">{strings.boardSeasonUnitSeconds}</span>
+                </div>
+              </div>
+            ) : null}
+            <p className="board-season-banner__prize">
+              {strings.boardSeasonPrizeExplain}
+            </p>
+          </section>
 
           <div className="board-tabs" role="tablist" aria-label={strings.globalLeaderboardTitle}>
             {BOARDS.map((id) => (

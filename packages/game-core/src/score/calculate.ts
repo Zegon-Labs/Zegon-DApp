@@ -149,9 +149,14 @@ export function calculateScoreFromState(
   };
 }
 
-/** Partial score estimate mid-duel (no victory/defeat cap). */
-export function estimateLiveScore(state: DuelState): number {
+/** Running duel score before floor (for live HUD deltas). */
+export function estimateLiveScoreRaw(state: DuelState): number {
   const { roundPoints, surpriseBonusTotal } = computeRoundPoints(state.roundLogs);
   const readStreakPenalty = readStreakScorePenalty(state.readingStreak);
-  return Math.max(0, roundPoints + surpriseBonusTotal - readStreakPenalty);
+  return roundPoints + surpriseBonusTotal - readStreakPenalty;
+}
+
+/** Partial score estimate mid-duel (no victory/defeat cap). */
+export function estimateLiveScore(state: DuelState): number {
+  return Math.max(0, estimateLiveScoreRaw(state));
 }
