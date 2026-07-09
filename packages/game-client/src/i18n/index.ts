@@ -396,6 +396,7 @@ export interface LocaleStrings {
   boardGlobalEmptyHint: string;
   boardNotRankedYet: string;
   boardYourStat: string;
+  boardYourTotal: string;
   boardLowerBetter: string;
   boardHigherBetter: string;
   replayTitle: string;
@@ -825,7 +826,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardDescVeteran:
       "Total rounds played across all duels. Shows who keeps dueling the most.",
     boardDescGhost:
-      "How often ZEGON reads you (%). Lower is better — unpredictable players rank higher. Requires 20+ rounds played.",
+      "Lifetime sum of your running score after every round played. Higher is better — surprise ZEGON and keep streaks alive.",
     boardDescSpeed:
       "Your fastest duel win time. Lower is better — quick victories rank higher.",
     boardDescVerified:
@@ -837,6 +838,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "Be the first: connect wallet, set a nickname, and finish a duel.",
     boardNotRankedYet: "You are not on this board yet — play a duel to appear.",
     boardYourStat: "Your best: {value}",
+    boardYourTotal: "Your total: {value}",
     boardLowerBetter: "Lower is better",
     boardHigherBetter: "Higher is better",
     replayTitle: "DUEL REPLAY",
@@ -1264,7 +1266,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
     boardDescVeteran:
       "Total de rondas jugadas en todos los duelos. Mide quién sigue volviendo a jugar.",
     boardDescGhost:
-      "Qué tan seguido ZEGON te lee (%). Más bajo es mejor — jugadores impredecibles suben. Requiere 20+ rondas.",
+      "Suma de tu puntaje acumulado tras cada ronda jugada. Más alto es mejor — sorprendé a ZEGON y mantené rachas.",
     boardDescSpeed:
       "Tu victoria más rápida. Más bajo es mejor — duelos cortos ganados rankean más alto.",
     boardDescVerified:
@@ -1276,6 +1278,7 @@ const LOCALES: Record<Language, LocaleStrings> = {
       "Sé el primero: conectá wallet, elegí nickname y terminá un duelo.",
     boardNotRankedYet: "Todavía no estás en este ranking — jugá un duelo para aparecer.",
     boardYourStat: "Tu mejor marca: {value}",
+    boardYourTotal: "Tu total: {value}",
     boardLowerBetter: "Más bajo es mejor",
     boardHigherBetter: "Más alto es mejor",
     replayTitle: "REPLAY DEL DUELO",

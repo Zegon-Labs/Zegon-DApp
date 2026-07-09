@@ -780,16 +780,16 @@ export async function handleGlobalLeaderboard(query?: {
   playerRank?: { rank: number | null; total: number; value: number | null };
   season?: Awaited<ReturnType<typeof getSeasonInfo>>;
 }> {
-  const board = (query?.board ?? "score") as StatsBoardType;
+  const board = (query?.board ?? "ghost") as StatsBoardType;
   const validBoards: StatsBoardType[] = [
+    "ghost",
     "score",
     "hunter",
     "veteran",
-    "ghost",
     "speed",
     "verified",
   ];
-  const boardType = validBoards.includes(board) ? board : "score";
+  const boardType = validBoards.includes(board) ? board : "ghost";
 
   const entries = await getStatsBoard(boardType, 50);
   const nicknames = await getNicknamesForAddresses(entries.map((e) => e.playerId));
@@ -943,6 +943,7 @@ export async function handleUpdateProfileStats(body: {
   maxReadingStreak?: number;
   playTimeMs?: number;
   globalScore?: number;
+  roundScoreGain?: number;
   verifiedOnChain?: boolean;
   achievements?: string[];
   unlocks?: string[];
@@ -980,6 +981,7 @@ export async function handleUpdateProfileStats(body: {
     maxReadingStreak: body.maxReadingStreak,
     playTimeMs: body.playTimeMs,
     globalScore: body.globalScore,
+    roundScoreGain: body.roundScoreGain,
     verifiedOnChain: body.verifiedOnChain,
     newAchievements: body.achievements,
     newUnlocks: body.unlocks,

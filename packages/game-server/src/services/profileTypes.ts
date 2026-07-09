@@ -7,6 +7,7 @@ export interface PlayerStats {
   bestGlobalScore: number;
   timesReadTotal: number;
   totalRoundsPlayed: number;
+  totalRoundScore: number;
   maxReadingStreak: number;
   totalPlayTimeMs: number;
   fastestWinMs: number | null;
@@ -46,6 +47,7 @@ export const DEFAULT_STATS: PlayerStats = {
   bestGlobalScore: 0,
   timesReadTotal: 0,
   totalRoundsPlayed: 0,
+  totalRoundScore: 0,
   maxReadingStreak: 0,
   totalPlayTimeMs: 0,
   fastestWinMs: null,

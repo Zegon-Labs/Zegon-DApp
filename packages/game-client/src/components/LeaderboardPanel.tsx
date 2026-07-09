@@ -15,7 +15,7 @@ interface BoardEntry {
   timestamp?: number;
 }
 
-const BOARDS: BoardId[] = ["score", "hunter", "veteran", "ghost", "speed", "verified"];
+const BOARDS: BoardId[] = ["ghost", "score", "hunter", "veteran", "speed", "verified"];
 
 function boardLabel(id: BoardId, strings: LocaleStrings): string {
   const map: Record<BoardId, string> = {
@@ -42,18 +42,17 @@ function boardDescription(id: BoardId, strings: LocaleStrings): string {
 }
 
 function boardSortHint(id: BoardId, strings: LocaleStrings): string {
-  return id === "ghost" || id === "speed" ? strings.boardLowerBetter : strings.boardHigherBetter;
+  return id === "speed" ? strings.boardLowerBetter : strings.boardHigherBetter;
 }
 
 function formatValue(id: BoardId, value: number): string {
-  if (id === "ghost") return `${(value * 100).toFixed(1)}%`;
   if (id === "speed") return `${(value / 1000).toFixed(1)}s`;
   return String(Math.round(value));
 }
 
 export function LeaderboardPanel() {
   const { strings } = useLocale();
-  const [board, setBoard] = useState<BoardId>("score");
+  const [board, setBoard] = useState<BoardId>("ghost");
   const [entries, setEntries] = useState<BoardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [wallet, setWallet] = useState<string | null>(getWalletAddress());
@@ -184,7 +183,7 @@ export function LeaderboardPanel() {
                 pct: Math.max(1, Math.round((playerRank.rank / Math.max(playerRank.total, 1)) * 100)),
               })}
               {playerRank.value !== null &&
-                ` · ${format(strings.boardYourStat, { value: formatValue(board, playerRank.value) })}`}
+                ` · ${format(board === "ghost" ? strings.boardYourTotal : strings.boardYourStat, { value: formatValue(board, playerRank.value) })}`}
             </p>
           ) : wallet ? (
             <p className="board-footer-rank board-footer-rank--muted">{strings.boardNotRankedYet}</p>

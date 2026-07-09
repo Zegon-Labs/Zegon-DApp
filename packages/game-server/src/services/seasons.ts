@@ -63,39 +63,31 @@ function computeSeasonPoints(profiles: PlayerProfile[]): Map<string, number> {
   const wins = profiles.map((p) => p.stats.duelsWon);
   const rounds = profiles.map((p) => p.stats.totalRoundsPlayed);
   const verified = profiles.map((p) => p.stats.verifiedDuels);
-  const ghostRatios = profiles.map((p) =>
-    p.stats.totalRoundsPlayed > 0
-      ? 1 - p.stats.timesReadTotal / p.stats.totalRoundsPlayed
-      : 0,
-  );
+  const ghostScores = profiles.map((p) => p.stats.totalRoundScore);
 
   const mins = {
     score: Math.min(...scores),
     wins: Math.min(...wins),
     rounds: Math.min(...rounds),
     verified: Math.min(...verified),
-    ghost: Math.min(...ghostRatios),
+    ghost: Math.min(...ghostScores),
   };
   const maxs = {
     score: Math.max(...scores),
     wins: Math.max(...wins),
     rounds: Math.max(...rounds),
     verified: Math.max(...verified),
-    ghost: Math.max(...ghostRatios),
+    ghost: Math.max(...ghostScores),
   };
 
   const out = new Map<string, number>();
   for (const p of profiles) {
-    const ghostRatio =
-      p.stats.totalRoundsPlayed > 0
-        ? 1 - p.stats.timesReadTotal / p.stats.totalRoundsPlayed
-        : 0;
     const sp =
       normalizeMetric(p.stats.bestGlobalScore, mins.score, maxs.score) * 0.35 +
       normalizeMetric(p.stats.duelsWon, mins.wins, maxs.wins) * 0.3 +
       normalizeMetric(p.stats.totalRoundsPlayed, mins.rounds, maxs.rounds) * 0.2 +
       normalizeMetric(p.stats.verifiedDuels, mins.verified, maxs.verified) * 0.1 +
-      normalizeMetric(ghostRatio, mins.ghost, maxs.ghost) * 0.05;
+      normalizeMetric(p.stats.totalRoundScore, mins.ghost, maxs.ghost) * 0.05;
     out.set(p.address, Math.round(sp * 10) / 10);
   }
   return out;

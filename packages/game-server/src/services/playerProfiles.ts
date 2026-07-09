@@ -231,6 +231,7 @@ export async function updateProfileStats(
     maxReadingStreak?: number;
     playTimeMs?: number;
     globalScore?: number;
+    roundScoreGain?: number;
     verifiedOnChain?: boolean;
     dailyScore?: number;
     dailySeed?: string;
@@ -279,6 +280,9 @@ export async function updateProfileStats(
   }
   if (update.globalScore !== undefined) {
     profile.stats.bestGlobalScore = Math.max(profile.stats.bestGlobalScore, update.globalScore);
+  }
+  if (update.roundScoreGain !== undefined) {
+    profile.stats.totalRoundScore += update.roundScoreGain;
   }
   if (update.verifiedOnChain) {
     profile.stats.verifiedDuels += 1;

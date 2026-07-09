@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateScoreFromState,
+  sumCumulativeRoundScores,
   surpriseStreakBonus,
   timesReadPenalty,
   PlayerAction,
@@ -102,6 +103,16 @@ describe("score calculation", () => {
     const calc = calculateScoreFromState(loss);
     expect(calc.defeatCapApplied).toBe(true);
     expect(calc.total).toBeLessThan(200);
+  });
+
+  it("sums running score snapshots for Ghost board metric", () => {
+    const logs = [
+      mockLog(false, 0),
+      mockLog(false, 1),
+      mockLog(true, 2),
+    ];
+    const total = sumCumulativeRoundScores(logs);
+    expect(total).toBe(8 + (8 + 8 + 8) + (8 + 8 + 8 - 15));
   });
 });
 

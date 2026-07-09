@@ -2,6 +2,7 @@ import {
   ACHIEVEMENTS,
   checkAchievements,
   notchesForDuel,
+  sumCumulativeRoundScores,
   xpForResult,
   type DuelResult,
 } from "@zegon/game-core";
@@ -112,6 +113,7 @@ export async function persistDuelProgression(
     firstDuelOfDay,
   });
   const won = result.winner === "PLAYER";
+  const roundScoreGain = sumCumulativeRoundScores(result.roundLogs);
 
   const unlocks = earned
     .map((id) => ACHIEVEMENTS[id]?.unlockCosmetic)
@@ -129,6 +131,7 @@ export async function persistDuelProgression(
     lastDuelDay: today,
     verifiedOnChain: options.verifiedOnChain,
     playTimeMs: options.playTimeMs,
+    roundScoreGain,
   });
 
   if (!hasServerProfile) {
@@ -147,6 +150,7 @@ export async function persistDuelProgression(
     playTimeMs: options.playTimeMs,
     verifiedOnChain: options.verifiedOnChain,
     globalScore: result.score,
+    roundScoreGain,
     achievements: earned.length > 0 ? earned : undefined,
     unlocks: unlocks.length > 0 ? unlocks : undefined,
     duelDay: today,

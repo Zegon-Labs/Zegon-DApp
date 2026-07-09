@@ -20,6 +20,7 @@ export interface PlayerProfile {
     bestGlobalScore: number;
     timesReadTotal: number;
     totalRoundsPlayed: number;
+    totalRoundScore: number;
     maxReadingStreak: number;
     totalPlayTimeMs: number;
     fastestWinMs: number | null;
@@ -124,6 +125,7 @@ const DEFAULT_STATS = {
   bestGlobalScore: 0,
   timesReadTotal: 0,
   totalRoundsPlayed: 0,
+  totalRoundScore: 0,
   maxReadingStreak: 0,
   totalPlayTimeMs: 0,
   fastestWinMs: null as number | null,
@@ -142,6 +144,7 @@ export function recordLocalProgress(
     notchesGain?: number;
     dailyScore?: number;
     globalScore?: number;
+    roundScoreGain?: number;
     achievements?: readonly string[];
     unlocks?: readonly string[];
     lastDuelDay?: string;
@@ -183,6 +186,9 @@ export function recordLocalProgress(
   }
   if (update.globalScore !== undefined) {
     stats.bestGlobalScore = Math.max(stats.bestGlobalScore, update.globalScore);
+  }
+  if (update.roundScoreGain !== undefined) {
+    stats.totalRoundScore += update.roundScoreGain;
   }
 
   const achievements = new Set(cached.achievements ?? []);

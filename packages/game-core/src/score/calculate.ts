@@ -74,6 +74,31 @@ function computeRoundPoints(roundLogs: readonly RoundLogEntry[]): {
   return { roundPoints, timesRead, surpriseBonusTotal, unreadRounds };
 }
 
+/** Sum of running score snapshots after each completed round (Ghost board metric). */
+export function sumCumulativeRoundScores(roundLogs: readonly RoundLogEntry[]): number {
+  let running = 0;
+  let total = 0;
+  let timesRead = 0;
+  let surpriseStreak = 0;
+
+  for (const log of roundLogs) {
+    if (log.predictionCorrect) {
+      running -= timesReadPenalty(timesRead);
+      timesRead += 1;
+      surpriseStreak = 0;
+    } else {
+      running += SCORE.UNREAD_ROUND;
+      surpriseStreak += 1;
+      if (surpriseStreak >= 2) {
+        running += surpriseStreakBonus(surpriseStreak);
+      }
+    }
+    total += running;
+  }
+
+  return total;
+}
+
 export function calculateScoreFromState(
   state: DuelState,
   options?: ScoreCalculationOptions,

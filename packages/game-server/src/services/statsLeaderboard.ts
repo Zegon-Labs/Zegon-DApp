@@ -18,7 +18,7 @@ export interface StatsBoardEntry {
   timestamp?: number;
 }
 
-const MIN_GHOST_ROUNDS = 20;
+const MIN_GHOST_ROUNDS = 1;
 
 function metricValue(profile: PlayerProfile, board: StatsBoardType): number | null {
   const s = profile.stats;
@@ -31,7 +31,7 @@ function metricValue(profile: PlayerProfile, board: StatsBoardType): number | nu
       return s.totalRoundsPlayed > 0 ? s.totalRoundsPlayed : null;
     case "ghost":
       if (s.totalRoundsPlayed < MIN_GHOST_ROUNDS) return null;
-      return s.timesReadTotal / s.totalRoundsPlayed;
+      return s.totalRoundScore;
     case "speed":
       return s.fastestWinMs !== null && s.fastestWinMs > 0 ? s.fastestWinMs : null;
     case "verified":
@@ -45,7 +45,7 @@ function sortEntries(
   entries: StatsBoardEntry[],
   board: StatsBoardType,
 ): StatsBoardEntry[] {
-  const asc = board === "ghost" || board === "speed";
+  const asc = board === "speed";
   return [...entries].sort((a, b) => (asc ? a.value - b.value : b.value - a.value));
 }
 
@@ -97,7 +97,7 @@ export async function getPlayerRank(
 export function formatBoardValue(board: StatsBoardType, value: number): string {
   switch (board) {
     case "ghost":
-      return `${(value * 100).toFixed(1)}% read`;
+      return String(Math.round(value));
     case "speed":
       return `${(value / 1000).toFixed(1)}s`;
     case "verified":
