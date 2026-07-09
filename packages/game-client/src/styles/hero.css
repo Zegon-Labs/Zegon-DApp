@@ -5333,7 +5333,7 @@ html.zegon-reduced-motion .smoke-particle {
   max-height: min(92vh, calc(min(96vw, 920px) * 1086 / 1448));
   height: auto;
   aspect-ratio: 1448 / 1086;
-  padding: 92px 64px 84px;
+  padding: 108px 64px 72px;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -5351,7 +5351,7 @@ html.zegon-reduced-motion .smoke-particle {
   width: 92%;
   max-width: 680px;
   margin: 0 auto;
-  padding: 10px 4px 12px;
+  padding: 22px 4px 12px;
   scrollbar-width: thin;
   scrollbar-color: rgba(179, 18, 43, 0.75) transparent;
 }
@@ -5365,7 +5365,7 @@ html.zegon-reduced-motion .smoke-particle {
 }
 
 .hero__panel--leaderboard .hero__panel-title {
-  margin: 0 0 10px;
+  margin: 6px 0 10px;
   font-size: clamp(22px, 3.8vw, 28px);
   line-height: 1.1;
   flex-shrink: 0;
@@ -5485,10 +5485,12 @@ html.zegon-reduced-motion .smoke-particle {
 .hero__panel--leaderboard .hero__panel-back {
   flex-shrink: 0;
   align-self: center;
-  margin-top: 8px;
-  margin-bottom: 4px;
+  width: min(94%, 520px);
+  max-width: 520px;
+  margin-top: 4px;
+  margin-bottom: 22px;
   padding-top: 0;
-  height: 62px;
+  height: 64px;
   font-size: 16px;
 }
 
@@ -5498,7 +5500,16 @@ html.zegon-reduced-motion .smoke-particle {
     max-width: min(96vw, 580px);
     min-height: calc(min(96vw, 580px) * 1086 / 1448);
     max-height: min(94vh, calc(min(96vw, 580px) * 1086 / 1448));
-    padding: 76px 48px 76px;
+    padding: 88px 48px 68px;
+  }
+
+  .hero__panel--leaderboard .hero__panel-title {
+    margin-top: 4px;
+  }
+
+  .hero__panel--leaderboard .hero__panel-back {
+    width: min(96%, 460px);
+    margin-bottom: 18px;
   }
 
   .leaderboard-panel__inner {
