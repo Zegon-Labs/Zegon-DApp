@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { verifyMessage, getAddress } from "ethers";
 
 const NONCE_TTL_MS = 10 * 60 * 1000;
+const GALILEO_CHAIN_ID = 16602;
 const nonces = new Map<string, { nonce: string; expiresAt: number }>();
 
 export function isDatabaseConfigured(): boolean {
@@ -51,7 +52,7 @@ export function createNonce(address: string): string {
 
 export function buildSiweMessage(address: string, nonce: string): string {
   const domain = process.env.SIWE_DOMAIN ?? "zegon.app";
-  return `${domain} wants you to sign in with your Ethereum account:\n${getAddress(address)}\n\nSign in to ZEGON\n\nURI: https://${domain}\nVersion: 1\nChain ID: 16601\nNonce: ${nonce}\nIssued At: ${new Date().toISOString()}`;
+  return `${domain} wants you to sign in with your Ethereum account:\n${getAddress(address)}\n\nSign in to ZEGON\n\nURI: https://${domain}\nVersion: 1\nChain ID: ${GALILEO_CHAIN_ID}\nNonce: ${nonce}\nIssued At: ${new Date().toISOString()}`;
 }
 
 export function verifySiweSignature(
