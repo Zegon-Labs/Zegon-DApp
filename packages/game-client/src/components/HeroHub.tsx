@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gameBridge } from "../game/bridge.js";
 import { useLocale } from "../hooks/useLocale.js";
 import { notify } from "../lib/toast.js";
@@ -94,6 +94,8 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   const [showScoreInfo, setShowScoreInfo] = useState(false);
   const [showArchetypePicker, setShowArchetypePicker] = useState(false);
   const [seasonClaimable, setSeasonClaimable] = useState(false);
+  const hubLayoutRef = useRef<HTMLDivElement>(null);
+  const hubMenuRef = useRef<HTMLElement>(null);
 
   const dailyArch = getDailyArchetype();
   const dailyArchName = lang === "es" ? dailyArch.nameEs : dailyArch.nameEn;
@@ -288,6 +290,55 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
   const challengeName = pendingChallenge?.meta.challengerName ?? "Someone";
   const challengeScore = pendingChallenge?.meta.challengerScore ?? 0;
 
+  useLayoutEffect(() => {
+    const layout = hubLayoutRef.current;
+    const menu = hubMenuRef.current;
+    const hero = layout?.closest(".hero");
+    if (!layout || !menu || !(hero instanceof HTMLElement)) return;
+
+    const desktopMq = window.matchMedia("(min-width: 901px)");
+
+    const applyHubFit = () => {
+      menu.style.removeProperty("--menu-fit-scale");
+      menu.classList.remove("hero__menu--compact");
+      hero.style.removeProperty("--hero-char-max-h");
+
+      const available = layout.clientHeight;
+      if (available > 0) {
+        hero.style.setProperty("--hero-char-max-h", `${Math.max(available - 12, 240)}px`);
+      }
+
+      if (!desktopMq.matches) return;
+
+      menu.style.setProperty("--menu-fit-scale", "1");
+      const needed = menu.getBoundingClientRect().height;
+      if (available <= 0 || needed <= 0) return;
+
+      const scale = Math.min(1, (available / needed) * 0.98);
+      menu.style.setProperty("--menu-fit-scale", scale.toFixed(3));
+      if (scale < 0.88) {
+        menu.classList.add("hero__menu--compact");
+      }
+    };
+
+    const observer = new ResizeObserver(() => applyHubFit());
+    observer.observe(layout);
+    observer.observe(menu);
+
+    const onViewportChange = () => applyHubFit();
+    desktopMq.addEventListener("change", onViewportChange);
+    window.addEventListener("resize", onViewportChange);
+    window.visualViewport?.addEventListener("resize", onViewportChange);
+    applyHubFit();
+
+    return () => {
+      observer.disconnect();
+      desktopMq.removeEventListener("change", onViewportChange);
+      window.removeEventListener("resize", onViewportChange);
+      window.visualViewport?.removeEventListener("resize", onViewportChange);
+    };
+  }, []);
+
   return (
     <main className="hero">
       <div className="hero__scene" aria-hidden="true">
@@ -300,10 +351,11 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
       </div>
       <div className="hero__atmosphere" aria-hidden="true" />
 
-      <div className="hero__layout">
+      <div className="hero__layout" ref={hubLayoutRef}>
         <HeroCharacter />
 
-        <section className="hero__menu" aria-label="Menú principal">
+        <div className="hero__menu-fit">
+        <section className="hero__menu" ref={hubMenuRef} aria-label="Menú principal">
           <div className="hero__menu-head">
             <h1 className="hero__logo" onDragStart={(e) => e.preventDefault()}>
               <img
@@ -624,6 +676,7 @@ export function HeroHub({ onNeedsProfile }: HeroHubProps) {
           </p>
         </div>
         </section>
+        </div>
       </div>
 
       <footer className="hero__footer">

@@ -70,6 +70,14 @@ button {
   background: #030205;
   --hero-shift-x: clamp(28px, 3.5vw, 56px);
   --hero-footer-reserve: clamp(132px, 21vh, 196px);
+  --hero-menu-w: clamp(360px, 26vw, 420px);
+  --hero-layout-pad-x: clamp(24px, 4vw, 72px);
+  --hero-char-gap: clamp(16px, 2vw, 32px);
+  --hero-char-max-w: min(
+    68vw,
+    calc(100vw - var(--hero-menu-w) - var(--hero-layout-pad-x) - var(--hero-char-gap))
+  );
+  --hero-char-max-h: calc(100dvh - var(--hero-footer-reserve) - 16px);
 }
 
 html:has(.hero),
@@ -191,8 +199,8 @@ body:has(.hero) {
   left: 50%;
   top: 50%;
   transform: translate(calc(-50% - var(--hero-shift-x)), -50%);
-  width: min(68vw, 1080px);
-  max-width: min(68vw, 1080px);
+  width: var(--hero-char-max-w);
+  max-width: var(--hero-char-max-w);
   height: auto;
   display: flex;
   align-items: center;
@@ -341,8 +349,8 @@ body:has(.hero) {
   z-index: 2;
   width: auto;
   height: auto;
-  max-width: min(100%, clamp(500px, 64vw, 1080px));
-  max-height: clamp(660px, calc(100dvh - var(--hero-footer-reserve, 168px) - 24px), 1040px);
+  max-width: min(100%, var(--hero-char-max-w));
+  max-height: var(--hero-char-max-h);
   display: block;
   object-fit: contain;
   object-position: center center;
@@ -602,24 +610,38 @@ body:has(.hero) {
   align-items: center;
   justify-content: flex-end;
   padding:
-    clamp(8px, 1.5vh, 16px)
+    clamp(6px, 1.2vh, 14px)
     clamp(24px, 4vw, 72px)
-    clamp(4px, 0.8vh, 8px)
+    clamp(2px, 0.5vh, 6px)
     clamp(16px, 2.5vw, 32px);
   min-height: 0;
   overflow: hidden;
   align-self: stretch;
+  container-type: size;
+  container-name: hub-layout;
+}
+
+.hero__menu-fit {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  max-height: 100%;
+  min-height: 0;
+  flex-shrink: 1;
+  margin-left: auto;
+  overflow: hidden;
 }
 
 .hero__menu {
-  --menu-w: min(100%, clamp(360px, 26vw, 420px));
-  --menu-gap: clamp(6px, 1vh, 9px);
-  --menu-px: 15px;
-  --menu-py: clamp(9px, 1.25vh, 11px);
-  --menu-fs-xs: clamp(10px, 2.1vw, 11px);
-  --menu-fs-sm: clamp(11px, 2.35vw, 12px);
-  --menu-fs-md: clamp(12px, 2.55vw, 14px);
-  --menu-fs-lg: clamp(14px, 2.9vw, 17px);
+  --menu-w: var(--hero-menu-w);
+  --menu-gap: clamp(4px, 0.72vh, 8px);
+  --menu-px: 14px;
+  --menu-py: clamp(6px, 0.95vh, 10px);
+  --menu-fs-xs: clamp(10px, 1.9vh, 11px);
+  --menu-fs-sm: clamp(11px, 2.05vh, 12px);
+  --menu-fs-md: clamp(12px, 2.25vh, 14px);
+  --menu-fs-lg: clamp(14px, 2.55vh, 17px);
+  --menu-fit-scale: 1;
 
   display: flex;
   flex-direction: column;
@@ -627,29 +649,31 @@ body:has(.hero) {
   width: var(--menu-w);
   max-width: var(--menu-w);
   height: auto;
-  max-height: calc(100dvh - var(--hero-footer-reserve) - clamp(8px, 1.5vh, 16px));
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(179, 18, 43, 0.55) transparent;
-  padding: 0 2px 4px;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
   gap: var(--menu-gap);
   justify-content: center;
   flex-shrink: 0;
   position: relative;
   z-index: 5;
-  margin-left: auto;
+  zoom: var(--menu-fit-scale);
+  transform-origin: 100% 50%;
 }
 
-.hero__menu::-webkit-scrollbar {
-  width: 4px;
+.hero__menu--compact .daily-feature__top,
+.hero__menu--compact .hero__guest-note {
+  display: none;
 }
 
-.hero__menu::-webkit-scrollbar-thumb {
-  background: rgba(179, 18, 43, 0.55);
-  border-radius: 4px;
+.hero__menu--compact .hero__tagline-line--b {
+  display: none;
+}
+
+@supports not (zoom: 1) {
+  .hero__menu {
+    transform: scale(var(--menu-fit-scale));
+  }
 }
 
 .hero__menu-head {
@@ -658,8 +682,9 @@ body:has(.hero) {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: clamp(4px, 0.7vh, 6px);
-  margin-bottom: clamp(2px, 0.5vh, 4px);
+  gap: clamp(2px, 0.45vh, 5px);
+  margin-bottom: 0;
+  flex-shrink: 1;
 }
 
 .hero__menu .hero__logo {
@@ -675,7 +700,7 @@ body:has(.hero) {
 
 .hero__menu .hero__logo-img {
   width: 100%;
-  max-width: clamp(148px, 36vw, 176px);
+  max-width: clamp(132px, 16vh, 168px);
   margin: 0 auto;
   transition: transform 0.22s ease, filter 0.22s ease;
 }
@@ -801,8 +826,8 @@ body:has(.hero) {
 }
 
 .hero__menu .daily-feature__top {
-  margin: 0.5rem 0 0;
-  padding: 0.5rem 0.65rem;
+  margin: 0.35rem 0 0;
+  padding: 0.4rem 0.55rem;
   border: 1px solid rgba(179, 18, 43, 0.3);
   border-radius: 4px;
   background: rgba(10, 9, 17, 0.45);
@@ -826,8 +851,14 @@ body:has(.hero) {
 }
 
 .hero__menu .hub-nav-btn {
-  min-height: 62px;
+  min-height: clamp(48px, 6.2vh, 60px);
   padding: var(--menu-py) var(--menu-px);
+}
+
+.hero__menu .hero__actions {
+  flex-shrink: 1;
+  min-height: 0;
+  gap: var(--menu-gap);
 }
 
 .hero__menu .hub-nav-btn__title {
@@ -1852,6 +1883,14 @@ html.zegon-reduced-motion .hero__footer-built:hover {
     overflow: visible;
   }
 
+  .hero__menu-fit {
+    order: 1;
+    width: 100%;
+    max-height: none;
+    margin: 0;
+    overflow: visible;
+  }
+
   .hero__character-wrap {
     position: relative;
     left: auto;
@@ -1880,17 +1919,20 @@ html.zegon-reduced-motion .hero__footer-built:hover {
   .hero__menu {
     order: 1;
     --menu-w: min(100%, clamp(340px, 92vw, 420px));
-    --menu-gap: clamp(6px, 1vh, 8px);
-    --menu-py: clamp(8px, 1.2vh, 10px);
-    --menu-fs-lg: clamp(13px, 3vw, 16px);
-    --menu-fs-md: clamp(12px, 2.65vw, 14px);
-    --menu-fs-sm: clamp(11px, 2.4vw, 12px);
-    --menu-fs-xs: clamp(10px, 2.2vw, 11px);
+    --menu-gap: clamp(5px, 0.9vh, 8px);
+    --menu-py: clamp(7px, 1.05vh, 10px);
+    --menu-fs-lg: clamp(13px, 2.8vh, 16px);
+    --menu-fs-md: clamp(12px, 2.5vh, 14px);
+    --menu-fs-sm: clamp(11px, 2.25vh, 12px);
+    --menu-fs-xs: clamp(10px, 2.05vh, 11px);
+    --menu-fit-scale: 1;
     width: var(--menu-w);
     max-width: var(--menu-w);
     max-height: none;
     margin: 0 auto;
+    zoom: 1;
     transform: none;
+    overflow: visible;
   }
 
   .hero__menu .hero__logo-img {
@@ -1930,38 +1972,72 @@ html.zegon-reduced-motion .hero__footer-built:hover {
 
 @media (min-width: 901px) {
   .hero__layout {
-    padding-right: clamp(32px, 4.5vw, 80px);
+    padding-right: var(--hero-layout-pad-x);
+  }
+}
+
+/* Ajustes según altura real del área central (container query, no px fijos) */
+@container hub-layout (max-height: 860px) {
+  .hero__menu {
+    --menu-gap: clamp(3px, 0.62vh, 7px);
+    --menu-py: clamp(5px, 0.85vh, 9px);
+  }
+
+  .hero__character-img {
+    max-height: calc(100cqh - 8px);
+  }
+}
+
+@container hub-layout (max-height: 780px) {
+  .hero__menu {
+    --menu-fs-lg: clamp(13px, 2.35vh, 16px);
+    --menu-fs-md: clamp(11px, 2.05vh, 13px);
+  }
+
+  .hero__character-img {
+    max-height: calc(100cqh - 12px);
+  }
+}
+
+@container hub-layout (max-height: 700px) {
+  .hero__menu {
+    --menu-gap: clamp(2px, 0.5vh, 6px);
+  }
+
+  .hero__menu .hero__logo-img {
+    max-width: clamp(118px, 14vh, 148px);
+  }
+
+  .hero__character-img {
+    max-height: calc(100cqh - 16px);
+  }
+}
+
+@container hub-layout (max-height: 620px) {
+  .hero__menu .daily-feature__top {
+    display: none;
+  }
+
+  .hero__character-img {
+    max-height: calc(100cqh - 20px);
   }
 }
 
 @media (min-width: 901px) and (max-height: 860px) {
   .hero {
-    --hero-footer-reserve: clamp(118px, 24vh, 168px);
+    --hero-footer-reserve: clamp(118px, 22vh, 168px);
+    --hero-char-max-h: calc(100dvh - var(--hero-footer-reserve) - 14px);
   }
 
-  .hero__menu {
-    justify-content: flex-start;
-    --menu-gap: clamp(5px, 0.85vh, 7px);
-    --menu-py: clamp(7px, 1vh, 9px);
-  }
-
-  .hero__character-img {
-    max-height: clamp(360px, calc(100dvh - var(--hero-footer-reserve) - 48px), 680px);
+  .hero__footer {
+    padding-bottom: clamp(4px, 0.8vh, 10px);
   }
 }
 
 @media (min-width: 901px) and (max-height: 720px) {
   .hero {
-    --hero-footer-reserve: clamp(108px, 26vh, 148px);
-  }
-
-  .hero__menu {
-    --menu-fs-lg: clamp(13px, 2.7vw, 15px);
-    --menu-fs-md: clamp(11px, 2.4vw, 13px);
-  }
-
-  .hero__footer {
-    padding-bottom: clamp(4px, 0.8vh, 8px);
+    --hero-footer-reserve: clamp(104px, 24vh, 148px);
+    --hero-char-max-h: calc(100dvh - var(--hero-footer-reserve) - 12px);
   }
 
   .hero__footer-built {
@@ -1969,36 +2045,22 @@ html.zegon-reduced-motion .hero__footer-built:hover {
   }
 }
 
-@media (min-width: 901px) and (min-height: 700px) {
-  .hero__character-img {
-    max-height: clamp(700px, calc(100dvh - 160px), 1060px);
-  }
-}
-
 @media (min-width: 1400px) {
+  .hero {
+    --hero-menu-w: clamp(380px, 24vw, 440px);
+    --hero-layout-pad-x: clamp(48px, 4.5vw, 96px);
+  }
+
   .hero__layout {
-    padding-right: clamp(48px, 4.5vw, 96px);
-  }
-
-  .hero__menu {
-    --menu-w: min(100%, clamp(380px, 24vw, 440px));
-  }
-
-  .hero__character-wrap {
-    width: min(66vw, 1120px);
-    max-width: min(66vw, 1120px);
-  }
-
-  .hero__character-img {
-    max-width: min(100%, 1120px);
+    padding-right: var(--hero-layout-pad-x);
   }
 
   .hero__footer {
-    max-width: min(94vw, 1280px);
+    max-width: 94vw;
   }
 
   .hero__footer-features {
-    max-width: min(92vw, 1180px);
+    max-width: 92vw;
     gap: clamp(16px, 2.5vw, 36px);
   }
 
@@ -2017,29 +2079,26 @@ html.zegon-reduced-motion .hero__footer-built:hover {
 }
 
 @media (min-width: 901px) and (max-height: 820px) {
-  .hero__character-wrap {
-    width: min(62vw, 880px);
-    max-width: min(62vw, 880px);
-  }
-
-  .hero__character-img {
-    max-height: clamp(480px, calc(100dvh - 180px), 740px);
+  .hero {
+    --hero-char-max-w: min(
+      62vw,
+      calc(100vw - var(--hero-menu-w) - var(--hero-layout-pad-x) - var(--hero-char-gap))
+    );
+    --hero-char-max-h: calc(100dvh - var(--hero-footer-reserve) - 20px);
   }
 }
 
 @media (min-width: 901px) and (max-width: 1280px) {
   .hero__layout {
-    padding-right: clamp(32px, 4.5vw, 72px);
+    padding-right: var(--hero-layout-pad-x);
   }
 
-  .hero__character-wrap {
-    width: min(64vw, 920px);
-    max-width: min(64vw, 920px);
-  }
-
-  .hero__character-img {
-    max-width: min(100%, clamp(440px, 58vw, 920px));
-    max-height: clamp(540px, calc(100dvh - 190px), 840px);
+  .hero {
+    --hero-char-max-w: min(
+      64vw,
+      calc(100vw - var(--hero-menu-w) - var(--hero-layout-pad-x) - var(--hero-char-gap))
+    );
+    --hero-char-max-h: calc(100dvh - var(--hero-footer-reserve) - 18px);
   }
 }
 
@@ -2110,8 +2169,8 @@ html.zegon-reduced-motion .hero__footer-built:hover {
   width: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--menu-gap);
+  margin-top: var(--menu-gap);
 }
 
 .saloon-feature {
