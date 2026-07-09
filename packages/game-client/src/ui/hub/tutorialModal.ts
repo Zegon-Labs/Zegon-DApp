@@ -244,41 +244,54 @@ export function createHubConfirmModal(
   options: HubConfirmModalOptions,
 ): Phaser.GameObjects.Container {
   const { width, height } = scene.scale;
-  const depth  = options.depth ?? 140;
-  const PANEL_W  = 480;
-  const INNER_PAD_H = 30;
-  const INNER_W  = PANEL_W - INNER_PAD_H * 2;  // 420
-  const INNER_PAD_T = 65;   // clears utility_table's top silver border
-  const INNER_PAD_B = 55;
-  const BTN_H   = 52;
-  const BTN_GAP = 8;
-  const BTN_W   = 400;
+  const depth = options.depth ?? 140;
+  const PANEL_W = 640;
+  const INNER_W = 330;
+  const BTN_H = 58;
+  const BTN_GAP = 10;
+  const BTN_W = INNER_W + 24;
   const cx = width / 2;
   const cy = height / 2;
 
-  // Measure body height with the actual font/wrap settings
   const measureBody = scene.add.text(0, 0, options.body, {
-    fontFamily: FONT, fontSize: "16px",
-    wordWrap: { width: INNER_W }, lineSpacing: 4,
+    fontFamily: FONT_DISPLAY,
+    fontSize: "15px",
+    wordWrap: { width: INNER_W },
+    lineSpacing: 5,
+    align: "center",
   }).setVisible(false);
-  const bodyH   = measureBody.height;
-  const TITLE_H = 34;
+  const bodyH = measureBody.height;
   measureBody.destroy();
 
+  const measureTitle = scene.add.text(0, 0, options.title, {
+    fontFamily: FONT_DISPLAY,
+    fontSize: "28px",
+    wordWrap: { width: INNER_W },
+    letterSpacing: 2,
+    align: "center",
+  }).setVisible(false);
+  const titleH = measureTitle.height;
+  measureTitle.destroy();
+
+  const rawH = Math.min(
+    62 + titleH + 14 + bodyH + 22 + BTN_H + BTN_GAP + BTN_H + 58,
+    680,
+  );
+  const INNER_PAD_T = Math.max(62, Math.round(rawH * 0.108));
+  const INNER_PAD_B = Math.max(54, Math.round(rawH * 0.100));
   const panelH = Math.min(
-    INNER_PAD_T + TITLE_H + 16 + bodyH + 20 + BTN_H + BTN_GAP + BTN_H + INNER_PAD_B,
-    600,
+    INNER_PAD_T + titleH + 14 + bodyH + 22 + BTN_H + BTN_GAP + BTN_H + INNER_PAD_B,
+    680,
   );
 
-  const root  = scene.add.container(0, 0).setDepth(depth);
-  const dim   = scene.add
+  const root = scene.add.container(0, 0).setDepth(depth);
+  const dim = scene.add
     .rectangle(width / 2, height / 2, width, height, 0x030205, 0.82)
     .setInteractive({ useHandCursor: false });
   root.add(dim);
 
   const panel = scene.add.container(cx, cy);
 
-  // ── Background: utility_table ─────────────────────────────────────────────
   if (scene.textures.exists(UTILITY_TABLE_KEY)) {
     panel.add(
       scene.add.image(0, 0, UTILITY_TABLE_KEY)
@@ -290,32 +303,30 @@ export function createHubConfirmModal(
   const topY = -panelH / 2;
   let y = topY + INNER_PAD_T;
 
-  // ── Title ─────────────────────────────────────────────────────────────────
   panel.add(
-    scene.add.text(0, y + TITLE_H / 2, options.title, {
+    scene.add.text(0, y + titleH / 2, options.title, {
       fontFamily: FONT_DISPLAY,
-      fontSize:   "28px",
-      color:      COLORS.ember,
-      align:      "center",
+      fontSize: "28px",
+      color: COLORS.ember,
+      align: "center",
+      wordWrap: { width: INNER_W },
       letterSpacing: 2,
     }).setOrigin(0.5, 0.5).setResolution(2),
   );
-  y += TITLE_H + 16;
+  y += titleH + 14;
 
-  // ── Body ──────────────────────────────────────────────────────────────────
   panel.add(
     scene.add.text(0, y, options.body, {
-      fontFamily: FONT,
-      fontSize:   "16px",
-      color:      COLORS.bone,
-      align:      "center",
-      wordWrap:   { width: INNER_W },
-      lineSpacing: 4,
+      fontFamily: FONT_DISPLAY,
+      fontSize: "15px",
+      color: COLORS.bone,
+      align: "center",
+      wordWrap: { width: INNER_W },
+      lineSpacing: 5,
     }).setOrigin(0.5, 0).setResolution(2),
   );
-  y += bodyH + 20;
+  y += bodyH + 22;
 
-  // ── Buttons ───────────────────────────────────────────────────────────────
   const hasSS = scene.textures.exists(BUTTON_STATES_KEY);
   let dismissing = false;
 
@@ -341,17 +352,19 @@ export function createHubConfirmModal(
         .setDisplaySize(BTN_W, BTN_H)
         .setInteractive({ useHandCursor: true });
       img
-        .on("pointerover",  () => img.setFrame(1))
-        .on("pointerout",   () => img.setFrame(startFrame))
-        .on("pointerdown",  onClick);
+        .on("pointerover", () => img.setFrame(1))
+        .on("pointerout", () => img.setFrame(startFrame))
+        .on("pointerdown", onClick);
       panel.add(img);
     }
     panel.add(
       scene.add.text(0, btnY, label, {
         fontFamily: FONT_DISPLAY,
-        fontSize:   "11px",
-        color:      isPrimary ? COLORS.ember : "#cccccc",
-        letterSpacing: 2,
+        fontSize: "13px",
+        color: isPrimary ? COLORS.ember : "#cccccc",
+        letterSpacing: 1.5,
+        align: "center",
+        wordWrap: { width: BTN_W - 32 },
       }).setOrigin(0.5, 0.5).setResolution(2),
     );
     if (!hasSS) {
@@ -362,7 +375,7 @@ export function createHubConfirmModal(
     }
   };
 
-  addBtn(y + BTN_H / 2, options.confirmLabel, true,  () => dismiss(options.onConfirm));
+  addBtn(y + BTN_H / 2, options.confirmLabel, true, () => dismiss(options.onConfirm));
   addBtn(y + BTN_H + BTN_GAP + BTN_H / 2, options.cancelLabel, false, () => dismiss(options.onCancel));
 
   root.add(panel);

@@ -1,17 +1,17 @@
 import Phaser from "phaser";
 import { DUEL_LAYOUT as L } from "../layout.js";
-import { C, COLORS, FONT, FONT_DISPLAY } from "../theme.js";
+import { C, COLORS, FONT_DISPLAY } from "../theme.js";
 
 export const HISTORY_PANEL_KEY = "history-panel";
 const HISTORY_PANEL_PATH = "/sprites/historial_panel.png";
 const HISTORY_PANEL_SRC_W = 1086;
 const HISTORY_PANEL_SRC_H = 1448;
 
-const ROW_H = 22;
-const PAD = 48;
-const HEADER_H = 78;
-const BODY_TOP = HEADER_H + 8;
-const HEADER_TEXT_Y = 52;
+const ROW_H = 26;
+const PAD = 52;
+const HEADER_H = 84;
+const BODY_TOP = HEADER_H + 10;
+const HEADER_TEXT_Y = 56;
 const PIP_SLOTS = 9;
 const SCROLLBAR_W = 5;
 const SCROLLBAR_GAP = 6;
@@ -114,7 +114,7 @@ export class DuelHistoryLog {
 
     this.headerText = scene.add.text(PAD, HEADER_TEXT_Y, "", {
       fontFamily: FONT_DISPLAY,
-      fontSize: "14px",
+      fontSize: "17px",
       color: COLORS.ember,
       letterSpacing: 1.5,
     }).setOrigin(0, 0);
@@ -246,8 +246,8 @@ export class DuelHistoryLog {
 
     lines.forEach((line, index) => {
       const entry = this.scene.add.text(0, index * ROW_H - this.scrollOffset, line, {
-        fontFamily: FONT,
-        fontSize: "13px",
+        fontFamily: FONT_DISPLAY,
+        fontSize: "15px",
         color: index === lines.length - 1 ? COLORS.ember : COLORS.bone,
         letterSpacing: 0.6,
       }).setOrigin(0, 0);

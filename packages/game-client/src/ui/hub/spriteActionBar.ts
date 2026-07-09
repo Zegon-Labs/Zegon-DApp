@@ -64,7 +64,8 @@ export class SpriteActionBar {
   private readonly panel: Phaser.GameObjects.Image | null = null;
   private readonly enabledStates: boolean[];
   private readonly depth: number;
-  private readonly btnScale: number;
+  private readonly btnScaleX: number;
+  private readonly btnScaleY: number;
   private activeTooltipIndex: number | null = null;
   private dimmedAll = false;
 
@@ -94,11 +95,12 @@ export class SpriteActionBar {
     );
 
     const slotDisplayW = SLOT_INTERIOR_W_SRC * panelScale;
-    this.btnScale = (slotDisplayW * 0.85) / BTN_FRAME_W;
+    this.btnScaleX = (slotDisplayW * 0.88) / BTN_FRAME_W;
+    this.btnScaleY = this.btnScaleX * 1.42;
     const y = actionPanelCenterY(width);
 
-    const btnDisplayW = BTN_FRAME_W * this.btnScale;
-    const fontSize = Math.max(10, Math.min(14, Math.floor(btnDisplayW * 0.10)));
+    const btnDisplayW = BTN_FRAME_W * this.btnScaleX;
+    const fontSize = Math.max(11, Math.min(17, Math.floor(btnDisplayW * 0.11)));
 
     opts.entries.forEach((entry, i) => {
       const x = slotXs[i] ?? 0;
@@ -106,7 +108,7 @@ export class SpriteActionBar {
       const sprite = scene.add
         .sprite(x, y, ACTION_BTN_KEY, 0)
         .setOrigin(0.5, 0.5)
-        .setScale(this.btnScale)
+        .setScale(this.btnScaleX, this.btnScaleY)
         .setDepth(depth)
         .setAlpha(0.4);
 
