@@ -3129,9 +3129,9 @@ body:has(.hero) {
 .leaderboard-table__head,
 .leaderboard-table__row {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 112px;
-  gap: 12px;
-  padding: 12px 4px;
+  grid-template-columns: 44px minmax(0, 1fr) 72px;
+  gap: 8px;
+  padding: 8px 2px;
   align-items: center;
 }
 
@@ -3148,13 +3148,13 @@ body:has(.hero) {
 }
 
 .leaderboard-table__row {
-  font-size: 22px;
+  font-size: 18px;
   border-bottom: 1px solid rgba(58,53,80,0.22);
 }
 
 .leaderboard-table__rank {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 20px;
   color: var(--ember);
 }
 
@@ -3167,10 +3167,10 @@ body:has(.hero) {
 .leaderboard-table__value {
   text-align: right;
   font-family: var(--font-mono);
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--cyan);
-  padding-right: 4px;
+  padding-right: 2px;
 }
 
 .leaderboard-table__row:last-child {
@@ -5235,16 +5235,17 @@ html.zegon-reduced-motion .smoke-particle {
   border: 1px solid var(--fog);
   background: rgba(10, 9, 17, 0.55);
   color: var(--dust);
-  padding: 10px 8px;
+  padding: 8px 4px;
   font-family: inherit;
-  font-size: 14px;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  letter-spacing: 0.03em;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .board-tab:hover {
@@ -5259,79 +5260,82 @@ html.zegon-reduced-motion .smoke-particle {
 }
 
 .board-intro {
-  margin: 0 0 6px;
-  font-size: 15px;
-  line-height: 1.45;
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.4;
   color: var(--bone);
 }
 
 .board-how-to {
-  margin: 0 0 8px;
-  font-size: 14px;
-  line-height: 1.4;
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.35;
   color: var(--gold);
 }
 
 .board-season {
-  margin: 0 0 12px;
-  font-size: 13px;
-  line-height: 1.4;
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.35;
   color: var(--dust);
 }
 
 .board-desc {
-  margin-bottom: 10px;
-  padding: 10px 12px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
   border: 1px solid rgba(179, 18, 43, 0.28);
   background: rgba(10, 9, 17, 0.72);
 }
 
 .board-desc__title {
-  margin: 0 0 4px;
+  margin: 0 0 3px;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 14px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ember);
+  line-height: 1.2;
 }
 
 .board-desc__hint {
-  margin-left: 8px;
+  display: inline;
+  margin-left: 6px;
   font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.04em;
+  font-size: 10px;
+  letter-spacing: 0.03em;
   text-transform: none;
   color: var(--dust);
 }
 
 .board-desc__body {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.35;
   color: var(--bone);
 }
 
 .board-footer-rank {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: var(--gold);
-  font-size: 17px;
-  line-height: 1.4;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .board-footer-rank--muted {
   color: var(--dust);
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .hero__panel--utility.hero__panel--leaderboard {
-  width: min(98vw, 980px);
-  max-width: min(98vw, 980px);
-  min-height: min(92vh, 820px);
-  max-height: min(96vh, 900px);
+  width: min(96vw, 800px);
+  max-width: min(96vw, 800px);
+  min-height: calc(min(96vw, 800px) * 1086 / 1448);
+  max-height: min(92vh, calc(min(96vw, 800px) * 1086 / 1448));
   height: auto;
-  aspect-ratio: unset;
-  padding: 68px 80px 72px;
+  aspect-ratio: 1448 / 1086;
+  padding: 88px 78px 92px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .leaderboard-panel__inner {
@@ -5341,70 +5345,99 @@ html.zegon-reduced-motion .smoke-particle {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 86%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 2px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(179, 18, 43, 0.75) transparent;
+}
+
+.leaderboard-panel__inner::-webkit-scrollbar {
+  width: 4px;
+}
+
+.leaderboard-panel__inner::-webkit-scrollbar-thumb {
+  background: rgba(179, 18, 43, 0.7);
 }
 
 .hero__panel--leaderboard .hero__panel-title {
-  margin-bottom: 8px;
-  font-size: clamp(22px, 3.2vw, 28px);
+  margin: 0 0 6px;
+  font-size: clamp(18px, 3.2vw, 22px);
+  line-height: 1.1;
   flex-shrink: 0;
+  text-align: center;
 }
 
 .hero__panel--leaderboard .board-intro,
 .hero__panel--leaderboard .board-how-to,
 .hero__panel--leaderboard .board-season {
   flex-shrink: 0;
+  text-align: center;
 }
 
 .hero__panel--leaderboard .board-desc {
   flex-shrink: 0;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+}
+
+.hero__panel--leaderboard .board-tabs {
+  flex-shrink: 0;
 }
 
 .hero__panel--leaderboard .leaderboard-table {
   flex: 1 1 auto;
-  min-height: 260px;
-  overflow-y: auto;
-  padding-right: 6px;
+  min-height: 140px;
+  overflow: visible;
+  padding-right: 2px;
 }
 
 .hero__panel--leaderboard .board-footer-rank {
   flex-shrink: 0;
-  margin: 10px 0 0;
-  padding-top: 4px;
+  margin: 8px 0 0;
+  padding-top: 2px;
+  text-align: center;
 }
 
 .hero__panel--leaderboard .hero__panel-back {
   flex-shrink: 0;
-  margin-top: 10px;
+  align-self: center;
+  margin-top: 6px;
   margin-bottom: 0;
-  padding-top: 4px;
+  padding-top: 0;
 }
 
 @media (max-width: 720px) {
   .hero__panel--utility.hero__panel--leaderboard {
-    width: min(98vw, 560px);
-    max-width: min(98vw, 560px);
-    min-height: min(94vh, 680px);
-    max-height: min(96vh, 760px);
-    padding: 58px 48px 64px;
+    width: min(96vw, 540px);
+    max-width: min(96vw, 540px);
+    min-height: calc(min(96vw, 540px) * 1086 / 1448);
+    max-height: min(94vh, calc(min(96vw, 540px) * 1086 / 1448));
+    padding: 72px 52px 80px;
   }
 
-  .hero__panel--leaderboard .leaderboard-table {
-    min-height: 200px;
+  .leaderboard-panel__inner {
+    width: 90%;
+    max-width: none;
+  }
+
+  .board-tab {
+    font-size: 11px;
+    padding: 7px 4px;
   }
 
   .leaderboard-table__row {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .leaderboard-table__rank {
-    font-size: 22px;
+    font-size: 18px;
   }
 
   .leaderboard-table__value {
-    font-size: 18px;
+    font-size: 16px;
   }
 }
 
