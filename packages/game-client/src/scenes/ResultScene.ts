@@ -468,7 +468,7 @@ export class ResultScene extends Phaser.Scene {
     const before = getCachedProfile(address);
     const beforeLevel = before ? xpProgress(before.xp ?? 0).level : 1;
 
-    const { earned, notchesGain, xpGain } = await persistDuelProgression(address, this.result, {
+    const { earned, notchesGain, xpGain, statsSaved } = await persistDuelProgression(address, this.result, {
       surpriseStreak: this.scoreOptions.surpriseStreak ?? 0,
       verifiedOnChain: verifiedOnChain || Boolean(this.verifyProof),
       playTimeMs,
@@ -487,6 +487,9 @@ export class ResultScene extends Phaser.Scene {
     if (earned.length > 0) {
       playSfx("achievement_unlock");
       progressLine += `\n🏅 ${earned.join(", ")}`;
+    }
+    if (!statsSaved) {
+      progressLine += `\n${strings.globalScoreSubmitProfile}`;
     }
 
     this.panelHandle?.dailyLabel

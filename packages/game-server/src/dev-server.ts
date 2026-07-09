@@ -96,7 +96,8 @@ const server = createServer(async (req, res) => {
     if (url === "/api/player/profile/stats" && req.method === "POST") {
       const body = (await parseBody(req)) as Parameters<typeof handleUpdateProfileStats>[0];
       const result = await handleUpdateProfileStats(body);
-      res.writeHead(200, { "Content-Type": "application/json" });
+      const status = "accepted" in result && !result.accepted ? 400 : 200;
+      res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(result));
       return;
     }

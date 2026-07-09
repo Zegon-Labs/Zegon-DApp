@@ -137,7 +137,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(await h.handleMetricsReport(date));
     }
     if (slug[0] === "player" && slug[1] === "profile" && slug[2] === "stats" && req.method === "POST") {
-      return res.status(200).json(await h.handleUpdateProfileStats(req.body));
+      const result = await h.handleUpdateProfileStats(req.body);
+      if ("accepted" in result && !result.accepted) {
+        return res.status(400).json(result);
+      }
+      return res.status(200).json(result);
     }
     if (slug[0] === "player" && slug[1] === "profile" && req.method === "GET") {
       const address = typeof req.query.address === "string" ? req.query.address : undefined;

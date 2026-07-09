@@ -565,15 +565,25 @@ export async function handleRecordDuel(body: {
       : compositeAttestationHash(session.logs, body.duelId);
 
   if (contract.isConfigured()) {
-    const tx = await contract.recordDuel(
-      body.duelId,
-      attestationHash,
-      body.result,
-    );
-    recordTxHash = tx?.txHash;
+    try {
+      const tx = await contract.recordDuel(
+        body.duelId,
+        attestationHash,
+        body.result,
+      );
+      recordTxHash = tx?.txHash;
+    } catch (err) {
+      console.error("recordDuel on-chain failed:", err);
+    }
   }
 
-  const storage = await storeDuelLog(body.duelId, session.logs);
+  let storage: Awaited<ReturnType<typeof storeDuelLog>>;
+  try {
+    storage = await storeDuelLog(body.duelId, session.logs);
+  } catch (err) {
+    console.error("storeDuelLog failed:", err);
+    storage = { localPath: undefined };
+  }
   session.storageRoot = storage.rootHash ?? storage.localPath;
   session.recordTxHash = recordTxHash;
   session.result = body.result;
@@ -924,6 +934,7 @@ export async function handleSubmitScore(body: {
 
 export async function handleUpdateProfileStats(body: {
   address: string;
+  nickname?: string;
   xpGain?: number;
   notchesGain?: number;
   won?: boolean;
@@ -937,9 +948,28 @@ export async function handleUpdateProfileStats(body: {
   unlocks?: string[];
   duelDay?: string;
   auth?: { message?: string; signature?: string };
-}): Promise<{ profile: Awaited<ReturnType<typeof updateProfileStats>> }> {
+}): Promise<
+  | { accepted: true; profile: Awaited<ReturnType<typeof updateProfileStats>> }
+  | { accepted: false; reason: string }
+> {
+  if (!isWalletAddress(body.address)) {
+    return { accepted: false, reason: "INVALID_ADDRESS" };
+  }
+
   const siwe = requireSiweOrDev(body.address, body.auth);
-  if (!siwe.ok) throw new Error(siwe.error);
+  if (!siwe.ok) return { accepted: false, reason: siwe.error };
+
+  let existing = await getProfile(body.address);
+  if (!existing && body.nickname?.trim()) {
+    try {
+      existing = await setProfile(body.address, body.nickname.trim());
+    } catch {
+      return { accepted: false, reason: "PROFILE_REQUIRED" };
+    }
+  }
+  if (!existing) {
+    return { accepted: false, reason: "PROFILE_REQUIRED" };
+  }
 
   const profile = await updateProfileStats(body.address, {
     xpGain: body.xpGain,
@@ -955,7 +985,7 @@ export async function handleUpdateProfileStats(body: {
     newUnlocks: body.unlocks,
     duelDay: body.duelDay,
   });
-  return { profile };
+  return { accepted: true, profile };
 }
 
 export async function handleDailyPoolInfo(seed?: string): Promise<{

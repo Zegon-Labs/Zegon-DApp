@@ -5,8 +5,43 @@ import {
   xpForResult,
   type DuelResult,
 } from "@zegon/game-core";
-import { getCachedProfile, recordLocalProgress } from "./profile.js";
+import { fetchProfile, getCachedProfile, recordLocalProgress, saveProfile } from "./profile.js";
 import { withSiweAuth } from "./siwe.js";
+
+async function ensureServerProfile(address: string): Promise<boolean> {
+  const cached = getCachedProfile(address);
+  if (!cached?.nickname) return false;
+
+  const remote = await fetchProfile(address);
+  if (remote?.nickname) return true;
+
+  try {
+    await saveProfile(address, cached.nickname);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function postProfileStats(
+  payload: Record<string, unknown>,
+): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const res = await fetch("/api/player/profile/stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      accepted?: boolean;
+      reason?: string;
+    };
+    if (res.ok && body.accepted !== false) return { ok: true };
+    return { ok: false, reason: body.reason ?? `HTTP_${res.status}` };
+  } catch {
+    return { ok: false, reason: "NETWORK" };
+  }
+}
 
 export async function persistDuelProgression(
   address: string,
@@ -18,8 +53,14 @@ export async function persistDuelProgression(
     dailyRank?: number;
     verifiedOnly?: boolean;
   },
-): Promise<{ earned: string[]; notchesGain: number; xpGain: number }> {
+): Promise<{ earned: string[]; notchesGain: number; xpGain: number; statsSaved: boolean }> {
   const cached = getCachedProfile(address);
+  if (!cached?.nickname) {
+    return { earned: [], notchesGain: 0, xpGain: 0, statsSaved: false };
+  }
+
+  const hasServerProfile = await ensureServerProfile(address);
+
   if (options.verifiedOnly) {
     const earned = checkAchievements(
       {
@@ -36,22 +77,18 @@ export async function persistDuelProgression(
       verifiedOnChain: true,
       achievements: earned,
     });
-    try {
-      const payload = await withSiweAuth({
-        address,
-        notchesGain,
-        verifiedOnChain: true,
-        achievements: earned.length > 0 ? earned : undefined,
-      });
-      await fetch("/api/player/profile/stats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      /* best-effort */
+    if (!hasServerProfile) {
+      return { earned, notchesGain, xpGain: 0, statsSaved: false };
     }
-    return { earned, notchesGain, xpGain: 0 };
+    const payload = await withSiweAuth({
+      address,
+      nickname: cached.nickname,
+      notchesGain,
+      verifiedOnChain: true,
+      achievements: earned.length > 0 ? earned : undefined,
+    });
+    const posted = await postProfileStats(payload);
+    return { earned, notchesGain, xpGain: 0, statsSaved: posted.ok };
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -94,29 +131,25 @@ export async function persistDuelProgression(
     playTimeMs: options.playTimeMs,
   });
 
-  try {
-    const payload = await withSiweAuth({
-      address,
-      xpGain,
-      notchesGain,
-      won,
-      timesRead: result.timesRead,
-      roundsPlayed: result.roundsPlayed,
-      maxReadingStreak: result.finalReadingStreak,
-      playTimeMs: options.playTimeMs,
-      verifiedOnChain: options.verifiedOnChain,
-      achievements: earned.length > 0 ? earned : undefined,
-      unlocks: unlocks.length > 0 ? unlocks : undefined,
-      duelDay: today,
-    });
-    await fetch("/api/player/profile/stats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    /* best-effort */
+  if (!hasServerProfile) {
+    return { earned, notchesGain, xpGain, statsSaved: false };
   }
 
-  return { earned, notchesGain, xpGain };
+  const payload = await withSiweAuth({
+    address,
+    nickname: cached.nickname,
+    xpGain,
+    notchesGain,
+    won,
+    timesRead: result.timesRead,
+    roundsPlayed: result.roundsPlayed,
+    maxReadingStreak: result.finalReadingStreak,
+    playTimeMs: options.playTimeMs,
+    verifiedOnChain: options.verifiedOnChain,
+    achievements: earned.length > 0 ? earned : undefined,
+    unlocks: unlocks.length > 0 ? unlocks : undefined,
+    duelDay: today,
+  });
+  const posted = await postProfileStats(payload);
+  return { earned, notchesGain, xpGain, statsSaved: posted.ok };
 }
